@@ -26,7 +26,7 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 
 **Scenario:** A builder needs a minimal, reproducible way to deliver the public mobile tracer bullet without silently binding the long-term product to an unreviewed stack or service.
 
-**Scope:** Compare the smallest credible frontend/runtime, test, and HTTPS deployment options against the Phase 0 acceptance criteria; record the selected baseline and its replacement boundary in an ADR. Include local development, automated verification, secret handling, public deployment, rollback, and expected Qoder use.
+**Scope:** Compare the smallest credible frontend/runtime, test, and HTTPS deployment options against the Phase 0 acceptance criteria; record the selected baseline and its replacement boundary in an ADR. Include local development, automated verification, secret handling, public deployment, rollback, and Qoder as the current competition build constraint.
 
 **Non-goals:** Selecting the final production architecture, real-user authentication, persistent financial storage, a market-data vendor, an AI model provider, or infrastructure for later MVP phases.
 
@@ -35,6 +35,7 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 - The ADR compares at least two viable baselines using delivery speed, mobile/browser support, testability, deployment/rollback, secret exposure, Qoder compatibility, and migration cost.
 - The selected baseline can serve one HTTPS route, run locally from documented commands, and support deterministic normal and failed-adapter fixtures.
 - The design keeps the market adapter, analysis contract, and presentation contract replaceable.
+- The runtime has no hidden Qoder dependency, local reproduction works without Qoder, and competition build evidence is redacted before storage or attachment.
 - No real financial data or long-lived secret is required for Phase 0.
 - Repository commands and durable project knowledge are updated after the baseline is accepted.
 
@@ -42,7 +43,7 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 
 **Scenario:** A judge opens one public HTTPS route on a 375px phone, makes the visible theme and simulated-demo choices, reads one daily card, inspects its evidence, and deliberately observes evidence failure.
 
-**Scope:** Deliver one fixed simulated portfolio snapshot, one implemented theme variant paired with the canonical rational evidence view, a vendor-neutral market adapter contract backed by a deterministic fixture or one implementation, a narrative front, an evidence back, directional guidance, timestamps, a risk notice, a forced adapter-failure state, and standards-compatible QR/NFC URL handoffs to the same public route.
+**Scope:** Deliver a controlled deterministic seed selection from a versioned simulated whitelist, one implemented theme variant paired with the canonical rational evidence view, a vendor-neutral market adapter contract backed by a deterministic fixture or one implementation, a narrative front, an evidence back, directional guidance, timestamps, a risk notice, a forced adapter-failure state, and standards-compatible QR/NFC URL handoffs to the same public route.
 
 **Non-goals:** Real-user accounts, persistence, screenshot extraction, broad asset coverage, multiple finished themes, authentication, production NFC objects, or a final vendor choice.
 
@@ -50,9 +51,11 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 
 - From a fresh 375px session, the card is reachable through no more than the visible theme and `Try simulated demo` choices.
 - `Simulated` remains visible on the portfolio, narrative front, and evidence back.
+- A visible seed or scenario identifier and whitelist version reproduce the same snapshot; unconstrained random assets or values cannot enter the demo.
 - The evidence back shows snapshot time, evidence cutoff, dated evidence, main derivation, assumptions, limitations, and risk notice.
 - The theme front and rational representation use identical fixture inputs, evidence, calculation output, coverage, and guidance. Runtime switching between multiple themes is deferred to FNL-007.
 - Forced adapter failure returns limited or unavailable analysis without fabricated current values.
+- The deterministic Phase 0 path does not require a model call.
 - The flow works with touch and keyboard, without personal data or NFC hardware.
 - QR, NFC URL handoff, and an ordinary link resolve to the same generic HTTPS route; decoded payloads contain no personal financial data, credentials, or sensitive parameters.
 
@@ -101,27 +104,34 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 
 **Scenario:** Analysis requests normalized, dated evidence without depending on one vendor or treating stale retrieval as current truth.
 
-**Scope:** Implement the adapter contract for the MVP asset subset, identity resolution, normalized observations, provenance, timestamps, caveats, and typed states.
+**Scope:** Implement the adapter contract for the MVP asset subset, identity resolution, normalized observations, provenance, per-measure freshness/staleness policies, revisions, contradictions, timestamps, caveats, and typed states.
 
 **Acceptance:**
 
 - Contract tests cover `available`, `stale`, `ambiguous`, `unsupported`, `rate-limited`, and `failed`.
-- Responses distinguish observation time from retrieval time and identify the source.
+- Every requested measure has a documented freshness and staleness policy.
+- Responses distinguish observation time from retrieval time; include a source locator or source class; and retain normalization, units, and asset-identity evidence.
+- Fixtures cover upstream revisions and contradictory evidence without silently overwriting prior observations.
 - Unsupported or ambiguous identities never receive invented values.
+- Test and diagnostic logs contain no credentials.
 - Replacing the adapter does not change portfolio, evidence, snapshot, or card contracts.
 
 ## FNL-006: Build the Limited-Analysis and Directional Engine
 
 **Scenario:** A user receives only conclusions supported by the confirmed snapshot, four constraints, and dated evidence.
 
-**Scope:** Version-bound claims, calculations or rule outcomes, unknowns, coverage, bounded guidance, risk notice, and recovery across supported, limited, observation-only, and unavailable states.
+**Scope:** Version-bound claims, calculations or rule outcomes, unknowns, evidence sufficiency, coverage, bounded guidance, risk notice, conditional model integration, and recovery across supported, limited, observation-only, and unavailable states.
 
 **Acceptance:**
 
 - Every material claim maps to confirmed input, derived result, or dated evidence.
+- Observed, derived, and generated content is labeled distinctly.
 - Guidance stays directional and names its triggering constraint or evidence.
+- Wording becomes more direct or urgent only for a supported risk-boundary breach, names the breached boundary, and never becomes an exact trade command.
 - Missing, stale, unsupported, ambiguous, contradictory, or unavailable inputs narrow dependent conclusions.
+- Coverage and evidence-sufficiency states explicitly do not represent market-outcome probability and are not exposed as `high confidence` prediction promises.
 - When nothing material is supportable, the result explains why and how to recover rather than showing a normal card.
+- If a model is used, its named schema/version is validated; tests cover timeout, malformed output, bounded retry, input/output redaction, external-processing disclosure, and no normal card after model failure. Deterministic paths may omit model calls.
 - Policy tests reject exact personalized quantities, percentages, prices, times, guarantees, and transaction actions.
 
 ## FNL-007: Add Card Themes Without Changing Reasoning
@@ -135,6 +145,7 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 - Calculations, evidence, coverage, risk classification, and guidance remain equal across themes.
 - Theme changes affect only vocabulary, artwork, pacing, and presentation.
 - The mascot remains recognizable in identity, character, and responsibility.
+- The themed explanation of holding-linked financial concepts is comprehensible to target novices and does not alter the rational conclusion; observable evidence is required, but no formal user-study process is mandated.
 - Risk notices, provenance, unknowns, timestamps, coverage, and simulated/real status remain legible.
 
 ## FNL-008: Enforce Private Workspaces and Safe Deletion
@@ -174,11 +185,12 @@ The sequence is tracer-bullet first: prove one honest public guest loop before b
 - Every Phase 0 and MVP criterion has a linked passing test or observable artifact.
 - The real-user flow works at 375px without requiring hover, animation, NFC, QR, camera, or screenshot extraction.
 - Evidence includes guest and real-user recordings, snapshot transition, normal and limited cards, adapter tests, and privacy verification.
+- Evidence includes documented local reproduction without Qoder and redacted Qoder competition-build evidence.
 - A claim-to-evidence audit covers every material statement on the demonstrated card.
 - Open failures remain blocking Issues; MVP is not marked complete while criteria lack evidence.
 
 ## Optional Post-MVP Candidates
 
-Do not schedule these until FNL-010 is accepted. Each needs a fresh product decision and updated acceptance criteria: institution connectors, intraday alerts, expanded assets or jurisdictions, longitudinal calibration, collaboration, additional themes or native clients, and production NFC objects or private expiring deep links.
+Do not schedule these until FNL-010 is accepted. Each needs a fresh product decision and updated acceptance criteria: Active Query, institution connectors, intraday alerts, expanded assets or jurisdictions, longitudinal calibration, collaboration, additional themes or native clients, and production NFC objects or private expiring deep links.
 
 Trade execution, automatic rebalancing, custody, guaranteed returns, and exact personalized trade instructions remain outside the product contract.
