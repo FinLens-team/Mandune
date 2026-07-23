@@ -1,0 +1,79 @@
+name: Bug report
+description: Report reproducible behavior that violates the FinLens contract
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach real holdings, raw financial screenshots, credentials, full account identifiers, bearer links, or unredacted logs. Use simulated or redacted evidence.
+  - type: textarea
+    id: contract
+    attributes:
+      label: Violated contract
+      description: Link the relevant product, MVP, ADR, Issue, or documented expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest sequence using simulated or redacted data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: data_mode
+    attributes:
+      label: Data mode
+      description: Do not submit this form if the evidence still contains real personal financial data.
+      options:
+        - Simulated data
+        - Fully redacted data
+        - No financial data involved
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Contract impact
+      options:
+        - Privacy or unauthorized data exposure
+        - Exact or unsupported financial guidance
+        - Missing or false degradation
+        - Incorrect confirmation, provenance, or snapshot state
+        - Accessibility or core-flow blocker
+        - Other product behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Route, viewport, browser, build identifier, data mode, and relevant adapter status. Omit secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Add sanitized logs, screenshots, recordings, or test output. Explain what was redacted.
+  - type: checkboxes
+    id: privacy_check
+    attributes:
+      label: Privacy check
+      options:
+        - label: I verified that this report and its attachments contain no real holdings, raw financial screenshots, credentials, full account identifiers, or transferable private links.
+          required: true

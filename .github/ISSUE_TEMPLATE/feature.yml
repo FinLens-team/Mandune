@@ -1,0 +1,75 @@
+name: Product increment
+description: Propose an observable FinLens product increment
+title: "[Feature]: "
+labels:
+  - feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `PRODUCT.md`, `CONTEXT.md`, `docs/specs/mvp.md`, and all accepted ADRs before filing. Issues are delivery tickets; product-contract changes belong in the specification first.
+  - type: textarea
+    id: scenario
+    attributes:
+      label: User scenario and problem
+      description: Who is acting, what are they trying to complete, and what observable problem blocks them?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Current evidence
+      description: Link the relevant specification section, ADR, test, recording, or observed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: State the smallest end-to-end behavior this ticket will deliver.
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: Name adjacent behavior that this ticket will not implement.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: List blocking Issue numbers, or write `None`.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Observable acceptance criteria
+      description: Use repeatable user-visible outcomes and automated checks, including a relevant failure path.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Privacy and advice boundaries
+      description: Explain how the increment protects personal financial data, simulated-data labels, bounded guidance, and unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: completion_evidence
+    attributes:
+      label: Completion evidence
+      description: List tests, screenshots, recordings, or audits that must be attached before closing.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contract_check
+    attributes:
+      label: Contract check
+      options:
+        - label: This ticket does not silently choose an unconfirmed framework, model, market-data vendor, storage engine, authentication protocol, or deployment API.
+          required: true
+        - label: This ticket preserves the accepted privacy boundary and the directional-advice boundary.
+          required: true

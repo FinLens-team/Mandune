@@ -1,0 +1,37 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# User-provided financial data and sensitive uploads
+private/
+uploads/
+screenshots/
+*.local-data
+
+# Logs and runtime state
+*.log
+logs/
+tmp/
+temp/
+*.pid
+*.pid.lock
+
+# Generated output and test artifacts
+dist/
+build/
+coverage/
+.cache/
+test-results/
+playwright-report/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
