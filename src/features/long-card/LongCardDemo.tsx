@@ -21,7 +21,7 @@ export function LongCardDemo() {
         <p>示例数据</p>
       </div>
       <ThemePreview />
-      <div className="scenario-tabs" aria-label="示例分析状态">
+      <div className="scenario-tabs" aria-label="示例分析状态" role="group">
         {SCENARIOS.map((item) => (
           <button
             aria-pressed={scenario === item.id}
