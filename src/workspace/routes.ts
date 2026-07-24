@@ -11,6 +11,7 @@ function attachLocatorCookie(
 ): void {
   setCookie(c, WORKSPACE_COOKIE, locator, {
     httpOnly: true,
+    secure: true,
     sameSite: "Lax",
     path: "/",
     maxAge: 30 * 24 * 60 * 60,
@@ -48,16 +49,16 @@ export function createWorkspaceRoutes(service: WorkspaceService): Hono {
   app.delete("/current", async (c) => {
     const locator = getCookie(c, WORKSPACE_COOKIE);
     const result = await service.delete(locator);
-    deleteCookie(c, WORKSPACE_COOKIE, { path: "/" });
+    deleteCookie(c, WORKSPACE_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      path: "/",
+    });
     if (!result.ok) {
       return c.json(UNAUTHORIZED, 401);
     }
     return c.json({ deleted: result.result });
-  });
-
-  app.post("/maintenance/purge-expired", async (c) => {
-    const summary = await service.purgeExpired();
-    return c.json(summary);
   });
 
   return app;

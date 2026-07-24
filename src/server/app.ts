@@ -6,6 +6,7 @@ import {
   SERVICE_NAME,
   type HealthResponse,
 } from "../contracts/index.js";
+import { PersistenceError } from "../persistence/errors.js";
 import {
   WorkspaceService,
   createWorkspaceRoutes,
@@ -19,10 +20,17 @@ function resolveClientRoot(moduleDir: string): string {
 }
 
 export function createApp(
-  config: ServerConfig,
+  config: Pick<ServerConfig, "version"> & Partial<Pick<ServerConfig, "port">>,
   workspaceService: WorkspaceService = new WorkspaceService(),
 ): Hono {
   const app = new Hono();
+
+  app.onError((error, c) => {
+    if (error instanceof PersistenceError) {
+      return c.json({ error: "storage_unavailable" }, 503);
+    }
+    return c.json({ error: "internal_error" }, 500);
+  });
 
   app.get("/health", (c) => {
     const body: HealthResponse = {

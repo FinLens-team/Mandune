@@ -1,6 +1,7 @@
 import { serve, type ServerType } from "@hono/node-server";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createDurableServices } from "../persistence/index.js";
 import { createApp } from "./app.js";
 import { loadServerConfig } from "./config.js";
 
@@ -23,22 +24,32 @@ export function startServer(
   env: NodeJS.ProcessEnv = process.env,
 ): { server: ServerType; port: number } {
   const config = loadServerConfig(env);
-  const app = createApp(config);
+  // Opening and migrating durable storage happens before binding the port.
+  // Any failure aborts startup; production never substitutes a memory store.
+  const services = createDurableServices(config);
+  const app = createApp(config, services.workspaces);
 
-  const server = serve(
-    {
-      fetch: app.fetch,
-      port: config.port,
-      hostname: "0.0.0.0",
-    },
-    (info) => {
-      console.log(
-        `mandong listening on http://127.0.0.1:${info.port} (request timeout disabled; headers timeout ${HEADERS_TIMEOUT_MS}ms)`,
-      );
-    },
-  );
+  let server: ServerType;
+  try {
+    server = serve(
+      {
+        fetch: app.fetch,
+        port: config.port,
+        hostname: config.host,
+      },
+      (info) => {
+        console.log(
+          `mandong listening on ${config.host}:${info.port} (request timeout disabled; headers timeout ${HEADERS_TIMEOUT_MS}ms)`,
+        );
+      },
+    );
+  } catch (error) {
+    services.database.close();
+    throw error;
+  }
 
   applyServerTimeouts(server);
+  server.once("close", () => services.database.close());
   return { server, port: config.port };
 }
 

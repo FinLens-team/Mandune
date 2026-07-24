@@ -20,8 +20,8 @@
 ## 当前仓库状态
 
 - 仓库是单包 pnpm 项目，使用 Node `>=22 <23`、pnpm `10.33.2`、ESM 与严格 TypeScript。应用代码位于 `src/`，构建产物位于 `dist/`；不要创建 pnpm workspace 或 `apps/`、`packages/` 布局。
-- 当前接受的 ADR 为 0004-0008：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时，以及 Vite + React、Hono、Vitest 与 CI 的单包工程基线。旧 0001-0003 已退出当前契约。
-- ADR-0008 不选择耐久私人存储、匿名工作区定位/认证或公开部署：这些边界分别留给 #26 和 #35。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
+- 当前接受的 ADR 为 0004-0009：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时、Vite + React/Hono/Vitest 单包工程基线，以及 Node 22 `node:sqlite` 单机耐久状态。旧 0001-0003 已退出当前契约。
+- ADR-0009 已完成 ADR-0008 推迟的耐久私人存储选择；公开部署仍由 #35 决定。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
 - `src/analysis/validation.ts` 接受契约允许的 date-only 市场观察日，只在调用旧共享校验器的副本中规范化为 UTC 零点；最终 `AnalysisResult` 必须保留供应商原始日期精度。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
@@ -33,6 +33,7 @@
 - ADR-0006 规定框架中立的 OpenAI-compatible `ModelGateway`；structured output、streaming、multimodal 和 tools 必须逐项 capability-test。
 - ADR-0007 选择服务端 Vercel AI SDK Core 与 `@ai-sdk/openai-compatible`；每日复盘仍由应用层编排，不引入自主 Agent loop。
 - ADR-0008 选择 Vite + React + TypeScript 客户端、Hono Node 服务、Vitest 与 GitHub Actions CI 的单包基线；`src/contracts` 必须保持框架和供应商中立。
+- ADR-0009 选择 Node 22 内置 `node:sqlite` 作为单进程、低并发 Demo 的耐久 Store；WAL/FK/迁移或完整性检查失败时生产启动必须 fail closed，不得回退 Memory。
 
 ## 交付规则
 
@@ -93,9 +94,10 @@ pnpm test
 pnpm test:smoke
 pnpm build
 pnpm start
+pnpm maintenance:purge
 ```
 
-`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `PORT=8787`。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。
+`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `HOST=127.0.0.1`、`PORT=8787`，并在绑定端口前打开 `MANDONG_DB_PATH`（默认 `/var/lib/mandong/mandong.sqlite3`）和执行迁移；父目录须预先存在且仅服务用户可访问。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。过期清理只运行本地 `pnpm maintenance:purge`，不提供公开 purge route。
 
 Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确保不早于产品的 180 秒应用级分析截止截断请求；反向代理/部署 timeout 仍由 #35 决定。
 
@@ -105,6 +107,9 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/client/ui/`：共享可访问 UI 原语与组件样式；按钮、体验/锁定徽章、图标按钮和分析状态应复用此边界，不在功能页面重复实现。
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
+- `src/history/`：append-only 不可变复盘历史与只读重放；未知版本不会调用当前供应商重算。
+- `src/persistence/`：`node:sqlite` Store 适配器、生产组合与本地维护 CLI。生产数据库失败不得回退 Memory。
+- `migrations/`：按编号执行的 SQLite schema；迁移 SQL 与对应 `PRAGMA user_version` 在同一 `BEGIN IMMEDIATE` 事务提交。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
 - `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
 - `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。

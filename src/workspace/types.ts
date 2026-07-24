@@ -1,5 +1,5 @@
 export const WORKSPACE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-export const WORKSPACE_COOKIE = "md_workspace";
+export const WORKSPACE_COOKIE = "__Host-md_workspace";
 
 export interface WorkspaceRecord {
   /** Internal stable id — never put in URLs as the only secret. */
