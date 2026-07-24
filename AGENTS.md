@@ -20,9 +20,16 @@
 ## 当前仓库状态
 
 - 仓库当前处于文档阶段，没有 `package.json`、应用源码或可运行的安装、开发、检查、测试、构建、启动和部署命令。
-- 当前没有有效 ADR，也没有已接受的框架、存储、认证或部署基线。旧 ADR 已退出当前契约，不能作为实现授权。
-- PandaAI 与 Bocha 仍是待运行验收的候选集成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
+- 当前接受的 ADR 为 0004-0007：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、以及 Vercel AI SDK Core 初始模型运行时。仍没有已接受的前端、存储、认证或部署基线；旧 0001-0003 已退出当前契约。
+- PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
+
+## 已接受的技术决策
+
+- ADR-0004 规定确定性证据、派生和串行模型分析先后顺序；主题只消费同一份已校验的理性分析，不能改变证据、结论或建议。
+- ADR-0005 选择 PandaAI 作为初始真实结构化数据上游；A 股和 ETF 代表性路径已验证，场外基金和完整生产矩阵仍保持明确的未知/待验收状态。
+- ADR-0006 规定框架中立的 OpenAI-compatible `ModelGateway`；structured output、streaming、multimodal 和 tools 必须逐项 capability-test。
+- ADR-0007 选择服务端 Vercel AI SDK Core 与 `@ai-sdk/openai-compatible`；每日复盘仍由应用层编排，不引入自主 Agent loop。
 
 ## 交付规则
 
