@@ -20,6 +20,25 @@
 - 不得选择产品契约尚未确认的框架、模型供应商、市场数据供应商、存储引擎、认证协议或部署 API。若交付确实依赖该选择，先形成决策证据并提交 ADR。
 - 每次变更只覆盖当前 Issue；发现后续工作时创建或补充依赖票据，不顺手扩大范围。
 
+## Architecture
+
+- `docs/decisions/0003-select-phase0-technical-and-deployment-baseline.md` 当前仍为 `Proposed`。它提出 Vite + React + TypeScript、薄 Fastify 服务和现有 Nginx + Certbot 入口；经 maintainer review 改为 `Accepted` 后才成为 FNL-001 的绑定基线。ADR 状态表示决策是否成立，不表示下游实现验收已经通过。
+- Phase 0 的 `MarketAdapter`、`Analysis` 和 `Presentation` 必须是框架中立的版本化 TypeScript 契约。核心契约不得依赖 React、Fastify、Nginx、Qoder 或供应商类型。
+- Fastify 只监听 loopback，Nginx 是 80/443 的唯一公网入口。当前主机已有活动 Nginx/Certbot 和多个 vhost；不得为 FinLens 另起会争用 80/443 的 Caddy，也不得替换现有入口来完成 Phase 0。
+- 生产发布使用按 commit SHA 标识的不可变 release 与 `current` 软链接；回滚切回上一已验证 release 并只重启 FinLens 服务，不在生产工作树执行 `git checkout`，也不改动 Nginx/证书状态。
+
+## Commands
+
+- 当前仓库仍是文档阶段，没有 `package.json`，因此没有可运行的项目命令。
+- FNL-001 必须在固定 Node 22.x 范围和已提交 npm lockfile 上提供本地开发、静态检查、Vitest、Playwright、生产构建及生产启动脚本；命令真实通过后再把精确命令写入 README 和本节。
+- `vite preview` 只能用于本地预览，不得作为生产服务。
+
+## Gotchas & Decisions
+
+- Vite 会把 `VITE_*` 值写入客户端包，任何密钥都不得使用该前缀或进入浏览器构建输入。
+- 当前活动入口由宝塔 Nginx 管理；部署时必须用活动 Nginx 二进制校验配置，不能假定 `/usr/sbin/nginx` 与线上实例相同。
+- ADR-0003 中的命令、端口、域名和测试均是待实现契约，不是现有通过证据。ADR 接受后由 FNL-001 实现干净构建、正常/失败 fixture、公开 HTTPS、回滚和初始脱敏 Qoder 证据；FNL-005 补齐完整市场适配器状态矩阵，FNL-010 汇总最终证据。
+
 ## Product Invariants
 
 - FinLens 只提供可追溯的方向性建议，不提供精确交易指令、代客操作、收益保证或持牌意见声明。
