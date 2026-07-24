@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-24
-- Ticket: MD-006
+- Ticket: #30 / MD-008（证据边界内 Agent Team）
 
 ## Context
 
@@ -15,7 +15,7 @@
 - 非流式文本生成是首个模型路径的最低能力；structured output、streaming、multimodal 和 tools 必须逐项 capability-test。
 - provider wire type 不进入 `Analysis`、`Presentation`、组合或证据契约；模型输出始终标为 `generated`。
 - base URL、model ID 和凭据由服务端配置，不接受用户输入，不进入 `VITE_*`、浏览器包、日志、fixture 或用户证据。
-- Phase 0 可以完全不调用模型，Active Query 仍不属于 Demo V1。
+- 确定性 fixture 路径可以完全不调用模型；主动查询仍不属于 Demo V1。
 
 ## Consequences
 

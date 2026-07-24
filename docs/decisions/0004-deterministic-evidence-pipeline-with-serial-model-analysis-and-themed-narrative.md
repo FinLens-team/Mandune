@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-24
-- Ticket: MD-006
+- Ticket: #30 / MD-008（证据边界内 Agent Team）
 
 ## Context
 
@@ -20,7 +20,7 @@
 6. 主题叙事只消费同一份已校验理性分析，不能重跑取数、派生或改变结论；
 7. 用同一分析版本装配东方观象正面和理性证据背面。
 
-`observed`、`derived` 和 `generated` 必须保持可区分。模型失败、超时、畸形、缺证或越界时不得展示部分生成文本，按分析契约进入 `limited`、`observation_only` 或 `unavailable`。Phase 0 使用确定性 fixture，不要求模型调用；主动查询和工具循环仍不属于 Demo V1。
+`observed`、`derived` 和 `generated` 必须保持可区分。模型失败、超时、畸形、缺证或越界时不得展示部分生成文本，按分析契约进入 `limited`、`observation_only` 或 `unavailable`。确定性 fixture 路径（#25 / MD-003）不要求模型调用；主动查询和工具循环仍不属于 Demo V1。
 
 ## Consequences
 

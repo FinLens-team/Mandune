@@ -23,7 +23,7 @@ tools: Read, Grep, Glob, Bash, Write
 
 ## 文档守卫工作流
 
-1. 读取项目契约文档（PRODUCT.md、CONTEXT.md、docs/specs/mvp.md、docs/decisions/、AGENTS.md）
+1. 读取项目契约文档（PRODUCT.md、CONTEXT.md、DESIGN.md、docs/specs/demo-v1.md、docs/specs/analysis-contract.md、docs/integrations/pandaai-bocha.md、docs/decisions/、AGENTS.md）
 2. 对比本次变更是否违反文档中已声明的规则或约束
 3. 检测文档漂移：代码已变但文档未同步更新的情况
 4. **核心输出**：识别文档中可以用程序硬性约束的规则，输出对应的 hook 实现

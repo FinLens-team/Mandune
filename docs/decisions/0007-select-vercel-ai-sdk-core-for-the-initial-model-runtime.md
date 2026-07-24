@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-24
-- Ticket: MD-006；未来主动查询票据
+- Ticket: #30 / MD-008；未来主动查询票据
 
 ## Context
 
