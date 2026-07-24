@@ -6,6 +6,12 @@ import {
   SERVICE_NAME,
   type HealthResponse,
 } from "../contracts/index.js";
+import {
+  JourneyAnalysisService,
+  MemoryJourneyStore,
+  createJourneyRoutes,
+} from "../app/server/index.js";
+import { HistoryService } from "../history/index.js";
 import { PersistenceError } from "../persistence/errors.js";
 import {
   WorkspaceService,
@@ -22,8 +28,14 @@ function resolveClientRoot(moduleDir: string): string {
 export function createApp(
   config: Pick<ServerConfig, "version"> & Partial<Pick<ServerConfig, "port">>,
   workspaceService: WorkspaceService = new WorkspaceService(),
+  backend?: {
+    history: HistoryService;
+    journey: JourneyAnalysisService;
+  },
 ): Hono {
   const app = new Hono();
+  const history = backend?.history ?? new HistoryService();
+  const journey = backend?.journey ?? new JourneyAnalysisService(new MemoryJourneyStore(), history);
 
   app.onError((error, c) => {
     if (error instanceof PersistenceError) {
@@ -43,6 +55,11 @@ export function createApp(
   });
 
   app.route("/api/workspaces", createWorkspaceRoutes(workspaceService));
+  app.route("/api", createJourneyRoutes({
+    workspaces: workspaceService,
+    journey,
+    history,
+  }));
 
   // Unknown /api/* must not fall through to SPA HTML (would look like enumeration).
   app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));

@@ -27,7 +27,10 @@ export function startServer(
   // Opening and migrating durable storage happens before binding the port.
   // Any failure aborts startup; production never substitutes a memory store.
   const services = createDurableServices(config);
-  const app = createApp(config, services.workspaces);
+  const app = createApp(config, services.workspaces, {
+    history: services.history,
+    journey: services.journey,
+  });
 
   let server: ServerType;
   try {
