@@ -1,3 +1,5 @@
+import { ReviewPage } from "../features/review/ReviewPage";
+
 export function App() {
   return (
     <div className="shell">
@@ -15,23 +17,22 @@ export function App() {
         </div>
         <p className="workspace-status">
           <span className="status-dot" aria-hidden="true" />
-          工程基线已就绪
+          组合复核已开放
         </p>
       </header>
 
       <main id="main" className="main">
         <section className="intro" aria-labelledby="intro-heading">
           <p className="eyebrow">每日持仓复盘</p>
-          <h2 id="intro-heading">从确认的持仓与证据开始</h2>
+          <h2 id="intro-heading">先确认持仓，再进入证据边界</h2>
           <p className="intro-copy">
-            满懂将逐步接入组合整理、证据核对与每日复盘。当前版本提供稳定的应用入口与服务基线。
+            示例与手工录入进入同一复核页。只有可用行可写入不可变快照；四项约束允许全部未知。
           </p>
         </section>
 
-        <aside className="boundary" aria-labelledby="boundary-heading">
-          <h2 id="boundary-heading">当前边界</h2>
-          <p>尚未接入私人持仓、外部数据或模型服务。</p>
-        </aside>
+        <div className="review-column">
+          <ReviewPage />
+        </div>
       </main>
 
       <footer className="footer">

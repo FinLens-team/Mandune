@@ -9,6 +9,9 @@
   "include": [
     "src/client/**/*.ts",
     "src/client/**/*.tsx",
+    "src/features/**/*.ts",
+    "src/features/**/*.tsx",
+    "src/portfolio/**/*.ts",
     "src/contracts/**/*.ts",
     "vite.config.ts"
   ]
