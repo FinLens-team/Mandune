@@ -29,7 +29,13 @@ interface WorkspaceShellModule {
     onReduceMotionChange: (enabled: boolean) => void;
   }>;
   WorkspaceShell: ComponentType<{
+    activeAnalysis?: { analysisId: string };
+    draft?: PortfolioDraft;
     initialDraft?: PortfolioDraft;
+    onDraftChange?: (draft: PortfolioDraft) => void;
+    onReducedMotionChange?: (enabled: boolean) => void;
+    onResumeAnalysis?: (analysisId: string) => void;
+    reducedMotion?: boolean;
     workspace: WorkspacePublicStatus | null;
     onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
     onNavigateHistory: () => void;
@@ -79,6 +85,28 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain("查看持仓与约束");
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("登录");
+  });
+
+  it("accepts controlled journey state and exposes the active-analysis resume seam", async () => {
+    const { WorkspaceShell } = await loadWorkspaceShell();
+    const markup = renderToStaticMarkup(
+      createElement(WorkspaceShell, {
+        activeAnalysis: { analysisId: "analysis-active" },
+        draft: createExampleDraft(),
+        onDraftChange: vi.fn(),
+        onReducedMotionChange: vi.fn(),
+        onResumeAnalysis: vi.fn(),
+        reducedMotion: true,
+        workspace,
+        onStartAnalysis: vi.fn(),
+        onNavigateHistory: vi.fn(),
+        onNavigateAbout: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain('data-reduce-motion="true"');
+    expect(markup).toContain("已有复盘仍在进行，可返回同一任务继续查看。");
+    expect(markup).toContain("返回分析进度");
   });
 
   it("renders an account-free drawer with workspace retention and accessible controls", async () => {

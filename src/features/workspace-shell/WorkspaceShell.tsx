@@ -11,13 +11,19 @@ import { WorkspaceDrawer, type WorkspaceView } from "./WorkspaceDrawer.js";
 import "./styles.css";
 
 export interface WorkspaceShellProps {
+  activeAnalysis?: { analysisId: string };
+  draft?: PortfolioDraft;
   initialDraft?: PortfolioDraft;
+  onDraftChange?: (draft: PortfolioDraft) => void;
   workspace: WorkspacePublicStatus | null;
   latestCompleteTradingDay?: string;
   lastAnalysisAt?: string;
+  onReducedMotionChange?: (enabled: boolean) => void;
+  onResumeAnalysis?: (analysisId: string) => void;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   onNavigateHistory: () => void;
   onNavigateAbout: () => void;
+  reducedMotion?: boolean;
 }
 
 export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
@@ -25,15 +31,23 @@ export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
 }
 
 export function WorkspaceShell({
+  activeAnalysis,
+  draft: controlledDraft,
   initialDraft,
   lastAnalysisAt,
   latestCompleteTradingDay,
   onNavigateAbout,
   onNavigateHistory,
+  onDraftChange,
+  onReducedMotionChange,
+  onResumeAnalysis,
   onStartAnalysis,
+  reducedMotion: controlledReducedMotion,
   workspace,
 }: WorkspaceShellProps) {
-  const [draft, setDraft] = useState(() => initialDraft ?? createExampleDraft());
+  const [uncontrolledDraft, setUncontrolledDraft] = useState(
+    () => initialDraft ?? createExampleDraft(),
+  );
   const [view, setView] = useState<WorkspaceView>("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTrigger, setDrawerTrigger] = useState<HTMLElement | null>(null);
@@ -42,13 +56,17 @@ export function WorkspaceShell({
   const [pendingSnapshot, setPendingSnapshot] = useState<PortfolioSnapshot | null>(null);
   const [savedSnapshotId, setSavedSnapshotId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
+  const draft = controlledDraft ?? uncontrolledDraft;
+  const reduceMotion = controlledReducedMotion ?? uncontrolledReducedMotion;
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (media?.matches) setReduceMotion(true);
-  }, []);
+    if (controlledReducedMotion === undefined && media?.matches) {
+      setUncontrolledReducedMotion(true);
+    }
+  }, [controlledReducedMotion]);
 
   useEffect(() => {
     if (view === "home") homeHeadingRef.current?.focus();
@@ -76,6 +94,17 @@ export function WorkspaceShell({
     setMessage(null);
   }
 
+  function changeDraft(nextDraft: PortfolioDraft) {
+    if (controlledDraft === undefined) setUncontrolledDraft(nextDraft);
+    onDraftChange?.(nextDraft);
+    setSavedSnapshotId(null);
+  }
+
+  function changeReducedMotion(enabled: boolean) {
+    if (controlledReducedMotion === undefined) setUncontrolledReducedMotion(enabled);
+    onReducedMotionChange?.(enabled);
+  }
+
   return (
     <div className="workspace-shell" data-reduce-motion={reduceMotion || undefined}>
       <a className="skip-link" href="#workspace-main">
@@ -99,6 +128,7 @@ export function WorkspaceShell({
               </p>
               {lastAnalysisAt ? <p>最近一次复盘：{lastAnalysisAt}</p> : null}
               {savedSnapshotId ? <p>已保存输入快照：{savedSnapshotId}</p> : null}
+              {activeAnalysis ? <p>已有复盘仍在进行，可返回同一任务继续查看。</p> : null}
             </div>
 
             <button
@@ -127,6 +157,14 @@ export function WorkspaceShell({
                 <BriefcaseBusiness aria-hidden="true" size={20} />
                 查看持仓与约束
               </Button>
+              {activeAnalysis && onResumeAnalysis ? (
+                <Button
+                  onClick={() => onResumeAnalysis(activeAnalysis.analysisId)}
+                  variant="secondary"
+                >
+                  返回分析进度
+                </Button>
+              ) : null}
             </div>
             {message ? (
               <p className="workspace-shell__message" role="status">
@@ -138,10 +176,7 @@ export function WorkspaceShell({
           <PortfolioEditor
             draft={draft}
             onCancel={() => navigate("home")}
-            onChange={(nextDraft) => {
-              setDraft(nextDraft);
-              setSavedSnapshotId(null);
-            }}
+            onChange={changeDraft}
             onSave={(snapshot) => {
               setSavedSnapshotId(snapshot.snapshot_id);
               navigate("home");
@@ -168,7 +203,7 @@ export function WorkspaceShell({
         onNavigate={navigate}
         onNavigateAbout={onNavigateAbout}
         onNavigateHistory={onNavigateHistory}
-        onReduceMotionChange={setReduceMotion}
+        onReduceMotionChange={changeReducedMotion}
         open={drawerOpen}
         reduceMotion={reduceMotion}
         returnFocus={drawerTrigger}

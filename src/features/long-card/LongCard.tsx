@@ -13,15 +13,24 @@ import {
   ScrollText,
   ShieldAlert,
 } from "lucide-react";
-import type {
-  EvidenceRecord,
-  MaterialReference,
-  PersonalConstraints,
-  ProvenanceKind,
+import {
+  validatePortfolioSnapshot,
+  type AnalysisResult,
+  type EvidenceRecord,
+  type MaterialReference,
+  type PersonalConstraints,
+  type PortfolioSnapshot,
+  type ProvenanceKind,
 } from "../../contracts/index.js";
 import type { AnalysisFixture } from "../../fixtures/scenarios.js";
 import {
+  THEME_NARRATIVE_SCHEMA_VERSION,
+  validateOwnedAnalysisResult,
+  type ThemeModelOutput,
+} from "../../analysis/index.js";
+import {
   AnalysisStatus,
+  Badge,
   Button,
   DemoBadge,
   LockBadge,
@@ -40,8 +49,16 @@ const MAX_DRAG_OFFSET_PX = 52;
 
 export type LongCardFace = "narrative" | "evidence";
 
+export interface LongCardRuntimeInput {
+  analysis: AnalysisResult;
+  exampleLabel?: string;
+  isExample: boolean;
+  narrative?: ThemeModelOutput;
+  snapshot: PortfolioSnapshot;
+}
+
 export interface LongCardProps {
-  fixture: AnalysisFixture;
+  input: LongCardRuntimeInput;
   reducedMotion?: boolean;
 }
 
@@ -64,6 +81,62 @@ interface PendingScrollRestore {
 type GestureIntent = "horizontal" | "vertical" | null;
 
 const PREVIEW_ASSETS = [previewOne, previewTwo, previewThree] as const;
+
+export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRuntimeInput {
+  const { analysis } = fixture;
+  const narrative: ThemeModelOutput | undefined = analysis.status === "unavailable"
+    ? undefined
+    : {
+        schema_version: THEME_NARRATIVE_SCHEMA_VERSION,
+        rational_analysis_id: analysis.analysis_id,
+        theme_id: analysis.theme_id,
+        headline: "今日观象",
+        body_paragraphs: analysis.conclusions.map((item) => item.statement),
+        mascot_mood: "calm",
+        guidance_summary: analysis.advice.map((item) => item.statement).join("；"),
+        conclusion_ids: analysis.conclusions.map((item) => item.id),
+        advice_ids: analysis.advice.map((item) => item.id),
+      };
+
+  return {
+    analysis,
+    exampleLabel: fixture.example_label,
+    isExample: fixture.is_example,
+    ...(narrative ? { narrative } : {}),
+    snapshot: fixture.snapshot,
+  };
+}
+
+export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boolean {
+  const { analysis, narrative, snapshot } = input;
+  if (
+    !validatePortfolioSnapshot(snapshot).ok ||
+    !validateOwnedAnalysisResult(analysis).ok ||
+    analysis.status === "unavailable" ||
+    analysis.snapshot_id !== snapshot.snapshot_id ||
+    analysis.contracts_version !== snapshot.contracts_version ||
+    analysis.theme_id !== snapshot.theme_id ||
+    JSON.stringify(analysis.constraints) !== JSON.stringify(snapshot.constraints) ||
+    !narrative
+  ) {
+    return false;
+  }
+
+  return narrative.schema_version === THEME_NARRATIVE_SCHEMA_VERSION &&
+    narrative.rational_analysis_id === analysis.analysis_id &&
+    narrative.theme_id === analysis.theme_id &&
+    JSON.stringify(narrative.conclusion_ids) ===
+      JSON.stringify(analysis.conclusions.map((item) => item.id)) &&
+    JSON.stringify(narrative.advice_ids) ===
+      JSON.stringify(analysis.advice.map((item) => item.id)) &&
+    narrative.guidance_summary === analysis.advice.map((item) => item.statement).join("；");
+}
+
+function ExampleBadge({ input }: { input: LongCardRuntimeInput }) {
+  if (!input.isExample) return null;
+  if (!input.exampleLabel || input.exampleLabel === "示例数据") return <DemoBadge />;
+  return <Badge tone="demo">{input.exampleLabel}</Badge>;
+}
 
 /** Returns the target face only for an unambiguously horizontal swipe. */
 export function longCardFlipTarget(start: PointerStart, end: PointerStart): boolean | null {
@@ -148,14 +221,14 @@ function Doudou() {
   );
 }
 
-function CoverageSummary({ fixture }: { fixture: AnalysisFixture }) {
-  const { coverage } = fixture.analysis;
+function CoverageSummary({ input }: { input: LongCardRuntimeInput }) {
+  const { coverage } = input.analysis;
   const pending = coverage.uncovered_line_ids.length + coverage.unsupported_line_ids.length;
   return (
     <dl className="mandong-long-card__coverage" aria-label="本次分析覆盖">
       <div>
         <dt>确认持仓</dt>
-        <dd>{fixture.snapshot.lines.length} 项</dd>
+        <dd>{input.snapshot.lines.length} 项</dd>
       </div>
       <div>
         <dt>已覆盖</dt>
@@ -171,13 +244,23 @@ function CoverageSummary({ fixture }: { fixture: AnalysisFixture }) {
 
 interface FaceProps {
   faceId: string;
-  fixture: AnalysisFixture;
   headingId: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
+  input: LongCardRuntimeInput;
 }
 
-export function NarrativeFront({ faceId, fixture, headingId, headingRef }: FaceProps) {
-  const { analysis, snapshot } = fixture;
+interface NarrativeFaceProps extends FaceProps {
+  narrative: ThemeModelOutput;
+}
+
+export function NarrativeFront({
+  faceId,
+  headingId,
+  headingRef,
+  input,
+  narrative,
+}: NarrativeFaceProps) {
+  const { analysis, snapshot } = input;
   return (
     <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -185,12 +268,12 @@ export function NarrativeFront({ faceId, fixture, headingId, headingRef }: FaceP
           <p>
             复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
           </p>
-          <DemoBadge />
+          <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead">
           <div>
             <p className="mandong-long-card__theme">{OBSERVATION_THEME.label}</p>
-            <h2 id={headingId} ref={headingRef} tabIndex={-1}>观象长笺</h2>
+            <h2 id={headingId} ref={headingRef} tabIndex={-1}>{narrative.headline}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
         </div>
@@ -200,36 +283,38 @@ export function NarrativeFront({ faceId, fixture, headingId, headingRef }: FaceP
           <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
           <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
         </dl>
-        <CoverageSummary fixture={fixture} />
-        <div className="mandong-long-card__guide"><Doudou /></div>
+        <CoverageSummary input={input} />
+        <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
+          <Doudou />
+        </div>
       </header>
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-observations`}>
         <h3 id={`${headingId}-observations`}>核心观察</h3>
-        <p className="mandong-long-card__narration">{OBSERVATION_THEME.narration}</p>
-        {analysis.conclusions.length > 0 ? (
+        {narrative.body_paragraphs.length > 0 ? (
           <ol className="mandong-long-card__statements">
-            {analysis.conclusions.map((conclusion) => (
-              <li key={conclusion.id}>
-                <span className="mandong-long-card__provenance">{provenanceLabel(conclusion.provenance)}</span>
-                <strong>{conclusion.statement}</strong>
-                {conclusion.affected_by_unknowns ? <span>受未知项影响，结论范围已缩小。</span> : null}
-              </li>
-            ))}
+            {narrative.body_paragraphs.map((paragraph, index) => {
+              const conclusion = analysis.conclusions[index];
+              return (
+                <li key={narrative.conclusion_ids[index] ?? `${index}-${paragraph}`}>
+                  <span className="mandong-long-card__provenance">生成表达</span>
+                  <strong>{paragraph}</strong>
+                  {conclusion?.affected_by_unknowns ? <span>受未知项影响，结论范围已缩小。</span> : null}
+                </li>
+              );
+            })}
           </ol>
         ) : <p>当前没有可展示的物质性结论。</p>}
       </section>
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-directions`}>
         <h3 id={`${headingId}-directions`}>方向性建议</h3>
-        {analysis.advice.length > 0 ? (
+        {narrative.advice_ids.length > 0 ? (
           <ul className="mandong-long-card__statements">
-            {analysis.advice.map((advice) => (
-              <li key={advice.id}>
-                <strong>{advice.statement}</strong>
-                <span>{advice.urgency === "attention" ? "需要留意" : "常规关注"}，不形成精确交易指令。</span>
-              </li>
-            ))}
+            <li>
+              <strong>{narrative.guidance_summary}</strong>
+              <span>方向性关注，不形成精确交易指令。</span>
+            </li>
           </ul>
         ) : <p>当前证据只支持观察，不支持方向性建议。</p>}
       </section>
@@ -283,14 +368,14 @@ function Constraints({ constraints }: { constraints: PersonalConstraints }) {
   );
 }
 
-export function RationalEvidenceBack({ faceId, fixture, headingId, headingRef }: FaceProps) {
-  const { analysis, snapshot } = fixture;
+export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: FaceProps) {
+  const { analysis, snapshot } = input;
   return (
     <article className="mandong-long-card__face mandong-long-card__back" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
           <p>理性证据背面</p>
-          <DemoBadge />
+          <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
@@ -310,7 +395,7 @@ export function RationalEvidenceBack({ faceId, fixture, headingId, headingRef }:
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-inputs`}>
         <h3 id={`${headingId}-inputs`}>确认输入与覆盖</h3>
-        <CoverageSummary fixture={fixture} />
+        <CoverageSummary input={input} />
         <ul className="mandong-long-card__evidence-list">
           {snapshot.lines.map((line) => {
             const covered = analysis.coverage.covered_line_ids.includes(line.line_id);
@@ -424,11 +509,11 @@ export function RationalEvidenceBack({ faceId, fixture, headingId, headingRef }:
   );
 }
 
-function Unavailable({ fixture }: { fixture: AnalysisFixture }) {
-  const { analysis } = fixture;
+function Unavailable({ input }: { input: LongCardRuntimeInput }) {
+  const { analysis } = input;
   return (
     <section className="mandong-long-card mandong-long-card--unavailable" aria-labelledby="analysis-unavailable-heading">
-      <DemoBadge />
+      <ExampleBadge input={input} />
       <AnalysisStatus status="unavailable" />
       <h2 id="analysis-unavailable-heading">当前证据不足以生成观象长笺</h2>
       <p>{analysis.limitations.join(" ")}</p>
@@ -440,7 +525,26 @@ function Unavailable({ fixture }: { fixture: AnalysisFixture }) {
   );
 }
 
-export function LongCard({ fixture, reducedMotion = false }: LongCardProps) {
+function IncompleteLongCard({ input }: { input: LongCardRuntimeInput }) {
+  return (
+    <section
+      className="mandong-long-card mandong-long-card--unavailable"
+      aria-labelledby="analysis-incomplete-heading"
+      role="status"
+    >
+      <ExampleBadge input={input} />
+      <h2 id="analysis-incomplete-heading">观象长笺暂不可展示</h2>
+      <p>分析结果或主题叙事缺失、版本不匹配，未通过同一快照与同一结论校验。</p>
+      <h3>可以怎样恢复</h3>
+      <ul className="mandong-long-card__plain-list">
+        <li>返回分析状态，等待完整且已校验的结果。</li>
+        <li>若任务已经结束，可重新发起本次复盘。</li>
+      </ul>
+    </section>
+  );
+}
+
+export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const [face, setFace] = useState<LongCardFace>("narrative");
   const [pointerStart, setPointerStart] = useState<PointerStart | null>(null);
   const [gestureIntent, setGestureIntent] = useState<GestureIntent>(null);
@@ -452,7 +556,7 @@ export function LongCard({ fixture, reducedMotion = false }: LongCardProps) {
   const scrollOffsetsRef = useRef<FaceScrollOffsets>({ evidence: null, narrative: null });
   const pendingScrollRestoreRef = useRef<PendingScrollRestore | null>(null);
   const id = useId();
-  const { analysis } = fixture;
+  const { analysis, narrative } = input;
   const narrativeHeadingId = `${id}-narrative-heading`;
   const evidenceHeadingId = `${id}-evidence-heading`;
   const narrativeFaceId = `${id}-narrative-face`;
@@ -471,7 +575,11 @@ export function LongCard({ fixture, reducedMotion = false }: LongCardProps) {
   }, [face]);
 
   if (analysis.status === "unavailable") {
-    return <Unavailable fixture={fixture} />;
+    return <Unavailable input={input} />;
+  }
+
+  if (!narrative || !longCardRuntimeIsDisplayable(input)) {
+    return <IncompleteLongCard input={input} />;
   }
 
   function switchFace(targetFace: LongCardFace) {
@@ -560,9 +668,9 @@ export function LongCard({ fixture, reducedMotion = false }: LongCardProps) {
           onAnimationEnd={() => setTransitionDirection(null)}
         >
           {showEvidence ? (
-            <RationalEvidenceBack faceId={evidenceFaceId} fixture={fixture} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} />
+            <RationalEvidenceBack faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} />
           ) : (
-            <NarrativeFront faceId={narrativeFaceId} fixture={fixture} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} />
+            <NarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} narrative={narrative} />
           )}
         </div>
       </div>

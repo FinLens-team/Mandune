@@ -150,6 +150,7 @@ describe("analysis progress projection", () => {
       events,
       terminal: {
         analysis_id: "another-analysis",
+        displayable: true,
         status: "supported",
         terminal_reason: "completed",
       },
@@ -160,6 +161,7 @@ describe("analysis progress projection", () => {
       events,
       terminal: {
         analysis_id: "analysis-31",
+        displayable: true,
         reason: "分析达到硬截止，已停止未完成任务。",
         status: "limited",
         terminal_reason: "deadline",
@@ -171,6 +173,7 @@ describe("analysis progress projection", () => {
       events,
       terminal: {
         analysis_id: "analysis-31",
+        displayable: false,
         status: "unavailable",
         terminal_reason: "model_failure",
       },
@@ -186,6 +189,26 @@ describe("analysis progress projection", () => {
       phase: "terminal",
     });
     expect(unavailable).toMatchObject({ canOpenResult: false, canRetry: true, isTerminal: true });
+  });
+
+  it("does not infer result displayability from a successful status", () => {
+    const model = projectAnalysisProgress({
+      analysisId: "analysis-31",
+      connection: "connected",
+      events: [],
+      terminal: {
+        analysis_id: "analysis-31",
+        displayable: false,
+        status: "supported",
+        terminal_reason: "completed",
+      },
+    });
+
+    expect(model).toMatchObject({
+      canOpenResult: false,
+      currentMessage: "复盘完成，可查看结果",
+      isTerminal: true,
+    });
   });
 
   it("stops animation for reduced motion, background, offscreen, disconnect, and terminal states", () => {

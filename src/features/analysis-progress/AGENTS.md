@@ -9,7 +9,7 @@
 
 - 阶段顺序来自 `TASK_EVENT_STAGES`，阶段状态只来自对应真实事件；未收到事件时使用 `not_reported`，不得推断 `pending`、完成度或结果状态。
 - 重连时按 `event_id` 去重并保留输入流顺序。跨 `analysisId` 的事件和终态不能进入当前任务投影。
-- `supported`、`limited`、`observation_only` 可进入 S9；`unavailable` 只能显示原因与恢复路径。
+- 进入 S9 需要 controller 显式提供 `terminal.displayable=true`，表示同一任务已有已校验结果和匹配叙事；status 本身不构成展示证据。
 
 ## Gotchas & Decisions
 

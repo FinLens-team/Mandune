@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FIXTURES, type FixtureScenarioId } from "../../fixtures/scenarios.js";
-import { LongCard, ThemePreview } from "./LongCard.js";
+import { LongCard, ThemePreview, longCardRuntimeFromFixture } from "./LongCard.js";
 
 const SCENARIOS: Array<{ id: FixtureScenarioId; label: string }> = [
   { id: "supported_full", label: "证据支持" },
@@ -34,7 +34,7 @@ export function LongCardDemo() {
           </button>
         ))}
       </div>
-      <LongCard fixture={FIXTURES[scenario]} />
+      <LongCard input={longCardRuntimeFromFixture(FIXTURES[scenario])} />
     </section>
   );
 }
