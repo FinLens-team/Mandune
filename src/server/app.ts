@@ -6,6 +6,10 @@ import {
   SERVICE_NAME,
   type HealthResponse,
 } from "../contracts/index.js";
+import {
+  WorkspaceService,
+  createWorkspaceRoutes,
+} from "../workspace/index.js";
 import type { ServerConfig } from "./config.js";
 
 const startedAt = Date.now();
@@ -14,7 +18,10 @@ function resolveClientRoot(moduleDir: string): string {
   return path.resolve(moduleDir, "../client");
 }
 
-export function createApp(config: ServerConfig): Hono {
+export function createApp(
+  config: ServerConfig,
+  workspaceService: WorkspaceService = new WorkspaceService(),
+): Hono {
   const app = new Hono();
 
   app.get("/health", (c) => {
@@ -26,6 +33,11 @@ export function createApp(config: ServerConfig): Hono {
     };
     return c.json(body);
   });
+
+  app.route("/api/workspaces", createWorkspaceRoutes(workspaceService));
+
+  // Unknown /api/* must not fall through to SPA HTML (would look like enumeration).
+  app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const clientRoot = resolveClientRoot(moduleDir);
@@ -40,6 +52,10 @@ export function createApp(config: ServerConfig): Hono {
   );
 
   app.notFound(async (c) => {
+    if (c.req.path.startsWith("/api/")) {
+      return c.json({ error: "not_found" }, 404);
+    }
+
     if (c.req.method !== "GET" && c.req.method !== "HEAD") {
       return c.json({ error: "not_found" }, 404);
     }
