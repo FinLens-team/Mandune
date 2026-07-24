@@ -57,7 +57,9 @@ export function normalizePandaMarketRows(
     }
 
     const hasClose = typeof row.close === "number" && Number.isFinite(row.close);
-    const status: EvidenceStatus = hasClose ? "available" : "ambiguous";
+    // Runtime acceptance has not established the close unit. Preserve the
+    // observed value, but do not promote it to material analysis evidence.
+    const status: EvidenceStatus = "ambiguous";
 
     return {
       id: marketEvidenceId(request.lineId, row.date),
@@ -72,7 +74,7 @@ export function normalizePandaMarketRows(
       fetched_at: request.acquiredAt,
       status,
       limitations: hasClose
-        ? baseLimitations(row.date)
+        ? ["The close value cannot support material analysis until its unit is verified.", ...baseLimitations(row.date)]
         : ["PandaAI returned a row without a usable close value.", ...baseLimitations(row.date)],
       provenance: "observed",
     };

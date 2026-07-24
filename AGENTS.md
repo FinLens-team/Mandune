@@ -23,6 +23,7 @@
 - 当前接受的 ADR 为 0004-0008：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时，以及 Vite + React、Hono、Vitest 与 CI 的单包工程基线。旧 0001-0003 已退出当前契约。
 - ADR-0008 不选择耐久私人存储、匿名工作区定位/认证或公开部署：这些边界分别留给 #26 和 #35。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
+- `src/analysis/validation.ts` 接受契约允许的 date-only 市场观察日，只在调用旧共享校验器的副本中规范化为 UTC 零点；最终 `AnalysisResult` 必须保留供应商原始日期精度。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
 
 ## 已接受的技术决策
@@ -108,6 +109,8 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
 - `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
+- `src/analysis/`：确定性派生、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。
+- `src/model/`：框架中立 `ModelGateway` 与服务端 OpenAI-compatible AI SDK 适配器；不承载自主 Agent loop、供应商凭据日志或 UI 类型。
 - `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
 - `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。
