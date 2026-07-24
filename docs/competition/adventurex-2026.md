@@ -10,7 +10,7 @@
 | 用户提供的 Qoder 更新 | 用户提供的最新赛道文案，内容与本地快照一致，但尚未在最终提交时从实时 Portal 复核 | 用于准备材料，不能写成最终 Portal 已确认事实 |
 | 待补证据 | 只有计划、占位符或尚未从最终分支验证的主张 | 不得写成已完成、已上线或已获用户认可 |
 
-团队内部核验快照位于 `/root/STUDY/AdventureX备赛/public/`，其中 `sources.md` 记录来源、采集时间和缺口。官方原始入口是 [AdventureX 2026 终极指南](https://adventurex.feishu.cn/docx/FOhLdr0Y3okbATxWvBQcoFx0nEd) 和 [2026 赛道表](https://adventurex.feishu.cn/share/base/view/shrcnDtHB7f5NTUAwMeiIJhNnNd)。内部快照不表示官方页面之后没有更新。
+本文件的 2026-07-23 核验基于 [AdventureX 2026 终极指南](https://adventurex.feishu.cn/docx/FOhLdr0Y3okbATxWvBQcoFx0nEd) 和 [2026 赛道表](https://adventurex.feishu.cn/share/base/view/shrcnDtHB7f5NTUAwMeiIJhNnNd)。日期快照不表示官方页面之后没有更新。
 
 ## 已核验官方事实
 
@@ -114,7 +114,4 @@ United Portal 的官方快照要求填写或提供：
 
 - AdventureX 2026 终极指南：<https://adventurex.feishu.cn/docx/FOhLdr0Y3okbATxWvBQcoFx0nEd>
 - AdventureX 2026 赛道表：<https://adventurex.feishu.cn/share/base/view/shrcnDtHB7f5NTUAwMeiIJhNnNd>
-- AdventureX 2026 终极指南去敏快照：`/root/STUDY/AdventureX备赛/public/guide-rules.md`
-- 日程与资源快照：`/root/STUDY/AdventureX备赛/public/schedule-resources.md`
-- 赛道快照：`/root/STUDY/AdventureX备赛/public/tracks.md`
-- 来源和核验边界：`/root/STUDY/AdventureX备赛/public/sources.md`
+- 以上两项来源最近核验时间：2026-07-23（UTC+8）；正式提交前必须重新核验实时页面。

@@ -1,196 +1,142 @@
-# FinLens Delivery Tickets
+# 满懂交付票据计划
 
-## How to Use This Plan
+本文件为 GitHub Issues 提供小型纵向切片计划。将 `MD-xxx` 替换为真实 Issue 编号后保留依赖边；每张票据只有在可观察验收证据已附上时才能关闭。产品边界来自 [`../../PRODUCT.md`](../../PRODUCT.md)，可观察体验来自 [`../specs/demo-v1.md`](../specs/demo-v1.md)，分析与供应商限制分别来自 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 和 [`../integrations/pandaai-bocha.md`](../integrations/pandaai-bocha.md)。
 
-This file seeds GitHub Issues. Replace `FNL-xxx` dependencies with real Issue numbers and preserve the dependency edges. Close a ticket only after attaching its observable acceptance evidence.
+当前没有绑定技术基线。某个切片若必须作出难以逆转的技术选择，应先新增 ADR；不要用 Issue 或计划文字把候选框架、存储、认证、模型或部署方案写成既定事实。
 
-The sequence is tracer-bullet first: prove one honest public guest loop before broadening domain state, input methods, market coverage, analysis, or presentation. Privacy and advice rules apply to every ticket. No ticket below selects a framework, model provider, market-data vendor, storage engine, authentication protocol, or deployment API; create an evidence-backed ADR before such a choice becomes binding.
+## 依赖图
 
-## Dependency Graph
-
-| ID | Deliverable | Depends on |
+| ID | 交付物 | 依赖 |
 |---|---|---|
-| FNL-000 | Phase 0 technical and deployment ADR | None |
-| FNL-001 | Phase 0 public guest tracer bullet | FNL-000 |
-| FNL-002 | Source-account and holding model | FNL-001 |
-| FNL-003 | Manual entry, confirmation, and snapshots | FNL-002 |
-| FNL-004 | Screenshot-assisted drafts and recovery | FNL-003 |
-| FNL-005 | Market-data adapter integration | FNL-001, FNL-003 |
-| FNL-006 | Limited-analysis and directional engine | FNL-003, FNL-005 |
-| FNL-007 | Card themes with invariant reasoning | FNL-006 |
-| FNL-008 | Private real-user workspace and deletion | FNL-004, FNL-006 |
-| FNL-009 | NFC and QR field-readiness hardening | FNL-001, FNL-008 |
-| FNL-010 | Complete MVP acceptance record | FNL-007, FNL-008, FNL-009 |
+| MD-001 | 确认的完整首次使用 Demo | None |
+| MD-002 | PandaAI 与 Bocha 权限探测 | None |
+| MD-003 | 版本化 fixture 驱动分析路径 | MD-001 |
+| MD-004 | 匿名私密工作区与组合导入 | MD-003 |
+| MD-005 | PandaAI 与 Bocha 证据接入 | MD-002, MD-004 |
+| MD-006 | 证据边界内的 Agent Team | MD-005 |
+| MD-007 | 观测台、观象长笺与历史 | MD-006 |
+| MD-008 | 公共验收与比赛证据 | MD-007 |
 
-## FNL-000: Select the Phase 0 Technical and Deployment Baseline
+## MD-001：确认的完整首次使用 Demo
 
-**Scenario:** A builder needs a minimal, reproducible way to deliver the public mobile tracer bullet without silently binding the long-term product to an unreviewed stack or service.
+**场景：** 新用户从普通入口依次选择东方观象主题、示例组合、单页复核、四项约束和显式生成，并在无真实供应商或模型调用的条件下看见可理解的结果占位状态。
 
-**Scope:** Compare the smallest credible frontend/runtime, test, and HTTPS deployment options against the Phase 0 acceptance criteria; record the selected baseline and its replacement boundary in an ADR. Include local development, automated verification, secret handling, public deployment, rollback, and Qoder as the current competition build constraint.
+**范围：** 建立一个可操作的首次使用纵向骨架，包含一个可选主题、三个锁定预览、兜兜、透明示例、手工录入入口、组合草稿单页、`unknown/not decided` 约束、生成动作和可返回的结果状态。实现可以使用内部确定性数据，但不得将它写成 PandaAI、Bocha 或实时数据。
 
-**Non-goals:** Selecting the final production architecture, real-user authentication, persistent financial storage, a market-data vendor, an AI model provider, or infrastructure for later MVP phases.
+**非目标：** 私密数据持久化、截图提取、供应商请求、模型或 Agent 编排、完整观测台、完整长笺或历史。
 
-**Acceptance:**
+**验收：**
 
-- The ADR compares at least two viable baselines using delivery speed, mobile/browser support, testability, deployment/rollback, secret exposure, Qoder compatibility, and migration cost.
-- The selected baseline can serve one HTTPS route, run locally from documented commands, and support deterministic normal and failed-adapter fixtures.
-- The design keeps the market adapter, analysis contract, and presentation contract replaceable.
-- The runtime has no hidden Qoder dependency, local reproduction works without Qoder, and competition build evidence is redacted before storage or attachment.
-- No real financial data or long-lived secret is required for Phase 0.
-- Repository commands and durable project knowledge are updated after the baseline is accepted.
+- 375px 触控和桌面用户均能从普通入口完成主题、草稿复核、四项约束与显式生成。
+- 三种持仓来源进入同一复核流程；尚未实现的路径清楚说明状态，不伪造导入成功。
+- 示例持续标注“示例数据”，主题和兜兜不改变任何确定性结果。
+- 页面不依赖悬停、动画、截图上传或横向手势；未知约束不会阻止继续。
 
-## FNL-001: Prove the Phase 0 Public Guest Loop
+## MD-002：PandaAI 与 Bocha 权限探测
 
-**Scenario:** A judge opens one public HTTPS route on a 375px phone, makes the visible theme and simulated-demo choices, reads one daily card, inspects its evidence, and deliberately observes evidence failure.
+**场景：** 团队需要知道项目凭据实际允许哪些最小请求，才能决定哪些供应商能力可以进入产品路径。
 
-**Scope:** Deliver a controlled deterministic seed selection from a versioned simulated whitelist, one implemented theme variant paired with the canonical rational evidence view, a vendor-neutral market adapter contract backed by a deterministic fixture or one implementation, a narrative front, an evidence back, directional guidance, timestamps, a risk notice, a forced adapter-failure state, and standards-compatible QR/NFC URL handoffs to the same public route.
+**范围：** 在受保护的服务边界，以脱敏测试资产和最小查询分别探测 PandaAI 列出的五个方法与 Bocha `POST /v1/web-search`。记录鉴权、请求约束、响应字段、观察/获取时间、空结果、限流、超时和错误，不提交 token、完整请求或私人组合。
 
-**Non-goals:** Real-user accounts, persistence, screenshot extraction, broad asset coverage, multiple finished themes, authentication, production NFC objects, or a final vendor choice.
+**非目标：** 接入用户分析、把未探测方法标为可用、把搜索摘要当事实、在 UI 宣传已经接通供应商。
 
-**Acceptance:**
+**验收：**
 
-- From a fresh 375px session, the card is reachable through no more than the visible theme and `Try simulated demo` choices.
-- `Simulated` remains visible on the portfolio, narrative front, and evidence back.
-- A visible seed or scenario identifier and whitelist version reproduce the same snapshot; unconstrained random assets or values cannot enter the demo.
-- The evidence back shows snapshot time, evidence cutoff, dated evidence, main derivation, assumptions, limitations, and risk notice.
-- The theme front and rational representation use identical fixture inputs, evidence, calculation output, coverage, and guidance. Runtime switching between multiple themes is deferred to FNL-007.
-- Forced adapter failure returns limited or unavailable analysis without fabricated current values.
-- The deterministic Phase 0 path does not require a model call.
-- The flow works with touch and keyboard, without personal data or NFC hardware.
-- QR, NFC URL handoff, and an ordinary link resolve to the same generic HTTPS route; decoded payloads contain no personal financial data, credentials, or sensitive parameters.
+- PandaAI 的每个列出方法分别记录 `available`、无权限或不适用，不以 SDK 方法名代替结果。
+- Bocha 记录 Bearer 鉴权、`query`、`freshness`、`summary`、`count` 和本地拒绝 `count > 50` 的证据。
+- 记录可安全公开的字段与时点语义、资产身份样本和错误映射；日志、Issue 附件和 fixture 不含凭据或完整私人持仓。
+- 产出只更新运行验收事实，不越过证据宣称基金、ETF 或 A 股已覆盖。
 
-## FNL-002: Establish Source-Account and Holding State
+## MD-003：版本化 Fixture 驱动分析路径
 
-**Scenario:** A user represents where each holding came from without implying live brokerage connectivity or verified balances.
+**场景：** 用户可以稳定复现正常、有限和不可用路径，并核对一条结果为何成立或不能成立。
 
-**Scope:** Define source accounts, holding drafts, confirmed versions, provenance, coverage, and lifecycle rules.
+**范围：** 把 MD-001 的内部数据替换为版本化、透明的 fixture，按分析契约生成 `supported`、`limited`、`observation_only` 与 `unavailable` 状态。fixture 显示资产身份、来源、观察时间、获取时间、证据截止时点、缓存状态和未知项。
 
-**Acceptance:**
+**非目标：** 真实 PandaAI/Bocha 请求、模型生成、私人工作区、截图提取或将 fixture 称为供应商缓存。
 
-- Two source accounts can coexist and every holding references one.
-- Draft, confirmed, rejected, unresolved, and unsupported states are distinct; zero and unknown remain distinct.
-- Removing an account reports affected drafts, holdings, snapshots, and analyses before deletion.
-- No state implies institution verification or live synchronization.
+**验收：**
 
-## FNL-003: Deliver Manual Entry, Confirmation, and Immutable Snapshots
+- 固定 fixture 版本和场景标识可重现相同确认输入、派生结果、证据和状态。
+- 每项物质性结论能回到确认输入、派生结果或 fixture 内已核验的带日期证据。
+- 缺失、过期、冲突、含糊和不支持样本不会制造当前值；普通入口可到达有限与不可用状态。
+- 示例数据、测试 fixture 与未来实时结果有持续可见的区分。
 
-**Scenario:** A user enters holdings, confirms usable data, provides four constraints, and creates a versioned snapshot without changing earlier analyses.
+## MD-004：匿名私密工作区与组合导入
 
-**Scope:** Manual drafts, edit/reject/confirm, provenance, the four constraints including `unknown`, and immutable snapshots.
+**场景：** 用户在一台设备上录入、复核和删除自己的组合，而公开入口与其他匿名工作区不能读到这些数据。
 
-**Acceptance:**
+**范围：** 实现 30 天匿名私密工作区、手工录入和截图提取草稿、单页逐行/批量确认、不可变快照、四项约束、主动删除和到期清理。截图在成功、失败或中止后删除，后续流程只使用复核后的结构化数据。
 
-- Only confirmed row versions enter a snapshot; editing cannot mutate an existing snapshot.
-- Confirmed rows show account, entry method, observation date, confirmation state, and unresolved fields.
-- A snapshot freezes holding versions, source references, valuation basis, constraints, creation time, and coverage.
-- Unsupported and unvalued holdings remain visible; exclusions are disclosed.
-- Repeated saves are idempotent and visibly distinguish saved, pending, and failed states.
+**非目标：** 账户注册、跨设备恢复、券商连接、公开分享、自动同步或把截图交给分析模型。
 
-## FNL-004: Add Screenshot-Assisted Drafts and Confirmation
+**验收：**
 
-**Scenario:** A user uploads a holdings screenshot, receives uncertain draft rows, corrects or rejects them, and confirms only reviewed data.
+- 两个工作区及普通公开入口相互隔离，界面显示最后活动和预计删除时间。
+- 未确认、含糊和不支持行保持未知；批量确认不会把它们写入快照。
+- 截图路径披露外部处理和删除规则，提取失败仍保留可修正草稿与手工回退。
+- 原图不进入历史；隔离工作区历史可以保存用户确认的结构化快照。公开 URL、默认日志、分析事件、fixture、测试快照和错误记录不含原图、完整私人组合、身份、账户或凭据。
 
-**Scope:** Sensitive-data disclosure, upload, extraction to drafts, uncertainty, provenance, recovery, manual fallback, and disclosed image retention.
+## MD-005：PandaAI 与 Bocha 证据接入
 
-**Acceptance:**
+**场景：** 用户发起分析后，系统能以已运行验收的字段取得结构化市场证据，并以已核验的一手来源使用事件证据。
 
-- Upload disclosure states sensitivity, processing purpose, retention, and external processing where applicable.
-- A simulated screenshot creates drafts, with ambiguous fields unresolved.
-- No row enters a snapshot before explicit confirmation.
-- Partial extraction preserves recoverable work and offers retry and manual entry.
-- Raw screenshots and unrelated text do not enter public assets, logs, analytics, fixtures, or Issues.
+**范围：** 在 MD-002 的实际权限范围内接入 PandaAI 与 Bocha，规范化供应商结果为中立证据记录，处理资产身份、字段、单位、观察时间、获取时间、修订、冲突、空结果、限流、超时和失败。Bocha 只发现候选事件，物质性事件回到一手来源核验。
 
-## FNL-005: Integrate a Typed Market-Data Adapter
+**非目标：** 盘中或实时行情承诺、用搜索摘要替代一手来源、未探测方法或资产覆盖、让供应商专有字段进入分析契约。
 
-**Scenario:** Analysis requests normalized, dated evidence without depending on one vendor or treating stale retrieval as current truth.
+**验收：**
 
-**Scope:** Implement the adapter contract for the MVP asset subset, identity resolution, normalized observations, provenance, per-measure freshness/staleness policies, revisions, contradictions, timestamps, caveats, and typed states.
+- 已接入范围仅包含 MD-002 实际验证通过的权限、字段和资产样本；其余范围明确标为未知或不支持。
+- 每条数据保留资产身份、来源定位、状态、观察时间和获取时间；获取时间不冒充市场时间。
+- 可用、过期、含糊、不支持、冲突、限流和失败会传入分析的类型化状态。
+- 任何用于结论的事件都有可定位的权威来源；未核验 Bocha 结果保持 `unverified`。
 
-**Acceptance:**
+## MD-006：证据边界内的 Agent Team
 
-- Contract tests cover `available`, `stale`, `ambiguous`, `unsupported`, `rate-limited`, and `failed`.
-- Every requested measure has a documented freshness and staleness policy.
-- Responses distinguish observation time from retrieval time; include a source locator or source class; and retain normalization, units, and asset-identity evidence.
-- Fixtures cover upstream revisions and contradictory evidence without silently overwriting prior observations.
-- Unsupported or ambiguous identities never receive invented values.
-- Test and diagnostic logs contain no credentials.
-- Replacing the adapter does not change portfolio, evidence, snapshot, or card contracts.
+**场景：** 系统在明确生成后，把完整确认快照和已规范化证据交给受约束的 Agent Team，得到可验证的理性分析而非未经核对的叙事。
 
-## FNL-006: Build the Limited-Analysis and Directional Engine
+**范围：** 实现分析阶段编排、最小 Agent 角色、输入脱敏、可复算派生结果、版本化输出结构、证据引用检查、建议策略、有限重试与 90 秒目标/180 秒硬截止。Agent 只能看到分析契约允许的结构化输入，不展示思维链。
 
-**Scenario:** A user receives only conclusions supported by the confirmed snapshot, four constraints, and dated evidence.
+**非目标：** 主动查询、自由追问、精确交易指令、让 Agent 自行发现或补写证据、把 Agent 活跃度作为预测信号。
 
-**Scope:** Version-bound claims, calculations or rule outcomes, unknowns, evidence sufficiency, coverage, bounded guidance, risk notice, conditional model integration, and recovery across supported, limited, observation-only, and unavailable states.
+**验收：**
 
-**Acceptance:**
+- Agent 输入包含完整已确认结构化持仓、约束、规范化证据和派生结果，不含原图、身份、账户、工作区凭据或供应商密钥。
+- `observed`、`derived` 与 `generated` 保持可区分；每项物质性结论都有输入或已核验证据引用。
+- 结构错误、缺证、越界建议、正反面不一致、超时或畸形输出不会显示部分正常结果；有限重试后诚实降级。
+- 策略测试拒绝精确金额、比例、价格、时点、收益保证和代客操作；主题不改变理性结果。
 
-- Every material claim maps to confirmed input, derived result, or dated evidence.
-- Observed, derived, and generated content is labeled distinctly.
-- Guidance stays directional and names its triggering constraint or evidence.
-- Wording becomes more direct or urgent only for a supported risk-boundary breach, names the breached boundary, and never becomes an exact trade command.
-- Missing, stale, unsupported, ambiguous, contradictory, or unavailable inputs narrow dependent conclusions.
-- Coverage and evidence-sufficiency states explicitly do not represent market-outcome probability and are not exposed as `high confidence` prediction promises.
-- When nothing material is supportable, the result explains why and how to recover rather than showing a normal card.
-- If a model is used, its named schema/version is validated; tests cover timeout, malformed output, bounded retry, input/output redaction, external-processing disclosure, and no normal card after model failure. Deterministic paths may omit model calls.
-- Policy tests reject exact personalized quantities, percentages, prices, times, guarantees, and transaction actions.
+## MD-007：观测台、观象长笺与历史
 
-## FNL-007: Add Card Themes Without Changing Reasoning
+**场景：** 用户可以看见真实分析进度、阅读一张绑定快照与证据时点的长笺、切换到证据背面，并在 30 天内分辨旧复盘与当前状态。
 
-**Scenario:** A user changes presentation theme while receiving the same financial conclusions for identical inputs.
+**范围：** 将 MD-006 的真实任务状态接到 Agent 观测台；实现正反面共享同一分析版本的观象长笺、按钮与手势翻面、覆盖/未知/风险呈现，以及不可变历史记录。东方观象是表现层，兜兜仅作为观察和承认未知的向导。
 
-**Scope:** Accessible default, theme change, fixed mascot identity, narrative fronts, evidence backs, and presentation-only rerendering.
+**非目标：** 多个可用主题、用动画证明进度、隐藏测试路线、把历史重算为当前结论或主动问答。
 
-**Acceptance:**
+**验收：**
 
-- Calculations, evidence, coverage, risk classification, and guidance remain equal across themes.
-- Theme changes affect only vocabulary, artwork, pacing, and presentation.
-- The mascot remains recognizable in identity, character, and responsibility.
-- The themed explanation of holding-linked financial concepts is comprehensible to target novices and does not alter the rational conclusion; observable evidence is required, but no formal user-study process is mandated.
-- Risk notices, provenance, unknowns, timestamps, coverage, and simulated/real status remain legible.
+- 观测台显示真实阶段、覆盖、等待、有限重试和失败，不显示思维链；离开与返回不会制造进度。
+- 长笺正面和理性背面引用同一快照、截止时点、结论、覆盖、未知项和建议，按钮可替代横向拖动。
+- 375px 触控下纵向滚动优先，减少动态效果下仍可完整阅读和翻面。
+- 修改组合或约束会创建新组合快照；主题变化只创建或选择表现版本，不改变理性分析，也不能静默改写历史复盘。
 
-## FNL-008: Enforce Private Workspaces and Safe Deletion
+## MD-008：公共验收与比赛证据
 
-**Scenario:** A user can use and delete a private workspace while visitors with only a public entry URL see no personal content.
+**场景：** 评委或外部复核者能从普通公开入口验证 Demo V1 的完整、有限和失败路径，并看到只由最终分支支撑的 AdventureX 与 Qoder 协作材料。
 
-**Scope:** Minimum private-session boundary, disclosure, private access, redaction, deletion, retention exceptions, and fail-closed behavior.
+**范围：** 完成公开可达性、桌面和 375px 浏览器验收、隐私审计、无痕入口检查、正常/有限/不可用录屏、fixture 与实时证据边界检查、研究状态声明、提交素材和脱敏 Qoder 协作证据。最终提交前复核实时 Portal。
 
-**Acceptance:**
+**非目标：** 把计划、归档 Qoder 产物、未完成研究或供应商资料写成产品完成、用户认可、实时接通或比赛获奖证据。
 
-- Unauthenticated access, search preview, and generic entry URL reveal no private data.
-- Expired sessions hide private data and sensitive pending actions fail closed.
-- Public assets, logs, analytics, errors, and previews contain no raw screenshots, credentials, account identifiers, or full portfolio payloads.
-- Deletion returns a visible result; failures and exceptions state remaining scope and recovery.
+**验收：**
 
-## FNL-009: Harden NFC and QR Field Readiness
+- 普通入口可完成 Demo V1 的首次使用、私密工作区、正常路径和降级路径；没有评委专用路由。
+- 验收记录覆盖 375px、键盘、触控、减少动态效果、隐私边界、180 秒硬截止、供应商/模型失败和历史不可变性。
+- 比赛材料只引用最终分支、实际测试、脱敏录屏和真实人工协作记录；Qoder archive commit `8c57fad` 明确标为未验证的中断产物。
+- 提交前重新核验 AdventureX Portal 的规则、字段、赛道名称和截止时间，并检查所有素材不含个人金融数据、凭据或无证据主张。
 
-**Scenario:** After the Phase 0 handoff works, the team needs repeatable field evidence that common devices, printed QR, and the selected NFC tag open the same mobile entry without exposing private data.
+## 不在本计划内
 
-**Scope:** Harden and revalidate the existing generic handoff across target phones and browsers, document NFC writing and booth setup, verify printed QR readability and ordinary-link fallback, and repeat negative private-route checks after the real-user workspace exists.
-
-**Acceptance:**
-
-- All three entry modes reach the same useful state.
-- Encoded URLs contain no portfolio data, account identifiers, credentials, sensitive parameters, or private authorization.
-- Lack of NFC, camera, or QR scanning does not block the ordinary URL and manual flow.
-- A forwarded generic entry URL cannot reveal a private workspace.
-
-## FNL-010: Assemble the Complete MVP Acceptance Record
-
-**Scenario:** A reviewer verifies the full guest and real-user loops from confirmed inputs to evidence, bounded guidance, degradation, privacy, and recovery.
-
-**Scope:** Run the complete acceptance matrix, repair integration defects within existing contracts, and publish the evidence in MVP Specification Section 9.
-
-**Acceptance:**
-
-- Every Phase 0 and MVP criterion has a linked passing test or observable artifact.
-- The real-user flow works at 375px without requiring hover, animation, NFC, QR, camera, or screenshot extraction.
-- Evidence includes guest and real-user recordings, snapshot transition, normal and limited cards, adapter tests, and privacy verification.
-- Evidence includes documented local reproduction without Qoder and redacted Qoder competition-build evidence.
-- A claim-to-evidence audit covers every material statement on the demonstrated card.
-- Open failures remain blocking Issues; MVP is not marked complete while criteria lack evidence.
-
-## Optional Post-MVP Candidates
-
-Do not schedule these until FNL-010 is accepted. Each needs a fresh product decision and updated acceptance criteria: Active Query, institution connectors, intraday alerts, expanded assets or jurisdictions, longitudinal calibration, collaboration, additional themes or native clients, and production NFC objects or private expiring deep links.
-
-Trade execution, automatic rebalancing, custody, guaranteed returns, and exact personalized trade instructions remain outside the product contract.
+主动查询、连续追问、聊天式投资问答、实时行情、盘中监控、券商连接、自动同步、交易执行、跨设备恢复、社交分享和三个锁定主题的完整实现均不属于 Demo V1。任何后续项目需要新的产品决策、规格和验收。

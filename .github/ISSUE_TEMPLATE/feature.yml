@@ -1,5 +1,5 @@
 name: Product increment
-description: Propose an observable FinLens product increment
+description: Propose an observable Mandong product increment
 title: "[Feature]: "
 labels:
   - feature
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Read `PRODUCT.md`, `CONTEXT.md`, `docs/specs/mvp.md`, and all accepted ADRs before filing. Issues are delivery tickets; product-contract changes belong in the specification first.
+        Read `PRODUCT.md`, `CONTEXT.md`, `DESIGN.md`, `docs/specs/demo-v1.md`, `docs/specs/analysis-contract.md`, `docs/integrations/pandaai-bocha.md`, and all accepted ADRs before filing. Issues are delivery tickets; product-contract changes belong in the relevant contract first.
   - type: textarea
     id: scenario
     attributes:
@@ -19,7 +19,7 @@ body:
     id: evidence
     attributes:
       label: Current evidence
-      description: Link the relevant specification section, ADR, test, recording, or observed behavior.
+      description: Link the relevant Demo, analysis, integration, design, ADR, test, recording, or observed behavior.
     validations:
       required: true
   - type: textarea
@@ -54,7 +54,7 @@ body:
     id: boundaries
     attributes:
       label: Privacy and advice boundaries
-      description: Explain how the increment protects personal financial data, simulated-data labels, bounded guidance, and unknowns.
+      description: Explain how the increment protects private workspace data, screenshots, provider and LLM inputs, bounded guidance, theme invariants, and unknowns.
     validations:
       required: true
   - type: textarea

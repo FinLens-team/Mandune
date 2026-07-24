@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible behavior that violates the FinLens contract
+description: Report reproducible behavior that violates the Mandong contract
 title: "[Bug]: "
 labels:
   - bug
@@ -12,7 +12,7 @@ body:
     id: contract
     attributes:
       label: Violated contract
-      description: Link the relevant product, MVP, ADR, Issue, or documented expected behavior.
+      description: Link the relevant product, Demo, analysis, design, integration, ADR, Issue, or documented expected behavior.
     validations:
       required: true
   - type: textarea
