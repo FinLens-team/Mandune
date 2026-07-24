@@ -1,5 +1,5 @@
 import type { EvidenceRecord, PersonalConstraints } from "../contracts/index.js";
-import { getFixture } from "../fixtures/index.js";
+import { FIXTURES } from "../fixtures/scenarios.js";
 import {
   DEMO_EXPERIENCE_SOURCE_LABEL,
   type DemoExperienceHolding,
@@ -51,7 +51,7 @@ function findAvailableEvidence(
 }
 
 function fixtureCandidates(): DemoExperienceHolding[] {
-  const fixture = getFixture("supported_full");
+  const fixture = FIXTURES.supported_full;
   return fixture.snapshot.lines.flatMap((line) => {
     if (line.asset_class !== "a_share" && line.asset_class !== "etf") {
       return [];
