@@ -21,6 +21,7 @@
   "include": [
     "src/contracts/**/*.ts",
     "src/fixtures/**/*.ts",
+    "src/portfolio/**/*.ts",
     "tests/**/*.ts",
     "vitest.config.ts",
     "vite.config.ts"
