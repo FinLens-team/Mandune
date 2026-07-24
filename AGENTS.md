@@ -78,7 +78,7 @@
 - 核心流程覆盖桌面和 375px 触控视口，并提供不依赖 hover、动画、截图上传或横向手势的完整替代路径。
 - 同时验证正常、有限、仅观察、不可用和恢复路径；硬截止后不得留下仍运行的供应商或生成任务。
 - 供应商测试覆盖鉴权、可用、过期、含糊、不支持、冲突、限流、空结果、超时和失败，并检查日志不含凭据或私人组合载荷。
-- 主题对照必须证明证据、派生结果、覆盖、风险和建议一致。Agent 观测台状态必须来自真实任务，不按计时器伪造。
+- 主题对照必须证明证据、派生结果、覆盖、风险和建议一致。单 agent 分析等待态必须来自真实任务，不按计时器伪造。
 - 比赛完成声明只使用最终分支、浏览器验收和脱敏协作证据。Qoder 记录不能替代产品验证。
 
 ## 命令
@@ -104,6 +104,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
+- `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
 - `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
 - `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。

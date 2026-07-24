@@ -1,6 +1,6 @@
 # 满懂 Demo V1 交付图
 
-实际开发任务位于 GitHub milestone [`Demo V1`](https://github.com/FinLens-team/finlens/milestone/1)。产品边界来自 [`../../PRODUCT.md`](../../PRODUCT.md)，体验、分析和供应商约束分别来自 [`../specs/demo-v1.md`](../specs/demo-v1.md)、[`../specs/analysis-contract.md`](../specs/analysis-contract.md) 和 [`../integrations/pandaai-bocha.md`](../integrations/pandaai-bocha.md)。
+实际开发任务位于 GitHub milestone [`Demo V1`](https://github.com/FinLens-team/finlens/milestone/1)。产品边界来自 [`../../PRODUCT.md`](../../PRODUCT.md)，体验、视觉、分析和供应商约束分别来自 [`../specs/demo-v1.md`](../specs/demo-v1.md)、[`../design/demo-v1-visual-system.md`](../design/demo-v1-visual-system.md)、[`../specs/analysis-contract.md`](../specs/analysis-contract.md) 和 [`../integrations/pandaai-bocha.md`](../integrations/pandaai-bocha.md)。
 
 ## 自助认领
 
@@ -29,30 +29,41 @@
 
 ## 依赖图
 
-| Issue | 交付物 | 依赖 | 初始状态 | 独占责任边界 |
+| Issue | 交付物 | 依赖 | 当前状态 | 独占责任边界 |
 |---|---|---|---|---|
-| [#23](https://github.com/FinLens-team/finlens/issues/23) | MD-001 技术基线与可运行脚手架 | 无 | Ready | 根工具链、bootstrap、smoke、ADR |
-| [#24](https://github.com/FinLens-team/finlens/issues/24) | MD-002 PandaAI/Bocha 权限探测 | 无 | Ready | `tools/provider-probe`、运行验收文档 |
-| [#25](https://github.com/FinLens-team/finlens/issues/25) | MD-003 版本化契约与确定性 fixture | #23 | Blocked | `src/contracts`、`src/fixtures`、契约测试 |
-| [#26](https://github.com/FinLens-team/finlens/issues/26) | MD-004 匿名私密工作区 | #25 | Blocked | `src/workspace`、工作区迁移与测试 |
-| [#27](https://github.com/FinLens-team/finlens/issues/27) | MD-005 持仓复核与四项约束 | #25 | Blocked | `src/portfolio`、review、constraints |
-| [#28](https://github.com/FinLens-team/finlens/issues/28) | MD-006 多模态截图草稿与删除 | #27 | Blocked | screenshot-import、extraction |
-| [#29](https://github.com/FinLens-team/finlens/issues/29) | MD-007 中立市场与事件证据 | #24、#25 | Blocked | providers、evidence |
-| [#30](https://github.com/FinLens-team/finlens/issues/30) | MD-008 证据边界内 Agent Team | #29、#25 | Blocked | analysis |
-| [#31](https://github.com/FinLens-team/finlens/issues/31) | MD-009 真实 Agent 观测台 | #30 | Blocked | observatory |
-| [#32](https://github.com/FinLens-team/finlens/issues/32) | MD-010 东方观象长笺、兜兜与主题 | #25 | Blocked | long-card、theme、`assets/doudou` |
+| [#23](https://github.com/FinLens-team/finlens/issues/23) | MD-001 技术基线与可运行脚手架 | 无 | Closed | 根工具链、bootstrap、smoke、ADR |
+| [#24](https://github.com/FinLens-team/finlens/issues/24) | MD-002 PandaAI/Bocha 权限探测 | 无 | Closed | `tools/provider-probe`、运行验收文档 |
+| [#25](https://github.com/FinLens-team/finlens/issues/25) | MD-003 版本化契约与确定性 fixture | #23 | Closed | `src/contracts`、`src/fixtures`、契约测试 |
+| [#26](https://github.com/FinLens-team/finlens/issues/26) | MD-004 匿名私密工作区 | #25 | Closed | `src/workspace`、工作区迁移与测试 |
+| [#27](https://github.com/FinLens-team/finlens/issues/27) | MD-005 持仓复核与四项约束 | #25 | Closed | `src/portfolio`、review、constraints |
+| [#28](https://github.com/FinLens-team/finlens/issues/28) | MD-006 多模态截图草稿与删除 | #27 | Closed | screenshot-import、extraction |
+| [#29](https://github.com/FinLens-team/finlens/issues/29) | MD-007 中立市场与事件证据 | #24、#25 | Closed | providers、evidence |
+| [#30](https://github.com/FinLens-team/finlens/issues/30) | MD-008 证据边界内单 agent 分析 | #29、#25 | Ready | `analysis`、`model` |
+| [#31](https://github.com/FinLens-team/finlens/issues/31) | MD-009 真实单 agent 分析进度 | #30、#46 | Blocked | `analysis-progress` |
+| [#32](https://github.com/FinLens-team/finlens/issues/32) | MD-010 东方观象长笺、兜兜与主题 | #25 | Closed | long-card、theme |
 | [#33](https://github.com/FinLens-team/finlens/issues/33) | MD-011 不可变分析历史 | #26、#30 | Blocked | history、历史迁移与测试 |
-| [#34](https://github.com/FinLens-team/finlens/issues/34) | MD-012 完整 Demo V1 用户旅程 | #26、#27、#28、#31、#32、#33 | Blocked | app 路由、journey tests |
+| [#34](https://github.com/FinLens-team/finlens/issues/34) | MD-012 完整随机体验 Demo 旅程 | #31、#33、#47、#48、#49、#50 | Blocked | app 路由、journey tests |
 | [#35](https://github.com/FinLens-team/finlens/issues/35) | MD-013 公网部署与验收 | #34 | Blocked | deploy、E2E、acceptance |
 | [#36](https://github.com/FinLens-team/finlens/issues/36) | MD-014 AdventureX/Qoder 证据包 | #35 | Blocked | competition、比赛素材 |
+| [#46](https://github.com/FinLens-team/finlens/issues/46) | MD-015 视觉基础与共享 UI | #23 | Ready | 全局 tokens、共享组件、asset slots |
+| [#47](https://github.com/FinLens-team/finlens/issues/47) | MD-016 首次引导与随机体验 | #46、#26、#27、#29 | Blocked | onboarding、demo-experience |
+| [#48](https://github.com/FinLens-team/finlens/issues/48) | MD-017 主界面、侧栏与仓位控制 | #46、#26、#27 | Blocked | workspace-shell、review、constraints UI |
+| [#49](https://github.com/FinLens-team/finlens/issues/49) | MD-018 长笺视觉与兜兜表现 | #46、#32 | Blocked | long-card、theme、兜兜素材 |
+| [#50](https://github.com/FinLens-team/finlens/issues/50) | MD-019 历史与关于视图 | #46、#33 | Blocked | history-view、about |
 
-关键路径：`#23 → #25 → #27 → #28 → #34 → #35 → #36`，以及 `#24 + #25 → #29 → #30 → #31 → #34`。
+当前 ready frontier 为 `#30` 与 `#46`，可以并行交付。之后的主要依赖链为：
+
+- `#30 → #33 → #50 → #34 → #35 → #36`；
+- `#30 + #46 → #31 → #34`；
+- `#46 → #47 / #48 / #49 → #34`。
+
+手工录入与截图提取的产品能力已由 #27/#28 保存，但 Demo V1 UI 只呈现暂未开放占位，因此它们不再成为 #34 的可见成功路径。
 
 ## 已接受 ADR 与票据映射
 
 | ADR | 决策 | 对应实际 Issue |
 |---|---|---|
-| ADR-0004 | 确定性证据 + 串行模型分析与主题叙事 | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
+| ADR-0004 | 确定性证据 + 单 agent 串行模型分析与主题叙事 | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
 | ADR-0005 | PandaAI 初始结构化数据上游 | 探测 [#24](https://github.com/FinLens-team/finlens/issues/24) MD-002；接入 [#29](https://github.com/FinLens-team/finlens/issues/29) MD-007 |
 | ADR-0006 | OpenAI-compatible `ModelGateway` | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
 | ADR-0007 | Vercel AI SDK Core 初始模型运行时 | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
@@ -73,7 +84,7 @@ ADR 中旧 8 票语义下的 `MD-002/MD-005/MD-006` 不得按编号直接对应�
 ## 文件冲突规则
 
 - `package.json`、lockfile、构建/部署配置、公共 schema、全局 tokens、fixture 索引和根指导文档只能由正文指定 owner 修改。
-- 集成票 `#34` 只能调用下游公开接口；发现缺口时回原 Issue 补票，不能顺手修改模块内部。
+- 集成票 `#34` 只能调用 #31/#33/#47-#50 的公开接口；发现缺口时回原 Issue 补票，不能顺手修改模块内部。
 - 供应商探测 `#24` 不触碰产品 adapters、公共 schema 或私人数据。
 - 每个 PR 必须列出实际修改文件；出现正文未声明的共享路径时，先在两个 Issue 评论并由维护者确定顺序。
 

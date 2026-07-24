@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-24
-- Ticket: #30 / MD-008（证据边界内 Agent Team）
+- Ticket: #30 / MD-008（证据边界内单 agent 分析管线）
 
 ## Context
 
