@@ -1,0 +1,51 @@
+#!/bin/sh
+
+set -eu
+
+message_file=${1:-}
+
+fail() {
+  printf '%s\n' "提交信息校验失败：$1" >&2
+  printf '%s\n' "格式说明：.githooks/README.md" >&2
+  exit 1
+}
+
+if [ -z "$message_file" ] || [ ! -f "$message_file" ]; then
+  fail "未找到 Git 提交信息文件。"
+fi
+
+if [ -s "$message_file" ] && [ "$(tail -c 1 "$message_file" | wc -l | tr -d ' ')" -eq 0 ]; then
+  fail "提交信息文件末尾必须保留真实换行。"
+fi
+
+cleaned_message=$(mktemp "${TMPDIR:-/tmp}/finlens-commit-msg.XXXXXX")
+trap 'rm -f "$cleaned_message"' EXIT HUP INT TERM
+
+# Git may leave editor guidance comments in the message file. They are not part
+# of the commit message, but line structure and blank lines otherwise stay intact.
+tr -d '\r' < "$message_file" | awk '!/^[[:space:]]*#/' > "$cleaned_message"
+
+if grep -Fq '\n' "$cleaned_message"; then
+  fail "检测到字面量 \\n；请输入真实换行，不要把反斜杠和字母 n 写进提交信息。"
+fi
+
+subject=$(sed -n '1p' "$cleaned_message")
+second_line=$(sed -n '2p' "$cleaned_message")
+
+if ! printf '%s\n' "$subject" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: .+$'; then
+  fail "首行必须使用 Conventional Commit：<type>(<scope>): <中文主题>。"
+fi
+
+if ! printf '%s\n' "$subject" | grep -q '[一-龥]'; then
+  fail "首行主题必须包含中文。"
+fi
+
+if [ -n "$second_line" ]; then
+  fail "首行主题后必须有一个真实空行。"
+fi
+
+if ! tail -n +3 "$cleaned_message" | grep -q '[一-龥]'; then
+  fail "正文必须包含中文，但可以混用英文术语；正文格式和长度不作限制。"
+fi
+
+exit 0

@@ -66,6 +66,10 @@
 
 当前没有项目命令。引入命令的 Issue 必须提交锁定依赖和可复现脚本，在干净环境中实际通过后同步更新本节与 [`README.md`](README.md)。不要把规划中的命令写成现状。
 
+仓库提交信息由 `.githooks/commit-msg` 校验；首次克隆后执行 `git config core.hooksPath .githooks` 启用。主题和正文必须包含中文但允许混用英文术语，正文格式和长度不作限制；主题后使用真实空行，不得使用字面量 `\\n`。PowerShell 执行 `powershell -ExecutionPolicy Bypass -File .githooks/test-commit-msg.ps1`，POSIX shell 执行 `sh .githooks/test-commit-msg.sh`，可离线验证 Hook。
+
+本项目同步上游时以 `origin/main` 为基线：先执行 `git fetch origin`，再使用 `git rebase origin/main` 将本地提交放到最新上游之后；冲突按当前产品契约逐文件解决并完成验证，不使用 merge commit 作为日常同步方式。
+
 ## 持久知识
 
 工作结束后，把源码和测试证实的架构、约定、命令、模块职责和非显然限制写入根或最近目录的 `AGENTS.md`。产品规则写入 `PRODUCT.md` 或规格，领域术语写入 `CONTEXT.md`，设计规则写入 `DESIGN.md`，难以逆转的技术决策写入 ADR，执行工作写入 Issue。不要记录会话过程、临时状态、凭据或未经验证的猜测。
