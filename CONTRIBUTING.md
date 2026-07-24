@@ -19,10 +19,20 @@ Issue 是执行票据，不替代产品契约。改变用户行为、范围或�
 
 优先交付纵向切片。单独的数据层、模型层或视觉层工作，只有在解除明确依赖并提供独立契约证据时才应成为票据。当前建议图见 [`docs/tickets/README.md`](docs/tickets/README.md)。
 
+## 自助认领
+
+1. 从 [`status:ready + no:assignee`](https://github.com/FinLens-team/finlens/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready+no%3Aassignee) 选择任务，不认领 `status:blocked`。
+2. 按 Issue 正文格式评论 `CLAIM`，随后自分配并移除 `status:ready`。一个 Issue 只有一个 owner。
+3. 从最新 `main` 创建 `issue/<编号>-<slug>`，尽早创建 Draft PR；不要同时认领有重叠独占路径的任务。
+4. 当前套餐不能强制保护 `main`，严禁直推 `main`。所有变更经任务分支和 PR 审查合入。
+5. 每 24 小时留下可验证更新；释放时按 Issue 正文评论 `HANDOFF` 并取消分配。
+
+完整认领、交接、依赖解锁和文件冲突规则见 [`docs/tickets/README.md`](docs/tickets/README.md)。
+
 ## 变更流程
 
 1. 在 Issue 中确认依赖、范围、非目标和验收证据。
-2. 创建聚焦分支，只修改完成该 Issue 所需的文件。
+2. 使用认领时声明的任务分支，只修改 Issue 的独占路径和已协调共享路径。
 3. 先建立能观察正常路径和关键降级路径的验证。
 4. 实现最小的完整用户结果，保持供应商与模型边界可替换。
 5. 对界面工作验证桌面、375px 触控、键盘操作和减少动态效果；对分析工作验证证据引用、未知项、硬截止和恢复状态。

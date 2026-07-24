@@ -1,144 +1,82 @@
-# 满懂交付票据计划
+# 满懂 Demo V1 交付图
 
-本文件为 GitHub Issues 提供小型纵向切片计划。将 `MD-xxx` 替换为真实 Issue 编号后保留依赖边；每张票据只有在可观察验收证据已附上时才能关闭。产品边界来自 [`../../PRODUCT.md`](../../PRODUCT.md)，可观察体验来自 [`../specs/demo-v1.md`](../specs/demo-v1.md)，分析与供应商限制分别来自 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 和 [`../integrations/pandaai-bocha.md`](../integrations/pandaai-bocha.md)。
+实际开发任务位于 GitHub milestone [`Demo V1`](https://github.com/FinLens-team/finlens/milestone/1)。产品边界来自 [`../../PRODUCT.md`](../../PRODUCT.md)，体验、分析和供应商约束分别来自 [`../specs/demo-v1.md`](../specs/demo-v1.md)、[`../specs/analysis-contract.md`](../specs/analysis-contract.md) 和 [`../integrations/pandaai-bocha.md`](../integrations/pandaai-bocha.md)。
 
-当前没有绑定技术基线。某个切片若必须作出难以逆转的技术选择，应先新增 ADR；不要用 Issue 或计划文字把候选框架、存储、认证、模型或部署方案写成既定事实。
+## 自助认领
+
+可认领池：[`status:ready + no:assignee`](https://github.com/FinLens-team/finlens/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready+no%3Aassignee)。
+
+1. 只认领带 `status:ready` 且没有 assignee 的 Issue。`status:blocked` 表示依赖或外部条件尚未解除。
+2. 先评论：`CLAIM @账号 | branch issue/<编号>-<slug> | owned paths <路径> | next update <时间+时区>`。
+3. 自分配为唯一 assignee，并移除 `status:ready`。一个 Issue 只允许一个 owner；reviewer 不加入 assignee。
+4. 从最新 `main` 创建 `issue/<编号>-<slug>`，尽早提交 Draft PR；PR 正文使用 `Closes #<编号>`。
+5. 当前私有仓库套餐不能强制保护 `main`。严禁直推 `main`；所有文件必须通过任务分支和 PR 审查合入。
+6. 认领者最迟每 24 小时在 Issue 或 PR 留下可验证更新。维护者提醒后再过 24 小时无回应，可以释放认领。
+7. 释放时评论 `HANDOFF`，列出 branch/commit/PR、已完成、未完成、验证结果、已触碰文件和阻塞，然后取消分配。不要删除已有分支或证据。
+
+同时认领时，以最早满足格式且文件边界无冲突的 `CLAIM` 评论为准。不要用“谁先 push”裁决。
+
+## 状态模型
+
+| 状态 | GitHub 表示 | 含义 |
+|---|---|---|
+| Ready | `status:ready`，无 assignee | 依赖已完成，可以自助认领 |
+| Blocked | `status:blocked`，无 assignee | 等待依赖、证据或决定 |
+| Claimed | 唯一 assignee，无 ready/blocked | owner 正在交付 |
+| Closed | PR 合并且验收证据齐全 | 可以解锁直接下游 |
+
+只有最终 PR 合并并关闭前置 Issue 才算依赖完成。Draft PR、部分 commit、计划文档或归档 Qoder 产物都不解锁下游。
 
 ## 依赖图
 
-| ID | 交付物 | 依赖 |
+| Issue | 交付物 | 依赖 | 初始状态 | 独占责任边界 |
+|---|---|---|---|---|
+| [#23](https://github.com/FinLens-team/finlens/issues/23) | MD-001 技术基线与可运行脚手架 | 无 | Ready | 根工具链、bootstrap、smoke、ADR |
+| [#24](https://github.com/FinLens-team/finlens/issues/24) | MD-002 PandaAI/Bocha 权限探测 | 无 | Ready | `tools/provider-probe`、运行验收文档 |
+| [#25](https://github.com/FinLens-team/finlens/issues/25) | MD-003 版本化契约与确定性 fixture | #23 | Blocked | `src/contracts`、`src/fixtures`、契约测试 |
+| [#26](https://github.com/FinLens-team/finlens/issues/26) | MD-004 匿名私密工作区 | #25 | Blocked | `src/workspace`、工作区迁移与测试 |
+| [#27](https://github.com/FinLens-team/finlens/issues/27) | MD-005 持仓复核与四项约束 | #25 | Blocked | `src/portfolio`、review、constraints |
+| [#28](https://github.com/FinLens-team/finlens/issues/28) | MD-006 多模态截图草稿与删除 | #27 | Blocked | screenshot-import、extraction |
+| [#29](https://github.com/FinLens-team/finlens/issues/29) | MD-007 中立市场与事件证据 | #24、#25 | Blocked | providers、evidence |
+| [#30](https://github.com/FinLens-team/finlens/issues/30) | MD-008 证据边界内 Agent Team | #29、#25 | Blocked | analysis |
+| [#31](https://github.com/FinLens-team/finlens/issues/31) | MD-009 真实 Agent 观测台 | #30 | Blocked | observatory |
+| [#32](https://github.com/FinLens-team/finlens/issues/32) | MD-010 东方观象长笺、兜兜与主题 | #25 | Blocked | long-card、theme、`assets/doudou` |
+| [#33](https://github.com/FinLens-team/finlens/issues/33) | MD-011 不可变分析历史 | #26、#30 | Blocked | history、历史迁移与测试 |
+| [#34](https://github.com/FinLens-team/finlens/issues/34) | MD-012 完整 Demo V1 用户旅程 | #26、#27、#28、#31、#32、#33 | Blocked | app 路由、journey tests |
+| [#35](https://github.com/FinLens-team/finlens/issues/35) | MD-013 公网部署与验收 | #34 | Blocked | deploy、E2E、acceptance |
+| [#36](https://github.com/FinLens-team/finlens/issues/36) | MD-014 AdventureX/Qoder 证据包 | #35 | Blocked | competition、比赛素材 |
+
+关键路径：`#23 → #25 → #27 → #28 → #34 → #35 → #36`，以及 `#24 + #25 → #29 → #30 → #31 → #34`。
+
+## 已接受 ADR 与票据映射
+
+| ADR | 决策 | 对应实际 Issue |
 |---|---|---|
-| MD-001 | 确认的完整首次使用 Demo | None |
-| MD-002 | PandaAI 与 Bocha 权限探测 | None |
-| MD-003 | 版本化 fixture 驱动分析路径 | MD-001 |
-| MD-004 | 匿名私密工作区与组合导入 | MD-003 |
-| MD-005 | PandaAI 与 Bocha 证据接入 | MD-002, MD-004 |
-| MD-006 | 证据边界内的 Agent Team | MD-005 |
-| MD-007 | 观测台、观象长笺与历史 | MD-006 |
-| MD-008 | 公共验收与比赛证据 | MD-007 |
+| ADR-0004 | 确定性证据 + 串行模型分析与主题叙事 | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
+| ADR-0005 | PandaAI 初始结构化数据上游 | 探测 [#24](https://github.com/FinLens-team/finlens/issues/24) MD-002；接入 [#29](https://github.com/FinLens-team/finlens/issues/29) MD-007 |
+| ADR-0006 | OpenAI-compatible `ModelGateway` | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
+| ADR-0007 | Vercel AI SDK Core 初始模型运行时 | [#30](https://github.com/FinLens-team/finlens/issues/30) MD-008 |
 
-## MD-001：确认的完整首次使用 Demo
+ADR 中旧 8 票语义下的 `MD-002/MD-005/MD-006` 不得按编号直接对应上表 MD-00x；以本表与 GitHub Issue 编号为准。
 
-**场景：** 新用户从普通入口依次选择东方观象主题、示例组合、单页复核、四项约束和显式生成，并在无真实供应商或模型调用的条件下看见可理解的结果占位状态。
+## 依赖解锁
 
-**范围：** 建立一个可操作的首次使用纵向骨架，包含一个可选主题、三个锁定预览、兜兜、透明示例、手工录入入口、组合草稿单页、`unknown/not decided` 约束、生成动作和可返回的结果状态。实现可以使用内部确定性数据，但不得将它写成 PandaAI、Bocha 或实时数据。
+前置 PR 合并并关闭后，维护者逐一检查直接下游：
 
-**非目标：** 私密数据持久化、截图提取、供应商请求、模型或 Agent 编排、完整观测台、完整长笺或历史。
+1. 正文列出的所有依赖是否均已关闭且有验收证据；
+2. 是否已冻结公共 schema、接口和文件责任边界；
+3. 是否与其他已认领 Issue 存在独占或共享路径冲突；
+4. 满足后评论 `UNBLOCKED by #<issue>/#<pr>`，移除 `status:blocked` 并添加 `status:ready`。
 
-**验收：**
+依赖被重开或证据撤回时，未认领下游退回 `status:blocked`。已认领任务只暂停受影响边界，由维护者明确合并、拆票或交接方案。
 
-- 375px 触控和桌面用户均能从普通入口完成主题、草稿复核、四项约束与显式生成。
-- 三种持仓来源进入同一复核流程；尚未实现的路径清楚说明状态，不伪造导入成功。
-- 示例持续标注“示例数据”，主题和兜兜不改变任何确定性结果。
-- 页面不依赖悬停、动画、截图上传或横向手势；未知约束不会阻止继续。
+## 文件冲突规则
 
-## MD-002：PandaAI 与 Bocha 权限探测
+- `package.json`、lockfile、构建/部署配置、公共 schema、全局 tokens、fixture 索引和根指导文档只能由正文指定 owner 修改。
+- 集成票 `#34` 只能调用下游公开接口；发现缺口时回原 Issue 补票，不能顺手修改模块内部。
+- 供应商探测 `#24` 不触碰产品 adapters、公共 schema 或私人数据。
+- 每个 PR 必须列出实际修改文件；出现正文未声明的共享路径时，先在两个 Issue 评论并由维护者确定顺序。
 
-**场景：** 团队需要知道项目凭据实际允许哪些最小请求，才能决定哪些供应商能力可以进入产品路径。
+## 旧 Issue 审计
 
-**范围：** 在受保护的服务边界，以脱敏测试资产和最小查询分别探测 PandaAI 列出的五个方法与 Bocha `POST /v1/web-search`。记录鉴权、请求约束、响应字段、观察/获取时间、空结果、限流、超时和错误，不提交 token、完整请求或私人组合。
-
-**已有证据：** ADR-0005 记录的 `panda_data` 0.0.12 / Python 3.12 credentialed spike 已验证代表性 `000001.SZ` A 股和 `510300.SH` ETF 历史读取；这项证据不替代本票据对五个方法和完整错误矩阵的验收。
-
-**非目标：** 接入用户分析、把未探测方法标为可用、把搜索摘要当事实、在 UI 宣传已经接通供应商。
-
-**验收：**
-
-- PandaAI 的每个列出方法分别记录 `available`、无权限或不适用，不以 SDK 方法名代替结果。
-- Bocha 记录 Bearer 鉴权、`query`、`freshness`、`summary`、`count` 和本地拒绝 `count > 50` 的证据。
-- 记录可安全公开的字段与时点语义、资产身份样本和错误映射；日志、Issue 附件和 fixture 不含凭据或完整私人持仓。
-- 产出只更新运行验收事实，不越过证据宣称基金、ETF 或 A 股已覆盖。
-
-## MD-003：版本化 Fixture 驱动分析路径
-
-**场景：** 用户可以稳定复现正常、有限和不可用路径，并核对一条结果为何成立或不能成立。
-
-**范围：** 把 MD-001 的内部数据替换为版本化、透明的 fixture，按分析契约生成 `supported`、`limited`、`observation_only` 与 `unavailable` 状态。fixture 显示资产身份、来源、观察时间、获取时间、证据截止时点、缓存状态和未知项。
-
-**非目标：** 真实 PandaAI/Bocha 请求、模型生成、私人工作区、截图提取或将 fixture 称为供应商缓存。
-
-**验收：**
-
-- 固定 fixture 版本和场景标识可重现相同确认输入、派生结果、证据和状态。
-- 每项物质性结论能回到确认输入、派生结果或 fixture 内已核验的带日期证据。
-- 缺失、过期、冲突、含糊和不支持样本不会制造当前值；普通入口可到达有限与不可用状态。
-- 示例数据、测试 fixture 与未来实时结果有持续可见的区分。
-
-## MD-004：匿名私密工作区与组合导入
-
-**场景：** 用户在一台设备上录入、复核和删除自己的组合，而公开入口与其他匿名工作区不能读到这些数据。
-
-**范围：** 实现 30 天匿名私密工作区、手工录入和截图提取草稿、单页逐行/批量确认、不可变快照、四项约束、主动删除和到期清理。截图在成功、失败或中止后删除，后续流程只使用复核后的结构化数据。
-
-**非目标：** 账户注册、跨设备恢复、券商连接、公开分享、自动同步或把截图交给分析模型。
-
-**验收：**
-
-- 两个工作区及普通公开入口相互隔离，界面显示最后活动和预计删除时间。
-- 未确认、含糊和不支持行保持未知；批量确认不会把它们写入快照。
-- 截图路径披露外部处理和删除规则，提取失败仍保留可修正草稿与手工回退。
-- 原图不进入历史；隔离工作区历史可以保存用户确认的结构化快照。公开 URL、默认日志、分析事件、fixture、测试快照和错误记录不含原图、完整私人组合、身份、账户或凭据。
-
-## MD-005：PandaAI 与 Bocha 证据接入
-
-**场景：** 用户发起分析后，系统能以已运行验收的字段取得结构化市场证据，并以已核验的一手来源使用事件证据。
-
-**范围：** 按 ADR-0005 在 MD-002 的实际权限范围内接入 PandaAI，并接入 Bocha，规范化供应商结果为中立证据记录，处理资产身份、字段、单位、观察时间、获取时间、修订、冲突、空结果、限流、超时和失败。Bocha 只发现候选事件，物质性事件回到一手来源核验。
-
-**非目标：** 盘中或实时行情承诺、用搜索摘要替代一手来源、未探测方法或资产覆盖、让供应商专有字段进入分析契约。
-
-**验收：**
-
-- 已接入范围仅包含 MD-002 实际验证通过的权限、字段和资产样本；其余范围明确标为未知或不支持。
-- 每条数据保留资产身份、来源定位、状态、观察时间和获取时间；获取时间不冒充市场时间。
-- 可用、过期、含糊、不支持、冲突、限流和失败会传入分析的类型化状态。
-- 任何用于结论的事件都有可定位的权威来源；未核验 Bocha 结果保持 `unverified`。
-
-## MD-006：证据边界内的 Agent Team
-
-**场景：** 系统在明确生成后，把完整确认快照和已规范化证据交给受约束的 Agent Team，得到可验证的理性分析而非未经核对的叙事。
-
-**范围：** 按 ADR-0004 编排分析阶段、最小 Agent 角色、输入脱敏、可复算派生结果、版本化输出结构、证据引用检查、建议策略、有限重试与 90 秒目标/180 秒硬截止；模型网关按 ADR-0006 通过 Vercel AI SDK Core 和 `@ai-sdk/openai-compatible` 实现。Agent 只能看到分析契约允许的结构化输入，不展示思维链。
-
-**非目标：** 主动查询、自由追问、精确交易指令、让 Agent 自行发现或补写证据、把 Agent 活跃度作为预测信号。
-
-**验收：**
-
-- Agent 输入包含完整已确认结构化持仓、约束、规范化证据和派生结果，不含原图、身份、账户、工作区凭据或供应商密钥。
-- `observed`、`derived` 与 `generated` 保持可区分；每项物质性结论都有输入或已核验证据引用。
-- 结构错误、缺证、越界建议、正反面不一致、超时或畸形输出不会显示部分正常结果；有限重试后诚实降级。
-- 策略测试拒绝精确金额、比例、价格、时点、收益保证和代客操作；主题不改变理性结果。
-
-## MD-007：观测台、观象长笺与历史
-
-**场景：** 用户可以看见真实分析进度、阅读一张绑定快照与证据时点的长笺、切换到证据背面，并在 30 天内分辨旧复盘与当前状态。
-
-**范围：** 将 MD-006 的真实任务状态接到 Agent 观测台；实现正反面共享同一分析版本的观象长笺、按钮与手势翻面、覆盖/未知/风险呈现，以及不可变历史记录。东方观象是表现层，兜兜仅作为观察和承认未知的向导。
-
-**非目标：** 多个可用主题、用动画证明进度、隐藏测试路线、把历史重算为当前结论或主动问答。
-
-**验收：**
-
-- 观测台显示真实阶段、覆盖、等待、有限重试和失败，不显示思维链；离开与返回不会制造进度。
-- 长笺正面和理性背面引用同一快照、截止时点、结论、覆盖、未知项和建议，按钮可替代横向拖动。
-- 375px 触控下纵向滚动优先，减少动态效果下仍可完整阅读和翻面。
-- 修改组合或约束会创建新组合快照；主题变化只创建或选择表现版本，不改变理性分析，也不能静默改写历史复盘。
-
-## MD-008：公共验收与比赛证据
-
-**场景：** 评委或外部复核者能从普通公开入口验证 Demo V1 的完整、有限和失败路径，并看到只由最终分支支撑的 AdventureX 与 Qoder 协作材料。
-
-**范围：** 完成公开可达性、桌面和 375px 浏览器验收、隐私审计、无痕入口检查、正常/有限/不可用录屏、fixture 与实时证据边界检查、研究状态声明、提交素材和脱敏 Qoder 协作证据。最终提交前复核实时 Portal。
-
-**非目标：** 把计划、归档 Qoder 产物、未完成研究或供应商资料写成产品完成、用户认可、实时接通或比赛获奖证据。
-
-**验收：**
-
-- 普通入口可完成 Demo V1 的首次使用、私密工作区、正常路径和降级路径；没有评委专用路由。
-- 验收记录覆盖 375px、键盘、触控、减少动态效果、隐私边界、180 秒硬截止、供应商/模型失败和历史不可变性。
-- 比赛材料只引用最终分支、实际测试、脱敏录屏和真实人工协作记录；Qoder archive commit `8c57fad` 明确标为未验证的中断产物。
-- 提交前重新核验 AdventureX Portal 的规则、字段、赛道名称和截止时间，并检查所有素材不含个人金融数据、凭据或无证据主张。
-
-## 不在本计划内
-
-主动查询、连续追问、聊天式投资问答、实时行情、盘中监控、券商连接、自动同步、交易执行、跨设备恢复、社交分享和三个锁定主题的完整实现均不属于 Demo V1。任何后续项目需要新的产品决策、规格和验收。
+旧 `#12–#22` 基于已退出的 FNL Phase 0/MVP/NFC 路线。审计确认这些 Issue 创建后没有评论、关联 PR 或 commit 证据；原正文已保留并追加新票映射，随后以 `superseded / not planned` 关闭。旧 assignee 和完成状态没有迁入新交付图。

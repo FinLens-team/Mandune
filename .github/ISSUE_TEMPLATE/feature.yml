@@ -44,6 +44,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: file_ownership
+    attributes:
+      label: File ownership boundary
+      description: List exclusive write paths, shared paths requiring coordination, and paths this ticket must not touch.
+    validations:
+      required: true
+  - type: textarea
     id: acceptance
     attributes:
       label: Observable acceptance criteria
@@ -72,4 +79,6 @@ body:
         - label: This ticket does not silently choose an unconfirmed framework, model, market-data vendor, storage engine, authentication protocol, or deployment API.
           required: true
         - label: This ticket preserves the accepted privacy boundary and the directional-advice boundary.
+          required: true
+        - label: This ticket will remain status:blocked until every declared dependency is closed with acceptance evidence.
           required: true

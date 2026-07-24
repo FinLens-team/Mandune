@@ -35,6 +35,6 @@ PandaAI 和 Bocha 的资料边界已经整理，但项目凭据下的接口权�
 
 ## 参与开发
 
-执行工作使用带依赖和可观察验收条件的 GitHub Issues。建议的纵向切片见 [`docs/tickets/README.md`](docs/tickets/README.md)，贡献流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，Agent 规则见 [`AGENTS.md`](AGENTS.md)。
+执行工作使用带依赖和可观察验收条件的 GitHub Issues。协作者从 [`status:ready + no:assignee`](https://github.com/FinLens-team/finlens/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready+no%3Aassignee) 自助认领；实际依赖图与文件边界见 [`docs/tickets/README.md`](docs/tickets/README.md)，贡献流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，Agent 规则见 [`AGENTS.md`](AGENTS.md)。
 
 AdventureX 事实、提交草稿、演示脚本和 Qoder 协作证据是待最终产品与实时 Portal 复核的工作材料，入口见 [`docs/competition/`](docs/competition/)。
