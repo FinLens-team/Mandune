@@ -25,6 +25,8 @@ dist/
 build/
 coverage/
 .cache/
+*.tsbuildinfo
+vitest.config.ts.timestamp-*
 test-results/
 playwright-report/
 
@@ -35,3 +37,6 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Dependencies
+node_modules/
