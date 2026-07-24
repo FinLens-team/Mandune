@@ -101,6 +101,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 ## 模块地图
 
 - `src/client/`：Vite + React 单页壳。必须保持桌面与 375px 触控视口可读、可键盘访问，不用悬停、动画或图片上传作为完成路径。
+- `src/client/ui/`：共享可访问 UI 原语与组件样式；按钮、体验/锁定徽章、图标按钮和分析状态应复用此边界，不在功能页面重复实现。
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
