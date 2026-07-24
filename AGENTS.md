@@ -101,8 +101,9 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 
 - `src/client/`：Vite + React 单页壳。必须保持桌面与 375px 触控视口可读、可键盘访问，不用悬停、动画或图片上传作为完成路径。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
-- `src/contracts/`：框架中立的共享类型占位。不得导入 React、Hono、模型 SDK 或供应商 SDK；业务分析 schema 由后续票据引入。
-- `src/fixtures/`：为后续确定性 fixture 固定的空目录；不得存入真实或完整私人持仓。
+- `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。
+- `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
+- `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。
 - `pnpm-lock.yaml`、根 `package.json`、`tsconfig*.json`、`vite.config.ts`、`vitest.config.ts`、`eslint.config.js` 与 `.github/workflows/ci.yml`：全局工程边界，后续改动需与当前 Issue owner 协调。
 
 仓库提交信息由 `.githooks/commit-msg` 校验；首次克隆后执行 `git config core.hooksPath .githooks` 启用。主题和正文必须包含中文但允许混用英文术语，正文格式和长度不作限制；主题后使用真实空行，不得使用字面量 `\\n`。PowerShell 执行 `powershell -ExecutionPolicy Bypass -File .githooks/test-commit-msg.ps1`，POSIX shell 执行 `sh .githooks/test-commit-msg.sh`，可离线验证 Hook。
