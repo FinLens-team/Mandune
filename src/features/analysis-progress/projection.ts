@@ -23,6 +23,8 @@ export type AnalysisProgressTerminalReason =
 
 export interface AnalysisProgressTerminal {
   analysis_id: string;
+  /** Set only after the controller has both a validated result and matching narrative. */
+  displayable: boolean;
   reason?: string;
   status: AnalysisResultStatus;
   terminal_reason: AnalysisProgressTerminalReason;
@@ -268,7 +270,8 @@ export function projectAnalysisProgress({
 
   return {
     analysisId,
-    canOpenResult: terminal !== undefined && terminal.status !== "unavailable",
+    canOpenResult:
+      terminal !== undefined && terminal.displayable && terminal.status !== "unavailable",
     canRetry:
       terminal !== undefined &&
       (terminal.status === "unavailable" || RETRYABLE_TERMINAL_REASONS.has(terminal.terminal_reason)),

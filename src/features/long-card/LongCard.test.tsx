@@ -6,6 +6,8 @@ import { FIXTURES } from "../../fixtures/index.js";
 import {
   LongCard,
   RationalEvidenceBack,
+  longCardRuntimeFromFixture,
+  longCardRuntimeIsDisplayable,
   longCardFlipTarget,
   longCardGestureIntent,
   preserveFaceScrollOffsets,
@@ -13,7 +15,8 @@ import {
 
 describe("long-card rendering and interaction boundaries", () => {
   it("renders a button-accessible front face with an announced current side", () => {
-    const markup = renderToStaticMarkup(createElement(LongCard, { fixture: FIXTURES.limited_partial }));
+    const input = longCardRuntimeFromFixture(FIXTURES.limited_partial);
+    const markup = renderToStaticMarkup(createElement(LongCard, { input }));
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("当前：东方观象");
     expect(markup).toContain("查看证据");
@@ -24,7 +27,7 @@ describe("long-card rendering and interaction boundaries", () => {
 
   it("renders an unavailable result without a normal long-card stage", () => {
     const markup = renderToStaticMarkup(
-      createElement(LongCard, { fixture: FIXTURES.unavailable_no_evidence }),
+      createElement(LongCard, { input: longCardRuntimeFromFixture(FIXTURES.unavailable_no_evidence) }),
     );
     expect(markup).toContain("当前证据不足以生成观象长笺");
     expect(markup).not.toContain("mandong-long-card__stage");
@@ -56,10 +59,11 @@ describe("long-card rendering and interaction boundaries", () => {
 
   it("renders the rational back with the exact analysis identifiers and all references", () => {
     const fixture = FIXTURES.limited_partial;
+    const input = longCardRuntimeFromFixture(fixture);
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
         faceId: "evidence-face",
-        fixture,
+        input,
         headingId: "evidence-heading",
         headingRef: { current: null },
       }),
@@ -75,6 +79,46 @@ describe("long-card rendering and interaction boundaries", () => {
       expect(markup).toContain(advice.statement);
       for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
     }
+  });
+
+  it("renders only a validated matching runtime narrative", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    expect(longCardRuntimeIsDisplayable(input)).toBe(true);
+    expect(input.narrative).toBeDefined();
+    if (!input.narrative) return;
+
+    const markup = renderToStaticMarkup(createElement(LongCard, { input }));
+    expect(markup).toContain(input.narrative.headline);
+    for (const paragraph of input.narrative.body_paragraphs) {
+      expect(markup).toContain(paragraph);
+    }
+    expect(markup).toContain(input.narrative.guidance_summary);
+
+    const mismatched = {
+      ...input,
+      narrative: { ...input.narrative, rational_analysis_id: "another-analysis" },
+    };
+    const mismatchedMarkup = renderToStaticMarkup(createElement(LongCard, { input: mismatched }));
+    expect(longCardRuntimeIsDisplayable(mismatched)).toBe(false);
+    expect(mismatchedMarkup).toContain("观象长笺暂不可展示");
+    expect(mismatchedMarkup).not.toContain("mandong-long-card__stage");
+  });
+
+  it("keeps the explicit observation-only fixture adapter displayable without advice", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.observation_only_gaps);
+    expect(input.narrative?.guidance_summary).toBe("");
+    expect(longCardRuntimeIsDisplayable(input)).toBe(true);
+    expect(renderToStaticMarkup(createElement(LongCard, { input }))).toContain(
+      "当前证据只支持观察，不支持方向性建议。",
+    );
+  });
+
+  it("does not render a normal letter when the runtime narrative is absent", () => {
+    const withoutNarrative = longCardRuntimeFromFixture(FIXTURES.limited_partial);
+    delete withoutNarrative.narrative;
+    const markup = renderToStaticMarkup(createElement(LongCard, { input: withoutNarrative }));
+    expect(markup).toContain("观象长笺暂不可展示");
+    expect(markup).not.toContain("mandong-long-card__stage");
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

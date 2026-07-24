@@ -94,6 +94,7 @@ describe("S8 analysis progress view", () => {
         onOpenResult: vi.fn(),
         terminal: {
           analysis_id: "analysis-31",
+          displayable: true,
           reason: "部分证据缺口限制了结论范围。",
           status: "limited",
           terminal_reason: "completed",
@@ -119,6 +120,7 @@ describe("S8 analysis progress view", () => {
         onRetry: vi.fn(),
         terminal: {
           analysis_id: "analysis-31",
+          displayable: false,
           reason: "当前证据不足，未生成观象长笺。",
           status: "unavailable",
           terminal_reason: "model_failure",
@@ -130,6 +132,29 @@ describe("S8 analysis progress view", () => {
     expect(markup).toContain("分析不可用，可重试");
     expect(markup).toContain("当前证据不足，未生成观象长笺。");
     expect(markup).toContain("重试本次复盘");
+    expect(markup).not.toContain("查看观象长笺");
+  });
+
+  it("keeps a successful status visible without opening S9 when narrative is not displayable", async () => {
+    const { AnalysisProgress } = await loadProgress();
+    const markup = renderToStaticMarkup(
+      createElement(AnalysisProgress, {
+        analysisId: "analysis-31",
+        connection: "connected",
+        events: [retryEvent],
+        onOpenResult: vi.fn(),
+        terminal: {
+          analysis_id: "analysis-31",
+          displayable: false,
+          reason: "主题叙事尚未通过一致性校验。",
+          status: "supported",
+          terminal_reason: "completed",
+        },
+      }),
+    );
+
+    expect(markup).toContain('data-status="supported"');
+    expect(markup).toContain("主题叙事尚未通过一致性校验。");
     expect(markup).not.toContain("查看观象长笺");
   });
 });
