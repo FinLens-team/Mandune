@@ -11,6 +11,7 @@
 5. **分析表达**：聊天气泡短句 + 真实任务阶段；90s/180s。
 6. **数据**：真实优先 + 同资产缓存/fixture 诚实兜底。
 7. **侧边栏**：类 FlyBuild 抽屉导航，无账号体系。
+8. **视觉基线**：两份 Gemini 提案不原样采用；以第一版克制骨架为基础，吸收第二版响应式细节，最终以 [`../design/demo-v1-visual-system.md`](../design/demo-v1-visual-system.md) 为唯一实现规格。
 
 ## 屏幕索引
 
@@ -47,4 +48,4 @@
 - [x] demo-v1 屏幕流与 Demo 占位
 - [x] analysis-contract 单 agent Demo 编排说明
 - [x] Gemini 设计简报：[`../design/gemini-frontend-design-brief.md`](../design/gemini-frontend-design-brief.md)
-- [ ] 前端视觉与动效：待 Gemini 返回后写入 `docs/design/demo-v1-visual-system.md`
+- [x] 前端视觉与动效：[`../design/demo-v1-visual-system.md`](../design/demo-v1-visual-system.md)
