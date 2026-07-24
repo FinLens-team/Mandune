@@ -6,7 +6,9 @@
 
 ## 当前状态
 
-本仓库目前仅包含产品、设计、分析、集成、比赛和交付文档。主分支没有 `package.json`、可运行应用或已经验证的安装、开发、测试、构建、启动和部署命令，也尚未选定实现框架、存储引擎、认证协议或部署方案。
+本仓库已具备 Demo V1 的可运行单包脚手架：Node 22、pnpm 10.33.2、Vite + React + TypeScript 客户端、Hono Node 服务、Vitest smoke test 与 GitHub Actions CI。客户端、服务端和框架中立契约分别位于 `src/client`、`src/server` 和 `src/contracts`。
+
+ADR-0008 只确定本地工程基线。耐久私人存储、匿名工作区定位与认证边界仍推迟到 #26；公开部署选择仍推迟到 #35；PandaAI/Bocha 的供应商接入和运行验收仍由 #24 及后续票据处理。当前壳不读取私人持仓、不调用供应商或模型，也不要求任何凭据启动。
 
 PandaAI 和 Bocha 的资料边界已经整理，但项目凭据下的接口权限、响应语义、覆盖范围、限流和稳定性尚未完成运行验收。因此当前不能声称供应商已经接通。
 
@@ -38,3 +40,19 @@ PandaAI 和 Bocha 的资料边界已经整理，但项目凭据下的接口权�
 执行工作使用带依赖和可观察验收条件的 GitHub Issues。协作者从 [`status:ready + no:assignee`](https://github.com/FinLens-team/finlens/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready+no%3Aassignee) 自助认领；实际依赖图与文件边界见 [`docs/tickets/README.md`](docs/tickets/README.md)，贡献流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，Agent 规则见 [`AGENTS.md`](AGENTS.md)。
 
 AdventureX 事实、提交草稿、演示脚本和 Qoder 协作证据是待最终产品与实时 Portal 复核的工作材料，入口见 [`docs/competition/`](docs/competition/)。
+
+## 本地运行
+
+要求 Node `>=22 <23` 与 pnpm `10.33.2`。先复制 `.env.example` 为本地 `.env`（如需改端口），不要填入或提交真实凭据。
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test
+pnpm build
+pnpm start
+```
+
+`pnpm start` 服务已构建的 `dist/server/index.js`，默认监听 `http://127.0.0.1:8787`；`GET /health` 只返回 `status`、`service`、`version` 和 `uptime_seconds`。`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 在本地观察 Hono 服务端，`pnpm test:smoke` 只运行健康检查。
+
+`pnpm build` 产出 `dist/client` 与 `dist/server`。服务端关闭 Node request timeout 并将 headers timeout 设为 210 秒，以免抢先截断产品已接受的 180 秒应用级分析截止；部署代理 timeout 仍由 #35 决定。

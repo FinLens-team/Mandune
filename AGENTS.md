@@ -19,8 +19,9 @@
 
 ## 当前仓库状态
 
-- 仓库当前处于文档阶段，没有 `package.json`、应用源码或可运行的安装、开发、检查、测试、构建、启动和部署命令。
-- 当前接受的 ADR 为 0004-0007：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、以及 Vercel AI SDK Core 初始模型运行时。仍没有已接受的前端、存储、认证或部署基线；旧 0001-0003 已退出当前契约。
+- 仓库是单包 pnpm 项目，使用 Node `>=22 <23`、pnpm `10.33.2`、ESM 与严格 TypeScript。应用代码位于 `src/`，构建产物位于 `dist/`；不要创建 pnpm workspace 或 `apps/`、`packages/` 布局。
+- 当前接受的 ADR 为 0004-0008：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时，以及 Vite + React、Hono、Vitest 与 CI 的单包工程基线。旧 0001-0003 已退出当前契约。
+- ADR-0008 不选择耐久私人存储、匿名工作区定位/认证或公开部署：这些边界分别留给 #26 和 #35。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
 
@@ -30,6 +31,7 @@
 - ADR-0005 选择 PandaAI 作为初始真实结构化数据上游；A 股和 ETF 代表性路径已验证，场外基金和完整生产矩阵仍保持明确的未知/待验收状态。
 - ADR-0006 规定框架中立的 OpenAI-compatible `ModelGateway`；structured output、streaming、multimodal 和 tools 必须逐项 capability-test。
 - ADR-0007 选择服务端 Vercel AI SDK Core 与 `@ai-sdk/openai-compatible`；每日复盘仍由应用层编排，不引入自主 Agent loop。
+- ADR-0008 选择 Vite + React + TypeScript 客户端、Hono Node 服务、Vitest 与 GitHub Actions CI 的单包基线；`src/contracts` 必须保持框架和供应商中立。
 
 ## 交付规则
 
@@ -80,7 +82,28 @@
 
 ## 命令
 
-当前没有项目命令。引入命令的 Issue 必须提交锁定依赖和可复现脚本，在干净环境中实际通过后同步更新本节与 [`README.md`](README.md)。不要把规划中的命令写成现状。
+已验证的本地命令：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test
+pnpm test:smoke
+pnpm build
+pnpm start
+```
+
+`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `PORT=8787`。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。
+
+Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确保不早于产品的 180 秒应用级分析截止截断请求；反向代理/部署 timeout 仍由 #35 决定。
+
+## 模块地图
+
+- `src/client/`：Vite + React 单页壳。必须保持桌面与 375px 触控视口可读、可键盘访问，不用悬停、动画或图片上传作为完成路径。
+- `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
+- `src/contracts/`：框架中立的共享类型占位。不得导入 React、Hono、模型 SDK 或供应商 SDK；业务分析 schema 由后续票据引入。
+- `src/fixtures/`：为后续确定性 fixture 固定的空目录；不得存入真实或完整私人持仓。
+- `pnpm-lock.yaml`、根 `package.json`、`tsconfig*.json`、`vite.config.ts`、`vitest.config.ts`、`eslint.config.js` 与 `.github/workflows/ci.yml`：全局工程边界，后续改动需与当前 Issue owner 协调。
 
 仓库提交信息由 `.githooks/commit-msg` 校验；首次克隆后执行 `git config core.hooksPath .githooks` 启用。主题和正文必须包含中文但允许混用英文术语，正文格式和长度不作限制；主题后使用真实空行，不得使用字面量 `\\n`。PowerShell 执行 `powershell -ExecutionPolicy Bypass -File .githooks/test-commit-msg.ps1`，POSIX shell 执行 `sh .githooks/test-commit-msg.sh`，可离线验证 Hook。
 

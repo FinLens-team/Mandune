@@ -25,6 +25,8 @@ dist/
 build/
 coverage/
 .cache/
+*.tsbuildinfo
+vitest.config.ts.timestamp-*
 test-results/
 playwright-report/
 
