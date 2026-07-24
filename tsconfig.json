@@ -20,10 +20,14 @@
   },
   "include": [
     "src/contracts/**/*.ts",
+    "src/evidence/**/*.ts",
     "src/fixtures/**/*.ts",
+    "src/providers/**/*.ts",
     "src/portfolio/**/*.ts",
     "src/workspace/**/*.ts",
     "src/extraction/**/*.ts",
+    "src/analysis/**/*.ts",
+    "src/model/**/*.ts",
     "tests/**/*.ts",
     "vitest.config.ts",
     "vite.config.ts"

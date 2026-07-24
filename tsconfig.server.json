@@ -14,8 +14,12 @@
   "include": [
     "src/server/**/*.ts",
     "src/contracts/**/*.ts",
+    "src/evidence/**/*.ts",
+    "src/providers/**/*.ts",
     "src/workspace/**/*.ts",
     "src/portfolio/**/*.ts",
-    "src/extraction/**/*.ts"
+    "src/extraction/**/*.ts",
+    "src/analysis/**/*.ts",
+    "src/model/**/*.ts"
   ]
 }
