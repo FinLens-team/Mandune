@@ -39,6 +39,7 @@ SYSTEMD_UNIT="${DEPLOY_ROOT}/systemd/mandong.service"
 for setting in \
   'User=mandong' \
   'Environment=PATH=/opt/mandong/runtime:/usr/bin:/bin' \
+  'ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/server/index.js' \
   'Environment=HOST=127.0.0.1' \
   'Environment=PORT=8787' \
   'NoNewPrivileges=yes' \

@@ -63,7 +63,9 @@ failed Nginx validation or reload restores the previous
 config. It validates the exact Node/pnpm versions and atomically pins their
 resolved entrypoints under `/opt/mandong/runtime`; the service never falls back
 to another `node` on the host PATH. It never starts or restarts
-`mandong.service`.
+`mandong.service`. The unit uses `--preserve-symlinks-main` so the ESM entrypoint
+guard remains valid while `/opt/mandong/current` is switched atomically between
+immutable release directories.
 
 ## Build a candidate
 
