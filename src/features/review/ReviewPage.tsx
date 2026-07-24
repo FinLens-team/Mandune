@@ -1,192 +1,216 @@
 import { useMemo, useState } from "react";
-import type {
-  AssetClass,
-  PortfolioDraft,
-  PortfolioSnapshot,
-} from "../../contracts/index.js";
-import { ConstraintsForm } from "../constraints/ConstraintsForm";
-import { ScreenshotImportPanel } from "../screenshot-import/ScreenshotImportPanel";
+import { Plus, Trash2 } from "lucide-react";
+import type { AssetClass, PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
+import { createExampleDraft, listUnresolvedLines, listUsableLines } from "../../portfolio/index.js";
+import { Button, DemoBadge, IconButton } from "../../client/ui/index.js";
+import { ConstraintsForm } from "../constraints/ConstraintsForm.js";
 import {
-  EXAMPLE_SOURCE_LABEL,
-  addLine,
-  createEmptyDraft,
-  createExampleDraft,
-  createManualLine,
-  createSnapshotFromDraft,
-  listUnresolvedLines,
-  listUsableLines,
-  removeLine,
-  updateConstraints,
-  updateLine,
-} from "../../portfolio/index.js";
+  appendHolding,
+  deleteHolding,
+  editConstraints,
+  editHolding,
+  snapshotCurrentDraft,
+} from "./model.js";
+import "./styles.css";
 
-type SourceMode = "example" | "manual" | "screenshot";
+type EditorTab = "holdings" | "constraints";
 
-export function ReviewPage() {
-  const [draft, setDraft] = useState<PortfolioDraft | null>(null);
-  const [sourceMode, setSourceMode] = useState<SourceMode | null>(null);
-  const [snapshot, setSnapshot] = useState<PortfolioSnapshot | null>(null);
+export interface PortfolioEditorProps {
+  draft: PortfolioDraft;
+  onChange: (draft: PortfolioDraft) => void;
+  onSave?: (snapshot: PortfolioSnapshot) => void;
+  onCancel?: () => void;
+}
+
+const EMPTY_HOLDING = {
+  asset_class: "etf" as AssetClass,
+  name: "",
+  symbol: "",
+  size_basis: "",
+  observation_date: "",
+};
+
+export function PortfolioEditor({ draft, onCancel, onChange, onSave }: PortfolioEditorProps) {
+  const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
+  const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
   const [message, setMessage] = useState<string | null>(null);
-  const [manual, setManual] = useState({
-    asset_class: "etf" as AssetClass,
-    name: "",
-    symbol: "",
-    market: "",
-    size_basis: "",
-    observation_date: "",
-  });
+  const usable = useMemo(() => listUsableLines(draft), [draft]);
+  const unresolved = useMemo(() => listUnresolvedLines(draft), [draft]);
 
-  const usable = useMemo(
-    () => (draft ? listUsableLines(draft) : []),
-    [draft],
-  );
-  const unresolved = useMemo(
-    () => (draft ? listUnresolvedLines(draft) : []),
-    [draft],
-  );
-
-  function startExample() {
-    setSourceMode("example");
-    setSnapshot(null);
-    setMessage(null);
-    setDraft(createExampleDraft());
-  }
-
-  function startManual() {
-    setSourceMode("manual");
-    setSnapshot(null);
-    setMessage(null);
-    setDraft(
-      createEmptyDraft({
-        source_label: "手工录入",
-        entry_method: "manual",
-      }),
-    );
-  }
-
-  function startScreenshot() {
-    setSourceMode("screenshot");
-    setSnapshot(null);
-    setMessage(null);
-    setDraft(
-      createEmptyDraft({
-        source_label: "截图提取草稿",
-        entry_method: "manual",
-      }),
-    );
-  }
-
-  function confirmLines(lineIds?: string[]) {
-    if (!draft) return;
-    const result = createSnapshotFromDraft(draft, { line_ids: lineIds });
+  function save() {
+    const result = snapshotCurrentDraft(draft);
     if (!result.ok) {
       setMessage(result.message);
       return;
     }
-    setSnapshot(result.snapshot);
-    const skippedNote =
-      result.skipped_line_ids.length > 0
-        ? `；${result.skipped_line_ids.length} 条未决行未写入快照`
-        : "";
-    setMessage(
-      `已创建不可变快照 ${result.snapshot.snapshot_id}（${result.snapshot.lines.length} 条确认行）${skippedNote}。`,
-    );
-  }
-
-  if (!draft || !sourceMode) {
-    return (
-      <section className="panel" aria-labelledby="source-heading">
-        <div className="panel-head">
-          <h2 id="source-heading">选择持仓来源</h2>
-          <p className="panel-note">
-            示例、手工与截图进入同一单页复核；截图只生成草稿，不自动确认。
-          </p>
-        </div>
-        <div className="action-row">
-          <button type="button" className="btn primary" onClick={startExample}>
-            使用示例组合
-          </button>
-          <button type="button" className="btn" onClick={startManual}>
-            手工录入
-          </button>
-          <button type="button" className="btn" onClick={startScreenshot}>
-            截图导入
-          </button>
-        </div>
-      </section>
-    );
+    const skipped = result.skippedCount > 0 ? `；${result.skippedCount} 条未决行保持未知` : "";
+    setMessage(`已保存下一次复盘输入${skipped}。历史复盘不会改写。`);
+    onSave?.(result.snapshot);
   }
 
   return (
-    <div className="review-stack">
-      {draft.source_label === EXAMPLE_SOURCE_LABEL || sourceMode === "example" ? (
-        <p className="example-banner" role="status">
-          当前为{EXAMPLE_SOURCE_LABEL}，不是真实私人持仓，也不是实时行情。
-        </p>
-      ) : null}
-
-      {sourceMode === "screenshot" ? (
-        <ScreenshotImportPanel
-          onCancel={() => {
-            setDraft(null);
-            setSourceMode(null);
-            setMessage(null);
-          }}
-          onDraftLines={(lines, meta) => {
-            setDraft((current) => {
-              if (!current) return current;
-              return lines.reduce(
-                (acc, line) => addLine(acc, line),
-                current,
-              );
-            });
-            setMessage(meta.message);
-            setSnapshot(null);
-          }}
-        />
-      ) : null}
-
-      <section className="panel" aria-labelledby="review-heading">
-        <div className="panel-head">
-          <h2 id="review-heading">单页持仓复核</h2>
-          <p className="panel-note">
-            可用 {usable.length} 条 · 未决 {unresolved.length} 条。批量确认不会写入未决行。
-          </p>
+    <div className="portfolio-editor">
+      <header className="portfolio-editor__header">
+        <div>
+          <DemoBadge />
+          <h1>仓位／身份</h1>
+          <p>编辑只影响后续复盘；已生成的历史快照不会被改写。</p>
         </div>
+      </header>
 
-        {sourceMode === "manual" ? (
+      <div className="portfolio-editor__tabs" role="tablist" aria-label="仓位与约束">
+        <button
+          aria-controls="portfolio-holdings-panel"
+          aria-selected={activeTab === "holdings"}
+          className={activeTab === "holdings" ? "is-active" : undefined}
+          id="portfolio-holdings-tab"
+          onClick={() => setActiveTab("holdings")}
+          role="tab"
+          type="button"
+        >
+          持仓（{draft.lines.length}）
+        </button>
+        <button
+          aria-controls="portfolio-constraints-panel"
+          aria-selected={activeTab === "constraints"}
+          className={activeTab === "constraints" ? "is-active" : undefined}
+          id="portfolio-constraints-tab"
+          onClick={() => setActiveTab("constraints")}
+          role="tab"
+          type="button"
+        >
+          四项约束
+        </button>
+      </div>
+
+      <div className="portfolio-editor__body">
+        <section
+          aria-labelledby="portfolio-holdings-tab"
+          className={`portfolio-editor__holdings${activeTab === "holdings" ? " is-visible" : ""}`}
+          id="portfolio-holdings-panel"
+          role="tabpanel"
+        >
+          <div className="portfolio-editor__section-heading">
+            <div>
+              <h2>确认持仓</h2>
+              <p>可用 {usable.length} 条，未决 {unresolved.length} 条。未决行不会进入快照。</p>
+            </div>
+          </div>
+
+          <div className="portfolio-lines" role="list">
+            {draft.lines.map((line) => (
+              <article
+                className={`portfolio-line${line.is_usable ? "" : " portfolio-line--unresolved"}`}
+                key={line.line_id}
+                role="listitem"
+              >
+                <div className="portfolio-line__heading">
+                  <div>
+                    <strong>{line.name}</strong>
+                    <span>{line.is_usable ? "可用于下次复盘" : "未决未知项"}</span>
+                  </div>
+                  <IconButton
+                    icon={Trash2}
+                    label={`删除 ${line.name}`}
+                    onClick={() => onChange(deleteHolding(draft, line.line_id))}
+                    tooltip="删除持仓"
+                  />
+                </div>
+                <div className="portfolio-line__fields">
+                  <label className="field">
+                    <span className="field-label">资产类型</span>
+                    <select
+                      value={line.asset_class}
+                      onChange={(event) =>
+                        onChange(
+                          editHolding(draft, line.line_id, {
+                            asset_class: event.target.value as AssetClass,
+                          }),
+                        )
+                      }
+                    >
+                      <option value="fund">基金</option>
+                      <option value="etf">ETF</option>
+                      <option value="a_share">A 股</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span className="field-label">名称</span>
+                    <input
+                      value={line.name}
+                      onChange={(event) =>
+                        onChange(editHolding(draft, line.line_id, { name: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="field-label">代码</span>
+                    <input
+                      value={String(line.symbol)}
+                      onChange={(event) =>
+                        onChange(
+                          editHolding(draft, line.line_id, {
+                            symbol: event.target.value.trim() || "unknown",
+                          }),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="field-label">持仓规模依据</span>
+                    <input
+                      value={String(line.size_basis)}
+                      onChange={(event) =>
+                        onChange(
+                          editHolding(draft, line.line_id, {
+                            size_basis: event.target.value.trim() || "unknown",
+                          }),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="field-label">观察日期</span>
+                    <input
+                      inputMode="numeric"
+                      placeholder="YYYY-MM-DD，未知可留空"
+                      value={String(line.observation_date)}
+                      onChange={(event) =>
+                        onChange(
+                          editHolding(draft, line.line_id, {
+                            observation_date: event.target.value.trim() || "unknown",
+                          }),
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                {!line.is_usable ? (
+                  <p className="portfolio-line__unknown">
+                    待补充：{line.unresolved_fields.join("、") || "资产身份或规模依据"}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+
           <form
-            className="manual-form"
+            className="portfolio-add"
             onSubmit={(event) => {
               event.preventDefault();
-              const line = createManualLine({
-                asset_class: manual.asset_class,
-                name: manual.name,
-                symbol: manual.symbol || "unknown",
-                market: manual.market || undefined,
-                size_basis: manual.size_basis || "unknown",
-                observation_date: manual.observation_date || "unknown",
-              });
-              setDraft((current) => (current ? addLine(current, line) : current));
-              setManual({
-                asset_class: manual.asset_class,
-                name: "",
-                symbol: "",
-                market: "",
-                size_basis: "",
-                observation_date: "",
-              });
-              setSnapshot(null);
+              onChange(appendHolding(draft, newHolding));
+              setNewHolding(EMPTY_HOLDING);
             }}
           >
-            <div className="manual-grid">
+            <h3>添加一项持仓</h3>
+            <div className="portfolio-line__fields">
               <label className="field">
                 <span className="field-label">资产类型</span>
                 <select
-                  value={manual.asset_class}
+                  value={newHolding.asset_class}
                   onChange={(event) =>
-                    setManual((value) => ({
-                      ...value,
+                    setNewHolding((current) => ({
+                      ...current,
                       asset_class: event.target.value as AssetClass,
                     }))
                   }
@@ -199,187 +223,91 @@ export function ReviewPage() {
               <label className="field">
                 <span className="field-label">名称</span>
                 <input
-                  value={manual.name}
-                  onChange={(event) =>
-                    setManual((value) => ({ ...value, name: event.target.value }))
-                  }
                   required
+                  value={newHolding.name}
+                  onChange={(event) =>
+                    setNewHolding((current) => ({ ...current, name: event.target.value }))
+                  }
                 />
               </label>
               <label className="field">
                 <span className="field-label">代码</span>
                 <input
-                  value={manual.symbol}
-                  onChange={(event) =>
-                    setManual((value) => ({ ...value, symbol: event.target.value }))
-                  }
                   placeholder="未知可留空"
+                  value={newHolding.symbol}
+                  onChange={(event) =>
+                    setNewHolding((current) => ({ ...current, symbol: event.target.value }))
+                  }
                 />
               </label>
               <label className="field">
                 <span className="field-label">持仓规模依据</span>
                 <input
-                  value={manual.size_basis}
+                  placeholder="未知可留空"
+                  value={newHolding.size_basis}
                   onChange={(event) =>
-                    setManual((value) => ({
-                      ...value,
-                      size_basis: event.target.value,
+                    setNewHolding((current) => ({ ...current, size_basis: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">观察日期</span>
+                <input
+                  inputMode="numeric"
+                  placeholder="YYYY-MM-DD，未知可留空"
+                  value={newHolding.observation_date}
+                  onChange={(event) =>
+                    setNewHolding((current) => ({
+                      ...current,
+                      observation_date: event.target.value,
                     }))
                   }
-                  placeholder="未知可留空"
                 />
               </label>
             </div>
-            <button type="submit" className="btn primary">
-              添加持仓行
-            </button>
+            <Button type="submit">
+              <Plus aria-hidden="true" size={20} />
+              添加持仓
+            </Button>
           </form>
-        ) : null}
+        </section>
 
-        <div className="line-list" role="list">
-          {draft.lines.length === 0 ? (
-            <p className="empty-state">还没有持仓行。请添加或切换示例组合。</p>
-          ) : (
-            draft.lines.map((line) => (
-              <article
-                key={line.line_id}
-                className={line.is_usable ? "line-card" : "line-card unresolved"}
-                role="listitem"
-              >
-                <div className="line-top">
-                  <div>
-                    <h3>{line.name}</h3>
-                    <p className="line-meta">
-                      {line.asset_class} · {String(line.symbol)} ·{" "}
-                      {line.is_usable ? "可用" : "未决未知项"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn danger"
-                    onClick={() => {
-                      setDraft((current) =>
-                        current ? removeLine(current, line.line_id) : current,
-                      );
-                      setSnapshot(null);
-                    }}
-                  >
-                    删除
-                  </button>
-                </div>
-                <div className="manual-grid">
-                  <label className="field">
-                    <span className="field-label">代码</span>
-                    <input
-                      value={String(line.symbol)}
-                      onChange={(event) => {
-                        const symbol = event.target.value.trim() || "unknown";
-                        setDraft((current) =>
-                          current
-                            ? updateLine(current, line.line_id, { symbol })
-                            : current,
-                        );
-                        setSnapshot(null);
-                      }}
-                    />
-                  </label>
-                  <label className="field">
-                    <span className="field-label">规模依据</span>
-                    <input
-                      value={String(line.size_basis)}
-                      onChange={(event) => {
-                        const size_basis = event.target.value.trim() || "unknown";
-                        setDraft((current) =>
-                          current
-                            ? updateLine(current, line.line_id, { size_basis })
-                            : current,
-                        );
-                        setSnapshot(null);
-                      }}
-                    />
-                  </label>
-                </div>
-                {!line.is_usable ? (
-                  <p className="unresolved-note">
-                    未决字段：{line.unresolved_fields.join("、") || "身份或规模依据不明"}
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => confirmLines([line.line_id])}
-                  >
-                    仅确认本行
-                  </button>
-                )}
-              </article>
-            ))
-          )}
+        <div
+          aria-labelledby="portfolio-constraints-tab"
+          className={`portfolio-editor__constraints${activeTab === "constraints" ? " is-visible" : ""}`}
+          id="portfolio-constraints-panel"
+          role="tabpanel"
+        >
+          <ConstraintsForm
+            compact
+            value={draft.constraints}
+            onChange={(constraints) => onChange(editConstraints(draft, constraints))}
+          />
         </div>
-
-        <div className="action-row">
-          <button
-            type="button"
-            className="btn primary"
-            disabled={usable.length === 0}
-            onClick={() => confirmLines(usable.map((line) => line.line_id))}
-          >
-            批量确认可用行
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setDraft(null);
-              setSourceMode(null);
-              setSnapshot(null);
-              setMessage(null);
-            }}
-          >
-            重选来源
-          </button>
-        </div>
-      </section>
-
-      <ConstraintsForm
-        value={draft.constraints}
-        onChange={(constraints) => {
-          setDraft((current) =>
-            current ? updateConstraints(current, constraints) : current,
-          );
-          setSnapshot(null);
-        }}
-      />
+      </div>
 
       {message ? (
-        <p className="status-message" role="status">
+        <p className="portfolio-editor__message" role="status">
           {message}
         </p>
       ) : null}
 
-      {snapshot ? (
-        <section className="panel" aria-labelledby="snapshot-heading">
-          <div className="panel-head">
-            <h2 id="snapshot-heading">不可变组合快照</h2>
-            <p className="panel-note">
-              {snapshot.snapshot_id} · 创建于 {snapshot.created_at}
-            </p>
-          </div>
-          <ul className="snapshot-list">
-            {snapshot.lines.map((line) => (
-              <li key={line.line_id}>
-                {line.name}（{line.symbol}）· {line.size_basis}
-              </li>
-            ))}
-          </ul>
-          <p className="panel-note">
-            约束：期限 {String(snapshot.constraints.investment_horizon)}；流动性{" "}
-            {String(snapshot.constraints.near_term_liquidity)}；回撤{" "}
-            {String(snapshot.constraints.tolerable_drawdown)}；目标{" "}
-            {String(snapshot.constraints.investment_objective)}
-          </p>
-        </section>
-      ) : null}
+      <footer className="portfolio-editor__actions">
+        {onCancel ? (
+          <Button onClick={onCancel} variant="secondary">
+            取消
+          </Button>
+        ) : null}
+        <Button disabled={usable.length === 0} onClick={save} variant="primary">
+          保存后续复盘输入
+        </Button>
+      </footer>
     </div>
   );
+}
+
+/** Standalone compatibility entry used by the scaffold before shell integration. */
+export function ReviewPage() {
+  const [draft, setDraft] = useState(() => createExampleDraft());
+  return <PortfolioEditor draft={draft} onChange={setDraft} />;
 }
