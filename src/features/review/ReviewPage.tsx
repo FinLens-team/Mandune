@@ -5,6 +5,7 @@ import type {
   PortfolioSnapshot,
 } from "../../contracts/index.js";
 import { ConstraintsForm } from "../constraints/ConstraintsForm";
+import { ScreenshotImportPanel } from "../screenshot-import/ScreenshotImportPanel";
 import {
   EXAMPLE_SOURCE_LABEL,
   addLine,
@@ -19,7 +20,7 @@ import {
   updateLine,
 } from "../../portfolio/index.js";
 
-type SourceMode = "example" | "manual";
+type SourceMode = "example" | "manual" | "screenshot";
 
 export function ReviewPage() {
   const [draft, setDraft] = useState<PortfolioDraft | null>(null);
@@ -63,6 +64,18 @@ export function ReviewPage() {
     );
   }
 
+  function startScreenshot() {
+    setSourceMode("screenshot");
+    setSnapshot(null);
+    setMessage(null);
+    setDraft(
+      createEmptyDraft({
+        source_label: "截图提取草稿",
+        entry_method: "manual",
+      }),
+    );
+  }
+
   function confirmLines(lineIds?: string[]) {
     if (!draft) return;
     const result = createSnapshotFromDraft(draft, { line_ids: lineIds });
@@ -85,7 +98,9 @@ export function ReviewPage() {
       <section className="panel" aria-labelledby="source-heading">
         <div className="panel-head">
           <h2 id="source-heading">选择持仓来源</h2>
-          <p className="panel-note">示例与手工进入同一单页复核；截图导入由后续票据接入。</p>
+          <p className="panel-note">
+            示例、手工与截图进入同一单页复核；截图只生成草稿，不自动确认。
+          </p>
         </div>
         <div className="action-row">
           <button type="button" className="btn primary" onClick={startExample}>
@@ -94,8 +109,8 @@ export function ReviewPage() {
           <button type="button" className="btn" onClick={startManual}>
             手工录入
           </button>
-          <button type="button" className="btn" disabled title="后续票据实现">
-            截图导入（未开放）
+          <button type="button" className="btn" onClick={startScreenshot}>
+            截图导入
           </button>
         </div>
       </section>
@@ -108,6 +123,27 @@ export function ReviewPage() {
         <p className="example-banner" role="status">
           当前为{EXAMPLE_SOURCE_LABEL}，不是真实私人持仓，也不是实时行情。
         </p>
+      ) : null}
+
+      {sourceMode === "screenshot" ? (
+        <ScreenshotImportPanel
+          onCancel={() => {
+            setDraft(null);
+            setSourceMode(null);
+            setMessage(null);
+          }}
+          onDraftLines={(lines, meta) => {
+            setDraft((current) => {
+              if (!current) return current;
+              return lines.reduce(
+                (acc, line) => addLine(acc, line),
+                current,
+              );
+            });
+            setMessage(meta.message);
+            setSnapshot(null);
+          }}
+        />
       ) : null}
 
       <section className="panel" aria-labelledby="review-heading">

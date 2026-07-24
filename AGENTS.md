@@ -103,6 +103,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
+- `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
 - `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。

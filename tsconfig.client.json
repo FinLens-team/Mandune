@@ -12,6 +12,7 @@
     "src/features/**/*.ts",
     "src/features/**/*.tsx",
     "src/portfolio/**/*.ts",
+    "src/extraction/**/*.ts",
     "src/contracts/**/*.ts",
     "vite.config.ts"
   ]
