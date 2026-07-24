@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -37,7 +38,7 @@ afterEach(() => {
 });
 
 function temporaryDatabase(): string {
-  const root = mkdtempSync("/flyshop/opencode/tmp/mandong-journey-");
+  const root = mkdtempSync(path.join(tmpdir(), "mandong-journey-"));
   roots.push(root);
   return path.join(root, "mandong.sqlite3");
 }
