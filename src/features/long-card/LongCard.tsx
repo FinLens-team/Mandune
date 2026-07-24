@@ -4,6 +4,23 @@ import { LOCKED_THEME_PREVIEWS, OBSERVATION_THEME } from "../../theme/observatio
 
 const FLIP_THRESHOLD_PX = 64;
 
+interface PointerStart {
+  x: number;
+  y: number;
+}
+
+/** Returns the target face only for an unambiguously horizontal swipe. */
+export function longCardFlipTarget(start: PointerStart, end: PointerStart): boolean | null {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+
+  if (Math.abs(deltaX) < FLIP_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
+    return null;
+  }
+
+  return deltaX < 0;
+}
+
 function statusLabel(status: AnalysisFixture["analysis"]["status"]): string {
   const labels = {
     supported: "证据支持",
@@ -174,7 +191,7 @@ function Unavailable({ fixture }: { fixture: AnalysisFixture }) {
 
 export function LongCard({ fixture }: { fixture: AnalysisFixture }) {
   const [showEvidence, setShowEvidence] = useState(false);
-  const [pointerStartX, setPointerStartX] = useState<number | null>(null);
+  const [pointerStart, setPointerStart] = useState<PointerStart | null>(null);
   const { analysis } = fixture;
 
   if (analysis.status === "unavailable") {
@@ -182,15 +199,15 @@ export function LongCard({ fixture }: { fixture: AnalysisFixture }) {
   }
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
-    setPointerStartX(event.clientX);
+    setPointerStart({ x: event.clientX, y: event.clientY });
   }
 
   function handlePointerUp(event: PointerEvent<HTMLElement>) {
-    if (pointerStartX === null) return;
-    const distance = event.clientX - pointerStartX;
-    setPointerStartX(null);
-    if (Math.abs(distance) >= FLIP_THRESHOLD_PX) {
-      setShowEvidence(distance < 0);
+    if (pointerStart === null) return;
+    const target = longCardFlipTarget(pointerStart, { x: event.clientX, y: event.clientY });
+    setPointerStart(null);
+    if (target !== null) {
+      setShowEvidence(target);
     }
   }
 
@@ -205,6 +222,7 @@ export function LongCard({ fixture }: { fixture: AnalysisFixture }) {
         className={`long-card-stage ${showEvidence ? "is-back" : "is-front"}`}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onPointerCancel={() => setPointerStart(null)}
       >
         {showEvidence ? <Back fixture={fixture} /> : <Front fixture={fixture} />}
       </div>
