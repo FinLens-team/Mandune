@@ -1,0 +1,114 @@
+.about-view {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-6);
+}
+
+.about-view__header {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.about-view__header h2,
+.about-section h3 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.about-view__header h2 {
+  font-size: var(--font-size-xl);
+  line-height: 1.35;
+}
+
+.about-view__header p,
+.about-section p {
+  max-width: var(--content-reading);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.about-section {
+  min-width: 0;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.about-section > svg {
+  color: var(--color-observed);
+}
+
+.about-section > div {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.about-section h3 {
+  font-size: var(--font-size-lg);
+  line-height: 1.45;
+}
+
+.about-workspace-times {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-border-subtle);
+}
+
+.about-workspace-times > div {
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--color-bg-surface);
+}
+
+.about-workspace-times dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.about-workspace-times dd {
+  margin: var(--space-1) 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.about-workspace-state {
+  padding: var(--space-3);
+  border-left: 2px solid var(--color-risk);
+  color: var(--color-risk) !important;
+  background: var(--color-risk-bg);
+}
+
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (min-width: 48rem) {
+  .about-workspace-times {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 23.4375rem) {
+  .about-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-actions .ui-button,
+  .about-section .ui-button {
+    width: 100%;
+  }
+}
