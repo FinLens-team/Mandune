@@ -13,10 +13,11 @@ export interface MarketEvidenceRequest {
   latestCompleteTradingDay: string;
 }
 
-const SHANGHAI_OFFSET = "+08:00";
+function isIsoDate(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
 
-function tradingDayTimestamp(date: string): string {
-  return `${date}T00:00:00${SHANGHAI_OFFSET}`;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
 function marketEvidenceId(lineId: string, date: string): string {
@@ -26,7 +27,7 @@ function marketEvidenceId(lineId: string, date: string): string {
 function baseLimitations(date: string): string[] {
   return [
     "PandaAI runtime acceptance does not declare price, volume, or amount units; unit remains unknown.",
-    `PandaAI returned trading date ${date} without a clock time; the normalized timestamp only preserves date granularity.`,
+    `PandaAI returned trading date ${date} without a clock time; the observation time preserves that date-only precision.`,
   ];
 }
 
@@ -34,7 +35,27 @@ export function normalizePandaMarketRows(
   request: MarketEvidenceRequest,
   rows: readonly PandaMarketRow[],
 ): EvidenceRecord[] {
-  return rows.map((row) => {
+  return rows.map((row, index) => {
+    if (!isIsoDate(row.date)) {
+      return {
+        id: marketEvidenceId(request.lineId, `invalid-date-${index}`),
+        scope: { kind: "asset", line_id: request.lineId, symbol: request.symbol },
+        metric_or_event_type: "close",
+        value: null,
+        source: {
+          name: "PandaAI get_market_data",
+          locator: `pandaai:get_market_data:${request.symbol}:invalid-date-${index}`,
+        },
+        observation_or_event_time: request.latestCompleteTradingDay,
+        fetched_at: request.acquiredAt,
+        status: "ambiguous" as const,
+        limitations: [
+          "PandaAI returned a market-data row with an invalid trading date; no market observation was accepted.",
+        ],
+        provenance: "observed" as const,
+      };
+    }
+
     const hasClose = typeof row.close === "number" && Number.isFinite(row.close);
     const status: EvidenceStatus = hasClose ? "available" : "ambiguous";
 
@@ -47,7 +68,7 @@ export function normalizePandaMarketRows(
         name: "PandaAI get_market_data",
         locator: `pandaai:get_market_data:${request.symbol}:${row.date}`,
       },
-      observation_or_event_time: tradingDayTimestamp(row.date),
+      observation_or_event_time: row.date,
       fetched_at: request.acquiredAt,
       status,
       limitations: hasClose
@@ -72,7 +93,7 @@ export function unavailableMarketEvidence(
       name: "PandaAI get_market_data",
       locator: `pandaai:get_market_data:${request.symbol}`,
     },
-    observation_or_event_time: tradingDayTimestamp(request.latestCompleteTradingDay),
+    observation_or_event_time: request.latestCompleteTradingDay,
     fetched_at: request.acquiredAt,
     status,
     limitations: [limitation],

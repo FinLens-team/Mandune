@@ -4,6 +4,7 @@
 
 import type {
   EvidenceStatus,
+  IsoDateString,
   IsoDateTimeString,
   ProvenanceKind,
   SourceLocator,
@@ -23,8 +24,8 @@ export interface EvidenceRecord {
   unit?: string;
   normalization_note?: string;
   source: SourceLocator;
-  /** Market observation time or event publish time. */
-  observation_or_event_time: IsoDateTimeString;
+  /** Market observation date/time or event publish time, preserving source precision. */
+  observation_or_event_time: IsoDateTimeString | IsoDateString;
   /** When the system fetched this record (must not masquerade as observation). */
   fetched_at: IsoDateTimeString;
   status: EvidenceStatus;

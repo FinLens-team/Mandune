@@ -30,10 +30,23 @@ describe("Panda evidence adapter", () => {
     expect(evidence).toMatchObject({
       status: "available",
       value: 10.5,
-      observation_or_event_time: "2026-07-23T00:00:00+08:00",
+      observation_or_event_time: "2026-07-23",
     });
     expect(evidence.unit).toBeUndefined();
     expect(evidence.limitations.join(" ")).toContain("unit remains unknown");
+  });
+
+  it("keeps a malformed provider trading date out of available evidence", async () => {
+    const adapter = new PandaEvidenceAdapter({
+      getAShareMarketData: async () => ({
+        status: "available",
+        rows: [{ date: "not-a-date", close: 10.5 }],
+      }),
+    });
+
+    const [evidence] = await adapter.collectMarketEvidence(request);
+    expect(evidence).toMatchObject({ status: "ambiguous", value: null });
+    expect(evidence?.limitations.join(" ")).toContain("invalid trading date");
   });
 
   it("does not claim ETF market coverage from the rejected runtime path", async () => {
