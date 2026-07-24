@@ -28,6 +28,13 @@ validate_commit_sha "${SHA}"
 [[ ${EXPECTED_HASH} =~ ^[0-9a-f]{64}$ ]] || die "expected SHA-256 must be 64 lowercase hexadecimal characters"
 [[ "$(sha256sum "${ARCHIVE}" | cut -d' ' -f1)" == "${EXPECTED_HASH}" ]] || die "release archive checksum mismatch"
 
+PREVIOUS="$(current_release)"
+PREVIOUS_SHA=""
+if [[ -n ${PREVIOUS} ]]; then
+  PREVIOUS_SHA="${PREVIOUS##*/}"
+  validate_commit_sha "${PREVIOUS_SHA}"
+fi
+
 RELEASE="${RELEASE_ROOT}/${SHA}"
 [[ ! -e ${RELEASE} ]] || die "release already exists: ${SHA}"
 install -d -o root -g root -m 0755 "${RELEASE_ROOT}"
@@ -55,13 +62,6 @@ chmod -R go-rwx "${INCOMING}"
 chmod -R g+rX "${INCOMING}"
 mv "${INCOMING}" "${RELEASE}"
 trap - EXIT
-
-PREVIOUS="$(current_release)"
-PREVIOUS_SHA=""
-if [[ -n ${PREVIOUS} ]]; then
-  PREVIOUS_SHA="${PREVIOUS##*/}"
-  validate_commit_sha "${PREVIOUS_SHA}"
-fi
 
 stop_service
 DB_PRESENT=0

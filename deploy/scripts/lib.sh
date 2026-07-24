@@ -42,11 +42,14 @@ acquire_deploy_lock() {
 
 current_release() {
   local resolved
-  resolved="$(readlink -f "${CURRENT_LINK}" 2>/dev/null || true)"
-  if [[ -z ${resolved} ]]; then
+  if [[ ! -e ${CURRENT_LINK} && ! -L ${CURRENT_LINK} ]]; then
     return 0
   fi
+  [[ -L ${CURRENT_LINK} ]] || die "current release path exists but is not a symlink"
+  resolved="$(readlink -f "${CURRENT_LINK}" 2>/dev/null || true)"
+  [[ -n ${resolved} ]] || die "current release symlink cannot be resolved"
   [[ ${resolved} == "${RELEASE_ROOT}/"* ]] || die "current symlink escapes the release root"
+  [[ -d ${resolved} ]] || die "current release target is not a directory"
   printf '%s\n' "${resolved}"
 }
 
