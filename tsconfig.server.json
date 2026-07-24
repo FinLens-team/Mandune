@@ -11,5 +11,11 @@
     "sourceMap": true,
     "noEmit": false
   },
-  "include": ["src/server/**/*.ts", "src/contracts/**/*.ts", "src/workspace/**/*.ts", "src/portfolio/**/*.ts", "src/extraction/**/*.ts"]
+  "include": [
+    "src/server/**/*.ts",
+    "src/contracts/**/*.ts",
+    "src/workspace/**/*.ts",
+    "src/portfolio/**/*.ts",
+    "src/extraction/**/*.ts"
+  ]
 }

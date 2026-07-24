@@ -23,6 +23,7 @@
     "src/fixtures/**/*.ts",
     "src/portfolio/**/*.ts",
     "src/workspace/**/*.ts",
+    "src/extraction/**/*.ts",
     "tests/**/*.ts",
     "vitest.config.ts",
     "vite.config.ts"
