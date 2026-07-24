@@ -20,6 +20,8 @@
     "src/portfolio/**/*.ts",
     "src/extraction/**/*.ts",
     "src/analysis/**/*.ts",
-    "src/model/**/*.ts"
+    "src/model/**/*.ts",
+    "src/history/**/*.ts",
+    "src/persistence/**/*.ts"
   ]
 }
