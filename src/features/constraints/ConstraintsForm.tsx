@@ -1,11 +1,12 @@
+import { useId } from "react";
 import type { PersonalConstraints, UnknownFieldState } from "../../contracts/index.js";
 
 const UNKNOWN: UnknownFieldState = "unknown";
 
-const FIELDS: Array<{
+export const CONSTRAINT_FIELDS: ReadonlyArray<{
   key: keyof PersonalConstraints;
   label: string;
-  options: string[];
+  options: readonly string[];
 }> = [
   {
     key: "investment_horizon",
@@ -29,27 +30,36 @@ const FIELDS: Array<{
   },
 ];
 
-export function ConstraintsForm(props: {
+export interface ConstraintsFormProps {
   value: PersonalConstraints;
   onChange: (next: PersonalConstraints) => void;
-}) {
+  compact?: boolean;
+}
+
+export function ConstraintsForm({ compact = false, onChange, value }: ConstraintsFormProps) {
+  const headingId = useId();
+
   return (
-    <section className="panel" aria-labelledby="constraints-heading">
+    <section
+      className={`constraints-form${compact ? " constraints-form--compact" : " panel"}`}
+      aria-labelledby={headingId}
+    >
       <div className="panel-head">
-        <h2 id="constraints-heading">四项个人约束</h2>
-        <p className="panel-note">均可选择“未知／尚未决定”，不会阻止继续。</p>
+        <h2 id={headingId}>四项个人约束</h2>
+        <p className="panel-note">“未知／尚未决定”是有效答案，会缩小对应分析范围。</p>
       </div>
       <div className="constraint-grid">
-        {FIELDS.map((field) => {
-          const current = props.value[field.key];
+        {CONSTRAINT_FIELDS.map((field) => {
+          const current = value[field.key];
           return (
             <label key={field.key} className="field">
               <span className="field-label">{field.label}</span>
               <select
+                name={field.key}
                 value={typeof current === "string" ? current : UNKNOWN}
                 onChange={(event) => {
-                  props.onChange({
-                    ...props.value,
+                  onChange({
+                    ...value,
                     [field.key]: event.target.value,
                   });
                 }}
