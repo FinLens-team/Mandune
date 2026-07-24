@@ -28,11 +28,12 @@ describe("Panda evidence adapter", () => {
     expect(evidence).toBeDefined();
     if (!evidence) return;
     expect(evidence).toMatchObject({
-      status: "available",
+      status: "ambiguous",
       value: 10.5,
       observation_or_event_time: "2026-07-23",
     });
     expect(evidence.unit).toBeUndefined();
+    expect(evidence.limitations.join(" ")).toContain("cannot support material analysis");
     expect(evidence.limitations.join(" ")).toContain("unit remains unknown");
   });
 
