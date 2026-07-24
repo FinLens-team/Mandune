@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ReviewPage } from "../features/review/ReviewPage";
+import { LongCardDemo } from "../features/long-card/LongCardDemo";
 
 interface WorkspaceStatus {
   workspace_id: string;
@@ -107,6 +108,7 @@ export function App() {
 
         <div className="review-column">
           <ReviewPage />
+          <LongCardDemo />
         </div>
       </main>
 
