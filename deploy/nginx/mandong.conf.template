@@ -1,0 +1,75 @@
+# Render with deploy/scripts/render-nginx.sh. Request logging is disabled because
+# workspace Cookies, query strings, and private request payloads are not an
+# acceptable production log surface for Mandong.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${MANDONG_SERVER_NAME};
+    access_log off;
+    error_log /dev/null emerg;
+    return 308 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${MANDONG_SERVER_NAME};
+
+    ssl_certificate ${MANDONG_TLS_CERTIFICATE};
+    ssl_certificate_key ${MANDONG_TLS_CERTIFICATE_KEY};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:MandongTLS:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    access_log off;
+    error_log /dev/null emerg;
+    server_tokens off;
+    client_max_body_size 1m;
+    client_body_timeout 30s;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Cache-Control "no-store" always;
+
+    location ~* \.map(?:$|/) {
+        return 404;
+    }
+
+    location = /health {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Cookie "";
+        proxy_set_header Connection "";
+        proxy_cache off;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 210s;
+        proxy_send_timeout 210s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Connection "";
+        proxy_cache off;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 210s;
+        proxy_send_timeout 210s;
+        send_timeout 210s;
+    }
+}
