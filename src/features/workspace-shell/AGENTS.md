@@ -3,6 +3,7 @@
 ## Architecture
 
 - `WorkspaceShell` supports controlled `draft` and `reducedMotion` values with matching change callbacks. `initialDraft` and media-query motion preference remain uncontrolled defaults only.
+- Data management has no cancel action; saving returns to home, while cross-page navigation for data management, history, atlas, and about goes through the persistent drawer trigger.
 - Experience source and the first-S4 coachmark use the same controlled/uncontrolled pattern through `experienceSource`, `reviewCoachmarkVisible`, and their callbacks; feature code never guesses persisted journey state.
 - `activeAnalysis` plus `onResumeAnalysis` exposes the leave-and-return seam without owning analysis transport state.
 - `useOverlayPresence` keeps drawers and dialogs mounted through their exit transition, and uses a double `requestAnimationFrame` before flipping `opening` → `open` so the entry transition actually plays (a single rAF can fire before the opening styles are committed, silently skipping the slide-in). `useOverlayFocus` traps focus, prevents initial focus scroll, locks background scrolling, and returns focus only after presence ends. `WorkspaceDrawer` and `AnalysisConfirmDialog` both drive `data-state` from the presence phase; the drawer uses asymmetric timing (340ms soft-spring entry, 200ms sharp exit).

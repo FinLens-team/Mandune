@@ -47,11 +47,10 @@ function DeleteCardDialog(props: {
 export interface AtlasViewProps {
   gateway: AtlasGateway;
   reducedMotion: boolean;
-  onNavigateHome: () => void;
   onOpenHistory: (recordId: string) => void;
 }
 
-export function AtlasView({ gateway, reducedMotion, onNavigateHome, onOpenHistory }: AtlasViewProps) {
+export function AtlasView({ gateway, reducedMotion, onOpenHistory }: AtlasViewProps) {
   const [cards, setCards] = useState<AtlasCardV1[] | null>(null);
   const [detail, setDetail] = useState<AtlasCardDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,10 +131,6 @@ export function AtlasView({ gateway, reducedMotion, onNavigateHome, onOpenHistor
 
   return (
     <main className="atlas-page" data-reduce-motion={reducedMotion || undefined} id="main">
-      <Button onClick={onNavigateHome} variant="secondary">
-        <ArrowLeft aria-hidden="true" size={18} />
-        返回主页
-      </Button>
       <header className="atlas-page__header">
         <p>个人概念相遇路径</p>
         <h1 ref={headingRef} tabIndex={-1}>满懂图鉴</h1>
@@ -148,7 +143,6 @@ export function AtlasView({ gateway, reducedMotion, onNavigateHome, onOpenHistor
           <BookOpenCheck aria-hidden="true" size={32} />
           <h2>图鉴还没有卡片</h2>
           <p>完成每日复盘后，系统可能收藏一张专业名词或趣味梗。</p>
-          <Button onClick={onNavigateHome}>返回主页复盘</Button>
         </section>
       ) : null}
       {cards && cards.length > 0 ? (

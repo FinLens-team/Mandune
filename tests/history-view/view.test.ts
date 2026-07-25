@@ -15,13 +15,11 @@ interface HistoryViewModule {
   HistoryDetail: ComponentType<{
     detail: HistoryReadResult;
     onBack: () => void;
-    onNavigateHome: () => void;
     onOpenRecord: (record: HistoryRecordV1) => void;
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
   }>;
   HistoryList: ComponentType<{
     entries: HistoryListEntry[];
-    onNavigateHome: () => void;
     onSelectRecord: (recordId: string) => void;
     onShowMore?: () => void;
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
@@ -29,7 +27,6 @@ interface HistoryViewModule {
   }>;
   HistoryView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
-    onNavigateHome: () => void;
     onOpenRecord: (record: HistoryRecordV1) => void;
     reader: HistoryReader;
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
@@ -41,7 +38,6 @@ interface AboutModule {
   AboutView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
     experienceSource?: DemoBadgeSource;
-    onNavigateHome: () => void;
     onRequestDeleteWorkspace?: () => void;
     workspace: WorkspacePublicStatus | null;
   }>;
@@ -68,7 +64,6 @@ describe("S10 history list and detail", () => {
     const { HistoryList } = await loadHistoryView();
     const markup = renderToStaticMarkup(createElement(HistoryList, {
       entries: [{ detail: { status: "found", record: record() }, summary }],
-      onNavigateHome: vi.fn(),
       onSelectRecord: vi.fn(),
     }));
 
@@ -89,7 +84,6 @@ describe("S10 history list and detail", () => {
     }));
     const markup = renderToStaticMarkup(createElement(HistoryList, {
       entries,
-      onNavigateHome: vi.fn(),
       onSelectRecord: vi.fn(),
       onShowMore: vi.fn(),
       visibleCount: 10,
@@ -104,13 +98,12 @@ describe("S10 history list and detail", () => {
   it("keeps one page header and leaves cross-page navigation to the workspace drawer", async () => {
     const { HistoryView } = await loadHistoryView();
     const markup = renderToStaticMarkup(createElement(HistoryView, {
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
       reader: noopReader,
       workspaceId: "workspace-history",
     }));
 
-    expect(markup).toContain("返回主页");
+    expect(markup).not.toContain("返回主页");
     expect(markup).toContain("history-page__header");
     expect(markup).toContain("历史记录");
     // 单一页头：不再与外层"复盘历史"标题重复。
@@ -123,14 +116,12 @@ describe("S10 history list and detail", () => {
     const entry = { detail: { status: "found", record: record() } as const, summary };
     const listMarkup = renderToStaticMarkup(createElement(HistoryList, {
       entries: [entry],
-      onNavigateHome: vi.fn(),
       onSelectRecord: vi.fn(),
       resolveRecordSource,
     }));
     const detailMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: entry.detail,
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
       resolveRecordSource,
     }));
@@ -147,14 +138,12 @@ describe("S10 history list and detail", () => {
     const entry = { detail: { status: "found", record: legacyRecord } as const, summary };
     const listMarkup = renderToStaticMarkup(createElement(HistoryList, {
       entries: [entry],
-      onNavigateHome: vi.fn(),
       onSelectRecord: vi.fn(),
       resolveRecordSource: () => undefined,
     }));
     const detailMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: entry.detail,
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
       resolveRecordSource: () => undefined,
     }));
@@ -169,7 +158,6 @@ describe("S10 history list and detail", () => {
     const markup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: { status: "found", record: record() },
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
     }));
 
@@ -185,7 +173,6 @@ describe("S10 history list and detail", () => {
     const unavailableMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: { status: "found", record: unavailable },
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
     }));
     expect(unavailableMarkup).toContain("本次分析未生成复盘报告");
@@ -201,7 +188,6 @@ describe("S10 history list and detail", () => {
     const markup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: { status: "found", record: streamed },
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
     }));
 
@@ -218,7 +204,6 @@ describe("S10 history list and detail", () => {
     const unsupportedMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
       detail: unsupported,
       onBack: vi.fn(),
-      onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
     }));
     expect(unsupportedMarkup).toContain("旧记录当前无法读取");
@@ -234,7 +219,6 @@ describe("S10 history list and detail", () => {
       const markup = renderToStaticMarkup(createElement(HistoryDetail, {
         detail,
         onBack: vi.fn(),
-        onNavigateHome: vi.fn(),
         onOpenRecord: vi.fn(),
       }));
       expect(markup).toContain(text);
@@ -246,16 +230,14 @@ describe("S10 history list and detail", () => {
     const { HistoryList, HistoryView } = await loadHistoryView();
     const emptyMarkup = renderToStaticMarkup(createElement(HistoryList, {
       entries: [],
-      onNavigateHome: vi.fn(),
       onSelectRecord: vi.fn(),
     }));
     expect(emptyMarkup).toContain("这里还没有复盘记录");
-    expect(emptyMarkup).toContain("返回主页发起复盘");
+    expect(emptyMarkup).not.toContain("返回主页");
 
     for (const availability of ["deleted", "expired"] as const) {
       const markup = renderToStaticMarkup(createElement(HistoryView, {
         availability,
-        onNavigateHome: vi.fn(),
         onOpenRecord: vi.fn(),
         reader: noopReader,
         workspaceId: "workspace-history",
@@ -270,7 +252,6 @@ describe("S10 about and navigation", () => {
   it("states privacy, retention, deletion, non-advice, and cache boundaries", async () => {
     const { AboutView } = await loadAbout();
     const markup = renderToStaticMarkup(createElement(AboutView, {
-      onNavigateHome: vi.fn(),
       onRequestDeleteWorkspace: vi.fn(),
       experienceSource: "edited",
       workspace: {
@@ -299,7 +280,6 @@ describe("S10 about and navigation", () => {
   it("keeps the about page independent from history tabs", async () => {
     const { AboutView } = await loadAbout();
     const markup = renderToStaticMarkup(createElement(AboutView, {
-      onNavigateHome: vi.fn(),
       onRequestDeleteWorkspace: vi.fn(),
       workspace: null,
     }));

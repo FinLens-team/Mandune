@@ -23,6 +23,7 @@ interface WorkspaceShellModule {
     activeAnalysis?: { analysisId: string };
     draft?: PortfolioDraft;
     initialDraft?: PortfolioDraft;
+    initialView?: "home" | "portfolio";
     onDraftChange?: (draft: PortfolioDraft) => void;
     onReducedMotionChange?: (enabled: boolean) => void;
     reducedMotion?: boolean;
@@ -108,6 +109,24 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain('data-reduce-motion="true"');
     expect(markup).toContain("复盘进行中");
     expect(markup).toContain('aria-label="点击奶龙，继续查看正在运行的复盘"');
+  });
+
+  it("uses the drawer as the only exit from data management", async () => {
+    const { WorkspaceShell } = await loadWorkspaceShell();
+    const markup = renderToStaticMarkup(
+      createElement(WorkspaceShell, {
+        initialDraft: createExampleDraft(),
+        initialView: "portfolio",
+        workspace,
+        onStartAnalysis: vi.fn(),
+        onNavigateHistory: vi.fn(),
+        onNavigateAbout: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("保存后续复盘输入");
+    expect(markup).not.toContain(">取消<");
+    expect(markup).toContain('aria-label="打开工作区导航"');
   });
 
   it("renders an account-free drawer with workspace retention and accessible controls", async () => {

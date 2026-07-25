@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ChevronDown,
   Clock3,
   Database,
@@ -19,7 +18,6 @@ import type { HistoryAvailability } from "../history-view/HistoryView.js";
 export interface AboutViewProps {
   availability?: HistoryAvailability;
   experienceSource?: string;
-  onNavigateHome: () => void;
   onRequestDeleteWorkspace?: () => void;
   workspace: WorkspacePublicStatus | null;
 }
@@ -126,7 +124,6 @@ const TOPICS: AboutTopic[] = [
 export function AboutView({
   availability = "active",
   experienceSource,
-  onNavigateHome,
   onRequestDeleteWorkspace,
   workspace,
 }: AboutViewProps) {
@@ -138,10 +135,6 @@ export function AboutView({
 
   return (
     <article className="about-view" aria-labelledby="about-heading">
-      <Button className="about-view__back" onClick={onNavigateHome} variant="secondary">
-        <ArrowLeft aria-hidden="true" size={18} />
-        返回主页
-      </Button>
       <header className="about-view__header">
         {experienceSource ? (
           <Badge tone="observed">{experienceSourceLabel(experienceSource)}</Badge>

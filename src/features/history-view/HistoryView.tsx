@@ -32,7 +32,6 @@ export type HistoryAvailability = "active" | "deleted" | "expired";
 
 export interface HistoryViewProps {
   availability?: HistoryAvailability;
-  onNavigateHome: () => void;
   onOpenRecord: (record: HistoryRecordV1) => void;
   reader: HistoryReader;
   reduceMotion?: boolean;
@@ -41,7 +40,6 @@ export interface HistoryViewProps {
 
 interface HistoryListProps {
   entries: HistoryListEntry[];
-  onNavigateHome: () => void;
   onSelectRecord: (recordId: string) => void;
   onShowMore?: () => void;
   visibleCount?: number;
@@ -50,7 +48,6 @@ interface HistoryListProps {
 interface HistoryDetailProps {
   detail: HistoryReadResult;
   onBack: () => void;
-  onNavigateHome: () => void;
   onOpenRecord: (record: HistoryRecordV1) => void;
 }
 
@@ -124,7 +121,6 @@ function SummaryMetadata({ summary }: { summary: HistorySummary }) {
 
 export function HistoryList({
   entries,
-  onNavigateHome,
   onSelectRecord,
   onShowMore,
   visibleCount,
@@ -135,7 +131,6 @@ export function HistoryList({
         <Database aria-hidden="true" size={28} />
         <h2 id="history-empty-heading" tabIndex={-1}>这里还没有复盘记录</h2>
         <p>完成一次复盘后，它会按时间保存在当前匿名私密工作区，并绑定当时的快照和证据截止时点。</p>
-        <Button onClick={onNavigateHome} variant="primary">返回主页发起复盘</Button>
       </section>
     );
   }
@@ -191,14 +186,10 @@ function DetailState({
   children,
   heading,
   onBack,
-  onNavigateHome,
-  retryHome = false,
 }: {
   children: React.ReactNode;
   heading: string;
   onBack: () => void;
-  onNavigateHome: () => void;
-  retryHome?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -216,7 +207,6 @@ function DetailState({
           <ArrowLeft aria-hidden="true" size={20} />
           返回历史列表
         </Button>
-        {retryHome ? <Button onClick={onNavigateHome} variant="primary">返回主页</Button> : null}
       </div>
     </section>
   );
@@ -225,14 +215,12 @@ function DetailState({
 function UnsupportedDetail({
   detail,
   onBack,
-  onNavigateHome,
 }: {
   detail: Extract<HistoryReadResult, { status: "unsupported_version" }>;
   onBack: () => void;
-  onNavigateHome: () => void;
 }) {
   return (
-    <DetailState heading="这条旧记录当前无法读取" onBack={onBack} onNavigateHome={onNavigateHome}>
+    <DetailState heading="这条旧记录当前无法读取" onBack={onBack}>
       <p>我们保留了它的快照、状态和证据截止摘要，但不会用今天的契约或最新市场数据重新计算旧分析。</p>
       <SummaryMetadata summary={detail.summary} />
       <dl className="history-version-list">
@@ -346,16 +334,16 @@ function FoundDetail({
   );
 }
 
-export function HistoryDetail({ detail, onBack, onNavigateHome, onOpenRecord }: HistoryDetailProps) {
+export function HistoryDetail({ detail, onBack, onOpenRecord }: HistoryDetailProps) {
   if (detail.status === "found") {
     return <FoundDetail onBack={onBack} onOpenRecord={onOpenRecord} record={detail.record} />;
   }
   if (detail.status === "unsupported_version") {
-    return <UnsupportedDetail detail={detail} onBack={onBack} onNavigateHome={onNavigateHome} />;
+    return <UnsupportedDetail detail={detail} onBack={onBack} />;
   }
   if (detail.status === "unreadable") {
     return (
-      <DetailState heading="这条记录未通过完整性校验" onBack={onBack} onNavigateHome={onNavigateHome}>
+      <DetailState heading="这条记录未通过完整性校验" onBack={onBack}>
         <p>为避免展示被破坏或不完整的历史，满懂不会读取部分内容，也不会按当前数据重算。</p>
         <SummaryMetadata summary={detail.summary} />
       </DetailState>
@@ -363,13 +351,13 @@ export function HistoryDetail({ detail, onBack, onNavigateHome, onOpenRecord }: 
   }
   if (detail.status === "unavailable") {
     return (
-      <DetailState heading="历史记录暂时无法读取" onBack={onBack} onNavigateHome={onNavigateHome}>
+      <DetailState heading="历史记录暂时无法读取" onBack={onBack}>
         <p>存储读取失败。已保存记录不会被替换为静态示例或重新生成的内容，请稍后从历史列表重试。</p>
       </DetailState>
     );
   }
   return (
-    <DetailState heading="这条记录已不存在" onBack={onBack} onNavigateHome={onNavigateHome} retryHome>
+    <DetailState heading="这条记录已不存在" onBack={onBack}>
       <p>它可能已随工作区主动删除或在 30 天无活动后到期清理，无法通过正常产品路径恢复。</p>
     </DetailState>
   );
@@ -377,10 +365,8 @@ export function HistoryDetail({ detail, onBack, onNavigateHome, onOpenRecord }: 
 
 function WorkspaceUnavailable({
   availability,
-  onNavigateHome,
 }: {
   availability: Exclude<HistoryAvailability, "active">;
-  onNavigateHome: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -400,14 +386,12 @@ function WorkspaceUnavailable({
           : "主动删除已清除该工作区的持仓、约束、复盘与历史。"}
         这些内容无法通过正常产品路径恢复。
       </p>
-      <Button onClick={onNavigateHome} variant="primary">返回主页</Button>
     </section>
   );
 }
 
 export function HistoryView({
   availability = "active",
-  onNavigateHome,
   onOpenRecord,
   reader,
   reduceMotion = false,
@@ -443,7 +427,7 @@ export function HistoryView({
   }, [selectedRecordId]);
 
   if (availability !== "active") {
-    return <WorkspaceUnavailable availability={availability} onNavigateHome={onNavigateHome} />;
+    return <WorkspaceUnavailable availability={availability} />;
   }
 
   const selectedEntry = result?.status === "loaded" && selectedRecordId
@@ -456,7 +440,6 @@ export function HistoryView({
         <HistoryDetail
           detail={selectedEntry.detail}
           onBack={() => setSelectedRecordId(null)}
-          onNavigateHome={onNavigateHome}
           onOpenRecord={onOpenRecord}
         />
       </div>
@@ -488,7 +471,6 @@ export function HistoryView({
     content = (
       <HistoryList
         entries={result.entries}
-        onNavigateHome={onNavigateHome}
         onSelectRecord={setSelectedRecordId}
         onShowMore={() => setVisibleCount((count) => count + HISTORY_PAGE_SIZE)}
         visibleCount={visibleCount}
@@ -498,10 +480,6 @@ export function HistoryView({
 
   return (
     <div className="history-view" data-reduce-motion={reduceMotion || undefined}>
-      <Button className="history-view__back" onClick={onNavigateHome} variant="secondary">
-        <ArrowLeft aria-hidden="true" size={18} />
-        返回主页
-      </Button>
       <header className="history-page__header">
         <p>不可变复盘存档</p>
         <h1 id="history-list-heading" ref={headingRef} tabIndex={-1}>历史记录</h1>

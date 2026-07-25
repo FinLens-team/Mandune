@@ -258,7 +258,6 @@ export function App(props: AppProps = {}) {
       <>
         <AtlasView
           gateway={atlasGateway}
-          onNavigateHome={() => goHome("home")}
           onOpenHistory={(recordId) => void controller.openHistoryRecord(recordId, "atlas")}
           reducedMotion={state.reducedMotion}
         />
@@ -274,7 +273,6 @@ export function App(props: AppProps = {}) {
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <main className="journey-secondary__page" id="main">
           <HistoryView
-            onNavigateHome={() => goHome("home")}
             onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
             reader={gateway}
             reduceMotion={state.reducedMotion}
@@ -294,7 +292,6 @@ export function App(props: AppProps = {}) {
         <main className="journey-secondary__page" id="main">
           <AboutView
             experienceSource={state.experienceSource}
-            onNavigateHome={() => goHome("home")}
             onRequestDeleteWorkspace={() => {
               if (window.confirm("确认注销当前工作区数据及全部历史？此操作无法恢复。")) {
                 void controller.deleteWorkspace();

@@ -340,7 +340,6 @@ export function WorkspaceShell({
             <div className="workspace-shell__view workspace-shell__view--data">
               <PortfolioEditor
                 draft={draft}
-                onCancel={() => navigate("home")}
                 onChange={changeDraft}
                 onSave={() => navigate("home")}
               />

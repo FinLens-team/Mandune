@@ -73,10 +73,6 @@
   min-width: 0;
 }
 
-.history-view__back {
-  justify-self: start;
-}
-
 /* 与图鉴页 atlas-page__header 同构：眉题 + 衬线标题 + 描述。 */
 .history-page__header {
   max-width: var(--content-reading);
@@ -360,7 +356,6 @@
     padding-inline: var(--space-3);
   }
 
-  .history-view__back,
   .history-list__more .ui-button,
   .history-actions .ui-button,
   .history-state .ui-button {
