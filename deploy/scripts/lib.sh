@@ -47,7 +47,7 @@ validate_archive_member_name() {
   IFS='/' read -r -a segments <<<"${normalized}"
   for segment in "${segments[@]}"; do
     [[ -n ${segment} && ${segment} != "." && ${segment} != ".." ]] || return 1
-    [[ ${segment} =~ ^[A-Za-z0-9._@+~=-]+$ ]] || return 1
+    [[ ${segment} =~ ^[[:alnum:]_.@+~=-]+$ ]] || return 1
   done
 
   case "${normalized}" in

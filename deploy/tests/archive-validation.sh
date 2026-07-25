@@ -48,6 +48,13 @@ make_tree "${BASE}"
 archive_tree "${BASE}" "${TEMP_ROOT}/valid.tar.gz"
 expect_accept "${TEMP_ROOT}/valid.tar.gz"
 
+UNICODE="${TEMP_ROOT}/unicode"
+cp -a "${BASE}" "${UNICODE}"
+install -m 0644 /dev/null "${UNICODE}/dist/server/持仓分析-skill.md"
+archive_tree "${UNICODE}" "${TEMP_ROOT}/unicode.tar.gz"
+expect_accept "${TEMP_ROOT}/unicode.tar.gz"
+validate_release_tree "${UNICODE}" >/dev/null 2>&1 || fail "UTF-8 extracted tree was rejected"
+
 SYMLINK="${TEMP_ROOT}/symlink"
 cp -a "${BASE}" "${SYMLINK}"
 ln -s ../../package.json "${SYMLINK}/dist/client/leak"
