@@ -436,6 +436,29 @@ describe("journey controller analysis status matrix", () => {
     });
   });
 
+  it("drops a stale analysis reference when the workspace switches to another theme", async () => {
+    const gateway = new FakeGateway("supported_full", { running: true });
+    const app = harness(gateway);
+    await enterReturning(app);
+    app.controller.setTheme("sunge");
+    gateway.status.theme_id = "sunge";
+    await app.controller.startAnalysis(app.state.draft!, "random", "sunge");
+    const previousAnalysisId = app.state.activeAnalysis?.analysisId;
+
+    expect(app.state.activeAnalysis?.themeId).toBe("sunge");
+    expect(app.persistence.getActiveAnalysis(workspace.workspace_id)).toBe(previousAnalysisId);
+
+    app.controller.setTheme("eastern_observation");
+
+    expect(app.state).toMatchObject({
+      activeAnalysis: null,
+      currentThemeId: "eastern_observation",
+      resumeAnalysisId: null,
+      resumeAnalysisSource: null,
+    });
+    expect(app.persistence.getActiveAnalysis(workspace.workspace_id)).toBeNull();
+  });
+
   it("fails closed when a supported result has no validated narrative", async () => {
     const app = harness(new FakeGateway("supported_full", { withoutNarrative: true }));
     await enterReturning(app);

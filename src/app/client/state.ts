@@ -201,7 +201,18 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
     case "EXPERIENCE_SOURCE_CHANGED":
       return { ...state, experienceSource: action.source };
     case "THEME_CHANGED":
-      return { ...state, currentThemeId: action.themeId };
+      if (!state.activeAnalysis || state.activeAnalysis.themeId === action.themeId) {
+        return { ...state, currentThemeId: action.themeId };
+      }
+      return {
+        ...state,
+        activeAnalysis: null,
+        currentThemeId: action.themeId,
+        displayedResult: null,
+        message: undefined,
+        resumeAnalysisId: null,
+        resumeAnalysisSource: null,
+      };
     case "REDUCED_MOTION_CHANGED":
       return { ...state, reducedMotion: action.enabled };
     case "REVIEW_COACHMARK_DISMISSED":

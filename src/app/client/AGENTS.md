@@ -7,6 +7,7 @@
 - `runtime.ts` is the final display gate for `LongCard`: snapshot, analysis, constraints, theme, narrative IDs, and guidance must remain version-consistent.
 - Browser storage is optional and workspace-scoped. It stores onboarding completion, reduced-motion preference, the first-S4 coachmark dismissal, the active analysis ID, current experience source, and an `analysis_id`-keyed recovery hint; durable drafts, tasks, results, and history remain server-owned.
 - The current theme is a workspace-scoped browser preference. The theme switcher updates it only after explicit confirmation; analysis creation freezes that value into the server-owned snapshot, so changing the current theme never rewrites an active or historical report.
+- Confirming a different theme clears any mismatched client-side active-analysis recovery reference. The old immutable task/history remains untouched, while the next mascot entry starts from the newly selected workspace theme instead of reopening the old theme's waiting page.
 
 ## Conventions
 

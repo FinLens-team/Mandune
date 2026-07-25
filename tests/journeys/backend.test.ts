@@ -302,6 +302,47 @@ describe("#34 backend journey transport", () => {
     })]);
   });
 
+  it("starts a new theme after an older themed run was interrupted", async () => {
+    const store = new MemoryJourneyStore();
+    const history = new HistoryService();
+    let id = 0;
+    const service = new JourneyAnalysisService(
+      store,
+      history,
+      new FixtureAnalysisExecutor("supported_full"),
+      () => new Date("2026-07-25T03:00:00.000Z"),
+      () => `analysis-theme-${++id}`,
+    );
+    await service.putDraft("workspace-theme-retry", draftFor("supported_full"));
+    const oldSnapshot = { ...snapshotFor("supported_full"), theme_id: "sunge" };
+    await store.createRun({
+      workspace_id: "workspace-theme-retry",
+      analysis_id: "analysis-old-sunge",
+      snapshot: oldSnapshot,
+      state: "running",
+      created_at: "2026-07-25T02:00:00.000Z",
+      updated_at: "2026-07-25T02:00:01.000Z",
+      retryable: false,
+    });
+    await store.recoverInterruptedRuns("2026-07-25T02:01:00.000Z");
+
+    const started = await service.start("workspace-theme-retry", "random", "eastern_observation");
+
+    expect(started).toMatchObject({
+      created: true,
+      run: {
+        analysis_id: "analysis-theme-1",
+        snapshot: { theme_id: "eastern_observation" },
+      },
+    });
+    expect(await store.getRun("workspace-theme-retry", "analysis-old-sunge")).toMatchObject({
+      state: "terminal",
+      terminal_reason: "restart_interrupted",
+      snapshot: { theme_id: "sunge" },
+    });
+    await service.waitForIdle();
+  });
+
   it("cascades drafts/runs and fences a completion that arrives after deletion", async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });

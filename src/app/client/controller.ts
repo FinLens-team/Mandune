@@ -265,7 +265,12 @@ export class JourneyController {
 
   setTheme(themeId: ThemeId): void {
     const state = this.options.getState();
-    if (state.workspace) this.options.persistence.setTheme(state.workspace.workspace_id, themeId);
+    if (state.workspace) {
+      this.options.persistence.setTheme(state.workspace.workspace_id, themeId);
+      if (state.activeAnalysis && state.activeAnalysis.themeId !== themeId) {
+        this.options.persistence.clearActiveAnalysis(state.workspace.workspace_id);
+      }
+    }
     if (state.currentThemeId !== themeId) {
       this.options.dispatch({ type: "THEME_CHANGED", themeId });
     }
