@@ -105,8 +105,10 @@ describe("deterministic analysis derivations", () => {
     const result = deriveAnalysisInputs({
       snapshot: snapshot(),
       evidence: [
+        series("line-1", "2026-07-22", 105),
         series("line-1", "2026-07-23", 100),
         series("line-1", TRADING_DAY, 110),
+        series("line-2", "2026-07-22", 95),
         series("line-2", "2026-07-23", 100),
         series("line-2", TRADING_DAY, 90),
       ],
@@ -118,6 +120,8 @@ describe("deterministic analysis derivations", () => {
     expect(result.derived).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "daily-change-pct-line-1", value: 10, unit: "%" }),
       expect.objectContaining({ id: "daily-change-pct-line-2", value: -10, unit: "%" }),
+      expect.objectContaining({ id: "recent-3-session-change-pct-line-1", value: 4.761905, unit: "%" }),
+      expect.objectContaining({ id: "recent-3-session-change-pct-line-2", value: -5.263158, unit: "%" }),
       expect.objectContaining({ id: "daily-contribution-pct-point-line-1", value: 6 }),
       expect.objectContaining({ id: "daily-contribution-pct-point-line-2", value: -4 }),
       expect.objectContaining({ id: "daily-portfolio-change-pct", value: 2 }),
@@ -129,6 +133,28 @@ describe("deterministic analysis derivations", () => {
       expect.objectContaining({ id: "exposure-asset-class-share-a_share", value: 60 }),
       expect.objectContaining({ id: "exposure-asset-class-share-etf", value: 40 }),
     ]));
+  });
+
+  it("does not derive a change when fewer than three valid trading days are available", () => {
+    const series = (date: string, value: number): ReturnType<typeof marketEvidence> => ({
+      ...marketEvidence("line-1", "ambiguous"),
+      id: `panda-line-1-${date}`,
+      value,
+      unit: undefined,
+      normalization_note: "unitless_return_eligible:same_provider_method",
+      source: { name: "PandaAI method", locator: `panda:line-1:${date}` },
+      observation_or_event_time: date,
+      limitations: ["同方法连续观察值可派生涨跌幅。"],
+    });
+    const result = deriveAnalysisInputs({
+      snapshot: snapshot(1),
+      evidence: [series("2026-07-23", 100), series(TRADING_DAY, 110)],
+      latestCompleteTradingDay: TRADING_DAY,
+    });
+
+    expect(result.derived.map((item) => item.id)).not.toContain("daily-change-pct-line-1");
+    expect(result.derived.map((item) => item.id)).not.toContain("recent-3-session-change-pct-line-1");
+    expect(result.coverage.covered_line_ids).toEqual([]);
   });
 
   it("rejects available market values whose unit is not verified", () => {

@@ -12,6 +12,7 @@ import type {
 const CACHE_METHOD = "market_series";
 const FAILURE_TTL_MS = 5 * 60 * 1_000;
 const CALENDAR_LOOKBACK_MS = 10 * 24 * 60 * 60 * 1_000;
+const REQUIRED_TRADING_DAYS = 3;
 
 export interface PandaMarketCache {
   getMarket(input: {
@@ -72,6 +73,16 @@ function statusFor(result: PandaBatchResult): EvidenceRecord["status"] {
   if (result.status === "unsupported") return "unsupported";
   if (result.status === "empty") return "ambiguous";
   return "failed";
+}
+
+function latestRows(rows: readonly PandaBatchRow[], tradingDay: string): PandaBatchRow[] {
+  const byMetricAndDate = new Map<string, PandaBatchRow>();
+  for (const row of rows) {
+    if (row.date <= tradingDay) byMetricAndDate.set(`${row.metric}:${row.date}`, row);
+  }
+  return [...byMetricAndDate.values()]
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .slice(-REQUIRED_TRADING_DAYS);
 }
 
 function unavailableEvidence(
@@ -190,7 +201,12 @@ export class CachedPandaEvidenceCollector {
       const cached = record && cacheFresh(record, input.tradingDay, current)
         ? resultFromCache(line, record)
         : undefined;
-      if (cached && record) results.set(line.line_id, { result: cached, fetchedAt: record.fetchedAt });
+      if (cached && record) {
+        results.set(line.line_id, {
+          result: { ...cached, rows: latestRows(cached.rows, input.tradingDay) },
+          fetchedAt: record.fetchedAt,
+        });
+      }
       else missing.push(line);
     }
 
@@ -218,7 +234,7 @@ export class CachedPandaEvidenceCollector {
       }
       const fetchedByLine = new Map(fetched.map((item) => [item.lineId, item]));
       for (const line of missing) {
-        const result = fetchedByLine.get(line.line_id) ?? {
+        const rawResult = fetchedByLine.get(line.line_id) ?? {
           lineId: line.line_id,
           assetClass: line.asset_class,
           symbol: line.symbol,
@@ -227,6 +243,7 @@ export class CachedPandaEvidenceCollector {
           rows: [],
           errorCode: "missing_batch_result",
         };
+        const result = { ...rawResult, rows: latestRows(rawResult.rows, input.tradingDay) };
         results.set(line.line_id, { result, fetchedAt });
         const observedAt = result.rows.at(-1)?.date;
         this.cache.putMarket({
@@ -251,6 +268,9 @@ export class CachedPandaEvidenceCollector {
       const { result } = collected;
       if (result.status === "available" && result.rows.length > 0) {
         evidence.push(...result.rows.map((row) => rowEvidence(line, result, row, collected.fetchedAt)));
+        if (result.rows.length < REQUIRED_TRADING_DAYS) {
+          failures.push({ lineId: line.line_id, status: "empty", errorCode: "insufficient_history" });
+        }
       } else {
         evidence.push(unavailableEvidence(line, result, input.tradingDay, collected.fetchedAt));
         failures.push({

@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { TencentMarketEvidenceSource } from "../../src/providers/index.js";
 
-function quote(dateTime: string): string {
-  const fields = Array.from({ length: 40 }, () => "");
-  fields[3] = "12.34";
-  fields[30] = dateTime;
-  return `v_sh600000="${fields.join("~")}";`;
+function klines(rows: string[][]): object {
+  return { data: { sh600000: { qfqday: rows } } };
 }
 
 describe("Tencent public market evidence", () => {
-  it("keeps a quote after the frozen cutoff ambiguous at its real observation date", async () => {
+  it("returns the latest three valid trading days and excludes rows after the cutoff", async () => {
     const source = new TencentMarketEvidenceSource(
-      async () => new Response(quote("20260726153000"), { status: 200 }),
+      async () => Response.json(klines([
+        ["2026-07-22", "10", "10.1"],
+        ["2026-07-23", "10.1", "10.2"],
+        ["2026-07-24", "10.2", "10.4"],
+        ["2026-07-25", "10.4", "10.3"],
+        ["2026-07-26", "10.3", "99"],
+      ])),
     );
     const evidence = await source.collectMarketEvidence({
       lineId: "line-1",
@@ -22,16 +25,22 @@ describe("Tencent public market evidence", () => {
       signal: new AbortController().signal,
     });
 
-    expect(evidence[0]).toMatchObject({
-      observation_or_event_time: "2026-07-26",
-      status: "ambiguous",
-      value: 12.34,
-    });
+    expect(evidence).toHaveLength(3);
+    expect(evidence.map((item) => [item.observation_or_event_time, item.value, item.status])).toEqual([
+      ["2026-07-23", 10.2, "ambiguous"],
+      ["2026-07-24", 10.4, "ambiguous"],
+      ["2026-07-25", 10.3, "available"],
+    ]);
+    expect(evidence.every((item) =>
+      item.normalization_note === "unitless_return_eligible:same_provider_method")).toBe(true);
   });
 
-  it("accepts a quote on the frozen latest complete trading day", async () => {
+  it("fails closed when fewer than three valid trading days are available", async () => {
     const source = new TencentMarketEvidenceSource(
-      async () => new Response(quote("20260725150000"), { status: 200 }),
+      async () => Response.json(klines([
+        ["2026-07-24", "10", "10.1"],
+        ["2026-07-25", "10.1", "10.2"],
+      ])),
     );
     const evidence = await source.collectMarketEvidence({
       lineId: "line-1",
@@ -44,8 +53,9 @@ describe("Tencent public market evidence", () => {
 
     expect(evidence[0]).toMatchObject({
       observation_or_event_time: "2026-07-25",
-      status: "available",
-      value: 12.34,
+      status: "failed",
+      value: null,
     });
+    expect(evidence[0]?.limitations.join(" ")).toContain("不足三个有效交易日");
   });
 });

@@ -35,7 +35,9 @@ const OBSERVABLE_EVIDENCE_STATUSES = new Set(["available", "stale", "ambiguous",
 interface DailyChange {
   lineId: string;
   percentage: number;
+  periodPercentage: number;
   evidenceRefs: [string, string];
+  periodEvidenceRefs: [string, string, string];
 }
 
 function semanticDate(value: string): string | undefined {
@@ -75,7 +77,7 @@ function rounded(value: number): number {
 }
 
 function dailyChanges(evidence: readonly EvidenceRecord[], latestTradingDay: string): DailyChange[] {
-  const byLine = new Map<string, EvidenceRecord[]>();
+  const bySeries = new Map<string, EvidenceRecord[]>();
   for (const item of evidence) {
     const lineId = assetLineId(item);
     if (!lineId || typeof item.value !== "number" || !Number.isFinite(item.value)) continue;
@@ -83,27 +85,33 @@ function dailyChanges(evidence: readonly EvidenceRecord[], latestTradingDay: str
     const eligible = item.status === "available" ||
       (item.status === "ambiguous" && item.normalization_note === "unitless_return_eligible:same_provider_method");
     if (!eligible || !semanticDate(item.observation_or_event_time)) continue;
-    const rows = byLine.get(lineId) ?? [];
+    const key = `${lineId}\u0000${item.metric_or_event_type}\u0000${item.source.name}`;
+    const rows = bySeries.get(key) ?? [];
     rows.push(item);
-    byLine.set(lineId, rows);
+    bySeries.set(key, rows);
   }
 
   const result: DailyChange[] = [];
-  for (const [lineId, rows] of byLine) {
-    const current = rows.find((item) => semanticDate(item.observation_or_event_time) === latestTradingDay);
-    if (!current || typeof current.value !== "number") continue;
-    const previous = rows
-      .filter((item) =>
-        item.metric_or_event_type === current.metric_or_event_type &&
-        item.source.name === current.source.name &&
-        semanticDate(item.observation_or_event_time)! < latestTradingDay &&
-        typeof item.value === "number")
-      .sort((left, right) => right.observation_or_event_time.localeCompare(left.observation_or_event_time))[0];
-    if (!previous || typeof previous.value !== "number" || previous.value === 0) continue;
+  for (const [key, rows] of bySeries) {
+    const lineId = key.split("\u0000", 1)[0]!;
+    const recent = [...new Map(rows
+      .filter((item) => semanticDate(item.observation_or_event_time)! <= latestTradingDay)
+      .map((item) => [semanticDate(item.observation_or_event_time), item])).values()]
+      .sort((left, right) => left.observation_or_event_time.localeCompare(right.observation_or_event_time))
+      .slice(-3);
+    if (recent.length !== 3) continue;
+    const first = recent[0]!;
+    const previous = recent[1]!;
+    const current = recent[2]!;
+    if (semanticDate(current.observation_or_event_time) !== latestTradingDay ||
+      typeof first.value !== "number" || typeof previous.value !== "number" ||
+      typeof current.value !== "number" || first.value === 0 || previous.value === 0) continue;
     result.push({
       lineId,
       percentage: rounded(((current.value - previous.value) / Math.abs(previous.value)) * 100),
+      periodPercentage: rounded(((current.value - first.value) / Math.abs(first.value)) * 100),
       evidenceRefs: [previous.id, current.id],
+      periodEvidenceRefs: [first.id, previous.id, current.id],
     });
   }
   return result.sort((left, right) => left.lineId.localeCompare(right.lineId));
@@ -264,6 +272,16 @@ export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivation
     formula_or_rule: "(current provider-native observation - previous observation) / abs(previous observation) * 100; both observations use the same provider method and metric.",
     provenance: "derived",
   }));
+  const recentPeriodDerivations = changes.map<DerivedResult>((change) => ({
+    id: `recent-3-session-change-pct-${change.lineId}`,
+    label: `${change.lineId} 最近三个有效交易日区间涨跌幅`,
+    value: change.periodPercentage,
+    unit: "%",
+    input_refs: [change.lineId],
+    evidence_refs: change.periodEvidenceRefs,
+    formula_or_rule: "(latest observation - first of the latest three valid trading-day observations) / abs(first observation) * 100; all three observations use the same provider method and metric.",
+    provenance: "derived",
+  }));
   const contributionDerivations: DerivedResult[] = declaredShares.every((item) => item.value !== undefined)
     ? declaredShares.flatMap<DerivedResult>((share) => {
         const change = changeByLine.get(share.lineId);
@@ -319,6 +337,7 @@ export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivation
     coverageCount,
     ...percentageDerivations,
     ...dailyChangeDerivations,
+    ...recentPeriodDerivations,
     ...contributionDerivations,
     ...contributionSummary,
     ...[...classCounts.entries()].map<DerivedResult>(([assetClass, count]) => ({

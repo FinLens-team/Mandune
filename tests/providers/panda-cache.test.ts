@@ -41,6 +41,7 @@ describe("cached PandaAI batch evidence", () => {
           status: "available",
           method: "get_market_data",
           rows: [
+            { date: "2026-07-22", metric: request.assetClass === "fund" ? "nav" : "close", value: 98 },
             { date: "2026-07-23", metric: request.assetClass === "fund" ? "nav" : "close", value: 100 },
             { date: "2026-07-24", metric: request.assetClass === "fund" ? "nav" : "close", value: 102 },
           ],
@@ -60,7 +61,7 @@ describe("cached PandaAI batch evidence", () => {
 
     expect(calls).toBe(1);
     expect(first.failures).toEqual([]);
-    expect(first.evidence).toHaveLength(snapshot.lines.length * 2);
+    expect(first.evidence).toHaveLength(snapshot.lines.length * 3);
     expect(first.evidence.every((item) => item.status === "ambiguous" && item.unit === undefined)).toBe(true);
     expect(second).toEqual(first);
   });

@@ -10,16 +10,25 @@ interface MarketEvidenceCollector {
   }): Promise<CachedPandaEvidenceResult>;
 }
 
+const REQUIRED_TRADING_DAYS = 3;
+
 function usableLineIds(evidence: readonly EvidenceRecord[]): Set<string> {
-  const ids = new Set<string>();
+  const datesBySeries = new Map<string, Set<string>>();
   for (const item of evidence) {
     const eligible = item.status === "available" ||
       (item.status === "ambiguous" &&
         item.normalization_note === "unitless_return_eligible:same_provider_method");
     if ((item.metric_or_event_type === "close" || item.metric_or_event_type === "nav") &&
       eligible && item.scope.kind === "asset") {
-      ids.add(item.scope.line_id);
+      const key = `${item.scope.line_id}\u0000${item.metric_or_event_type}\u0000${item.source.name}`;
+      const dates = datesBySeries.get(key) ?? new Set<string>();
+      dates.add(item.observation_or_event_time.slice(0, 10));
+      datesBySeries.set(key, dates);
     }
+  }
+  const ids = new Set<string>();
+  for (const [key, dates] of datesBySeries) {
+    if (dates.size >= REQUIRED_TRADING_DAYS) ids.add(key.split("\u0000", 1)[0]!);
   }
   return ids;
 }

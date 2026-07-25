@@ -4,13 +4,14 @@ import type { MarketEvidenceSource } from "../analysis/index.js";
 type FetchLike = typeof fetch;
 
 /**
- * Keyless public quote upstream (Tencent qt.gtimg.cn) used to widen live
+ * Keyless public daily-kline upstream used to widen live
  * A-share / exchange-traded fund coverage beyond the deterministic fixtures.
  * Off-exchange funds stay unsupported because this endpoint does not publish a
  * verifiable, unit-declared NAV for them.
  */
-const TENCENT_QUOTE_ENDPOINT = "https://qt.gtimg.cn/q=";
+const TENCENT_KLINE_ENDPOINT = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get";
 const DEFAULT_TIMEOUT_MS = 8_000;
+const REQUIRED_TRADING_DAYS = 3;
 
 function evidenceId(lineId: string, suffix: string): string {
   return `tencent-market-${lineId}-${suffix}`;
@@ -36,24 +37,31 @@ function tencentCode(symbol: string): string | undefined {
   return undefined;
 }
 
-interface ParsedQuote {
+interface ParsedKline {
   close: number;
   observedDate: string;
 }
 
-function parseQuote(payload: string): ParsedQuote | undefined {
-  const quoted = /="([^"]*)"/.exec(payload);
-  if (!quoted?.[1]) return undefined;
-  const fields = quoted[1].split("~");
-  const close = Number(fields[3]);
-  if (!Number.isFinite(close) || close <= 0) return undefined;
-
-  // The full quote carries a 14-digit YYYYMMDDhhmmss timestamp near the tail.
-  const stamp = /(\d{4})(\d{2})(\d{2})\d{6}/.exec(quoted[1]);
-  if (!stamp) return undefined;
-  const observedDate = `${stamp[1]}-${stamp[2]}-${stamp[3]}`;
-  if (Number.isNaN(Date.parse(`${observedDate}T00:00:00.000Z`))) return undefined;
-  return { close, observedDate };
+function parseKlines(payload: unknown, code: string, cutoff: string): ParsedKline[] {
+  if (typeof payload !== "object" || payload === null) return [];
+  const data = (payload as { data?: unknown }).data;
+  if (typeof data !== "object" || data === null) return [];
+  const instrument = (data as Record<string, unknown>)[code];
+  if (typeof instrument !== "object" || instrument === null) return [];
+  const source = instrument as { qfqday?: unknown; day?: unknown };
+  const rows = Array.isArray(source.qfqday) ? source.qfqday : Array.isArray(source.day) ? source.day : [];
+  const byDate = new Map<string, ParsedKline>();
+  for (const row of rows) {
+    if (!Array.isArray(row) || typeof row[0] !== "string") continue;
+    const observedDate = row[0];
+    const close = Number(row[2]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(observedDate) || observedDate > cutoff ||
+      !Number.isFinite(close) || close <= 0) continue;
+    byDate.set(observedDate, { observedDate, close });
+  }
+  return [...byDate.values()]
+    .sort((left, right) => left.observedDate.localeCompare(right.observedDate))
+    .slice(-REQUIRED_TRADING_DAYS);
 }
 
 export class TencentMarketEvidenceSource implements MarketEvidenceSource {
@@ -111,50 +119,42 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
 
     try {
       const timeout = AbortSignal.timeout(this.timeoutMs);
-      const response = await this.fetchImpl(`${TENCENT_QUOTE_ENDPOINT}${code}`, {
+      const query = new URLSearchParams({ param: `${code},day,,,10,qfq` });
+      const response = await this.fetchImpl(`${TENCENT_KLINE_ENDPOINT}?${query}`, {
         method: "GET",
         signal: AbortSignal.any([input.signal, timeout]),
       });
       if (!response.ok) {
         return [this.failedEvidence(input, scope, `行情服务返回 HTTP ${response.status}。`)];
       }
-      const payload = await response.text();
-      const parsed = parseQuote(payload);
-      if (!parsed) {
-        return [this.failedEvidence(input, scope, "行情响应缺少可用收盘价或观察日期。")];
+      const rows = parseKlines(await response.json(), code, input.latestCompleteTradingDay);
+      if (rows.length < REQUIRED_TRADING_DAYS) {
+        return [this.failedEvidence(input, scope, "行情响应不足三个有效交易日，无法形成涨跌分析。")];
       }
 
-      const withinCutoff = parsed.observedDate <= input.latestCompleteTradingDay;
-      const observationDate = parsed.observedDate;
-      const isLatest = withinCutoff && observationDate === input.latestCompleteTradingDay;
-
-      return [
-        {
-          id: evidenceId(input.lineId, observationDate),
+      const latestDate = rows.at(-1)!.observedDate;
+      return rows.map((row) => {
+        const isLatest = row.observedDate === latestDate;
+        return {
+          id: evidenceId(input.lineId, row.observedDate),
           scope,
           metric_or_event_type: "close",
-          value: parsed.close,
+          value: row.close,
           unit: "CNY",
+          normalization_note: "unitless_return_eligible:same_provider_method",
           source: {
-            name: "腾讯行情 qt.gtimg.cn",
-            locator: `tencent:qt:${code}:${observationDate}`,
+            name: "腾讯行情日 K",
+            locator: `tencent:kline:${code}:${row.observedDate}`,
           },
-          observation_or_event_time: observationDate,
+          observation_or_event_time: row.observedDate,
           fetched_at: input.acquiredAt,
-          // A same-day close on the frozen latest complete trading day is
-          // materially usable; anything older is preserved but downgraded by
-          // the orchestrator's date normalization.
-          status: isLatest ? "available" : withinCutoff ? "stale" : "ambiguous",
+          status: isLatest ? "available" as const : "ambiguous" as const,
           limitations: isLatest
-            ? ["收盘价来自公开延迟行情，单位按交易所人民币计价。"]
-            : withinCutoff ? [
-                "收盘价来自公开延迟行情，观察日不是冻结的最新完整交易日，不得支持物质性结论。",
-              ] : [
-                "行情观察日晚于本次证据截止日，仅记录缺口，不得作为本次分析证据。",
-              ],
-          provenance: "observed",
-        },
-      ];
+            ? ["最近三个有效交易日的收盘价来自公开延迟日 K 行情，单位按交易所人民币计价。"]
+            : ["历史收盘价仅与同一行情方法的连续观察值共同用于派生涨跌幅。"],
+          provenance: "observed" as const,
+        };
+      });
     } catch (error) {
       const cancelled = input.signal.aborted;
       return [
@@ -179,7 +179,7 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
       scope,
       metric_or_event_type: "close",
       value: null,
-      source: { name: "腾讯行情 qt.gtimg.cn", locator: `tencent:qt:${scope.symbol}` },
+      source: { name: "腾讯行情日 K", locator: `tencent:kline:${scope.symbol}` },
       observation_or_event_time: input.latestCompleteTradingDay,
       fetched_at: input.acquiredAt,
       status: "failed",
