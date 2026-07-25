@@ -20,6 +20,9 @@ temp/
 *.pid
 *.pid.lock
 
+# Local scratch data (sqlite runtime state, throwaway probes)
+.localdata/
+
 # Generated output and test artifacts
 dist/
 build/

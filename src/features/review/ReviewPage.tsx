@@ -4,6 +4,7 @@ import type { AssetClass, PortfolioDraft, PortfolioSnapshot } from "../../contra
 import { createExampleDraft, listUnresolvedLines, listUsableLines } from "../../portfolio/index.js";
 import { Button, DemoBadge, IconButton } from "../../client/ui/index.js";
 import { ConstraintsForm } from "../constraints/ConstraintsForm.js";
+import { InstrumentField } from "./InstrumentField.js";
 import {
   appendHolding,
   deleteHolding,
@@ -26,6 +27,7 @@ const EMPTY_HOLDING = {
   asset_class: "etf" as AssetClass,
   name: "",
   symbol: "",
+  market: "",
   size_basis: "",
   observation_date: "",
 };
@@ -220,20 +222,29 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                   <option value="a_share">A 股</option>
                 </select>
               </label>
-              <label className="field">
-                <span className="field-label">名称</span>
-                <input
-                  required
-                  value={newHolding.name}
-                  onChange={(event) =>
-                    setNewHolding((current) => ({ ...current, name: event.target.value }))
-                  }
-                />
-              </label>
+              <InstrumentField
+                id="portfolio-add-name"
+                label="名称"
+                placeholder="输入名称／代码／拼音首字母可搜索"
+                required
+                value={newHolding.name}
+                onInput={(text) =>
+                  setNewHolding((current) => ({ ...current, name: text }))
+                }
+                onSelect={(suggestion) =>
+                  setNewHolding((current) => ({
+                    ...current,
+                    asset_class: suggestion.asset_class,
+                    name: suggestion.name,
+                    symbol: suggestion.symbol,
+                    market: suggestion.market ?? "",
+                  }))
+                }
+              />
               <label className="field">
                 <span className="field-label">代码</span>
                 <input
-                  placeholder="未知可留空"
+                  placeholder="未知可留空；选中搜索建议会自动回填"
                   value={newHolding.symbol}
                   onChange={(event) =>
                     setNewHolding((current) => ({ ...current, symbol: event.target.value }))

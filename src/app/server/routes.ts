@@ -1,6 +1,12 @@
 import { Hono, type Context } from "hono";
 import { getCookie } from "hono/cookie";
 import type { HistoryService } from "../../history/index.js";
+import {
+  INSTRUMENT_DICTIONARY_AS_OF,
+  INSTRUMENT_QUERY_MAX_LENGTH,
+  isInstrumentAssetClass,
+  searchInstruments,
+} from "../../instruments/index.js";
 import type { WorkspaceService } from "../../workspace/index.js";
 import { WORKSPACE_COOKIE } from "../../workspace/index.js";
 import { JourneyAnalysisService, JourneyInputError } from "./service.js";
@@ -51,6 +57,25 @@ export function createJourneyRoutes(input: {
       if (error instanceof JourneyInputError) return c.json({ error: error.code }, 400);
       throw error;
     }
+  });
+
+  // Assistive fill-in search over the static reference dictionary.
+  // Query keywords never leave this server; no provider call is made.
+  app.get("/instruments/search", async (c) => {
+    const id = await workspaceId(c, input.workspaces);
+    if (!id) return c.json(UNAUTHORIZED, 401);
+    const query = c.req.query("q") ?? "";
+    if (query.length > INSTRUMENT_QUERY_MAX_LENGTH) {
+      return c.json({ error: "invalid_query" }, 400);
+    }
+    const assetClass = c.req.query("asset_class");
+    if (assetClass !== undefined && !isInstrumentAssetClass(assetClass)) {
+      return c.json({ error: "invalid_asset_class" }, 400);
+    }
+    return c.json({
+      suggestions: searchInstruments(query, assetClass ? { assetClass } : {}),
+      dictionary_as_of: INSTRUMENT_DICTIONARY_AS_OF,
+    });
   });
 
   app.post("/analyses", async (c) => {

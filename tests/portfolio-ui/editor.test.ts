@@ -71,6 +71,47 @@ describe("S6 portfolio editor", () => {
     expect(removed.lines.some((line) => line.line_id === lineId)).toBe(false);
   });
 
+  it("renders an assistive fuzzy-search combobox that never blocks free text", async () => {
+    const { PortfolioEditor } = await loadReview();
+    const markup = renderToStaticMarkup(
+      createElement(PortfolioEditor, {
+        draft: createExampleDraft(),
+        onChange: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain('role="combobox"');
+    expect(markup).toContain('aria-autocomplete="list"');
+    expect(markup).toContain("输入名称／代码／拼音首字母可搜索");
+    // Symbol stays free text so unmatched holdings can remain unknown.
+    expect(markup).toContain("未知可留空；选中搜索建议会自动回填");
+  });
+
+  it("keeps the suggestion-filled market and drops blank markets when adding holdings", () => {
+    const original = createExampleDraft();
+    const withMarket = appendHolding(original, {
+      asset_class: "etf",
+      name: "沪深300ETF",
+      symbol: "510300.SH",
+      market: "SH",
+      size_basis: "体验持仓规模：中等",
+      observation_date: "2026-07-24",
+    });
+    expect(withMarket.lines.at(-1)?.market).toBe("SH");
+
+    const withoutMarket = appendHolding(original, {
+      asset_class: "fund",
+      name: "手工输入基金",
+      symbol: "",
+      market: "  ",
+      size_basis: "",
+      observation_date: "",
+    });
+    const line = withoutMarket.lines.at(-1);
+    expect(line?.market).toBeUndefined();
+    expect(line?.symbol).toBe("unknown");
+  });
+
   it("saves all-unknown constraints as a new immutable input without rewriting earlier snapshots", () => {
     const original = createExampleDraft();
     const first = snapshotCurrentDraft(original);

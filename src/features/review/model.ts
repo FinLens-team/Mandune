@@ -17,6 +17,8 @@ export interface NewHoldingInput {
   asset_class: DraftLine["asset_class"];
   name: string;
   symbol: string;
+  /** Optional venue filled by instrument suggestions; free text stays valid. */
+  market?: string;
   size_basis: string;
   observation_date: string;
 }
@@ -30,12 +32,14 @@ export function editHolding(
 }
 
 export function appendHolding(draft: PortfolioDraft, input: NewHoldingInput): PortfolioDraft {
+  const market = input.market?.trim();
   return addLine(
     draft,
     createManualLine({
       asset_class: input.asset_class,
       name: input.name,
       symbol: input.symbol.trim() || "unknown",
+      ...(market ? { market } : {}),
       size_basis: input.size_basis.trim() || "unknown",
       observation_date: input.observation_date.trim() || "unknown",
     }),
