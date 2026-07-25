@@ -5,6 +5,7 @@ import {
   ATLAS_GENERATION_POLICY_VERSION,
 } from "./generation-policy.js";
 import {
+  ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION,
   ATLAS_CANDIDATE_SCHEMA_VERSION,
   ATLAS_DOMAINS,
   type AtlasCandidate,
@@ -62,8 +63,9 @@ const MEME_SCHEMA = {
 const CANDIDATES_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["candidates"],
+  required: ["schema_version", "candidates"],
   properties: {
+    schema_version: { type: "string", const: ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION },
     candidates: {
       type: "array",
       maxItems: 4,
@@ -111,9 +113,12 @@ export class ModelAtlasCandidateGenerator implements AtlasCandidateGenerator {
   constructor(private readonly gateway: ModelGateway, private readonly timeoutMs = 14_000) {}
 
   async generate(input: AtlasGenerationInput, signal: AbortSignal): Promise<unknown | null> {
-    const response = await this.gateway.generate<{ candidates: AtlasCandidate[] }>({
+    const response = await this.gateway.generate<{
+      schema_version: typeof ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION;
+      candidates: AtlasCandidate[];
+    }>({
       operation: "atlas_multi_candidate",
-      schemaVersion: ATLAS_CANDIDATE_SCHEMA_VERSION,
+      schemaVersion: ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION,
       schema: CANDIDATES_SCHEMA,
       instructions: `${ATLAS_GENERATION_POLICY_VERSION}\n${ATLAS_GENERATION_POLICY}`,
       input: safeModelInput(input),

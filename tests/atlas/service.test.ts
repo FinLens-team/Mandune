@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   ATLAS_GENERATION_POLICY_VERSION,
+  ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION,
   ATLAS_CANDIDATE_SCHEMA_VERSION,
   AtlasService,
   includeAtlasMeme,
@@ -284,12 +285,18 @@ describe("atlas service boundaries", () => {
     const gateway: ModelGateway = {
       async generate<T>(next: ModelGatewayRequest) {
         request = next;
-        return { ok: true, value: candidateFor({
-          analysis: analysis("analysis-model-policy"),
-          existing_cards: [],
-          snapshot: structuredClone(getFixture("supported_full").snapshot),
-          selected_kind: "professional_term",
-        }) as T };
+        return {
+          ok: true,
+          value: {
+            schema_version: ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION,
+            candidates: [candidateFor({
+              analysis: analysis("analysis-model-policy"),
+              existing_cards: [],
+              snapshot: structuredClone(getFixture("supported_full").snapshot),
+              selected_kind: "professional_term",
+            })],
+          } as T,
+        };
       },
     };
     const existing = candidateFor({
@@ -334,6 +341,13 @@ describe("atlas service boundaries", () => {
 
     expect(request?.instructions).toContain(ATLAS_GENERATION_POLICY_VERSION);
     expect(request?.instructions).toContain("existing_cards");
+    expect(request?.schemaVersion).toBe(ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION);
+    expect(request?.schema).toMatchObject({
+      required: ["schema_version", "candidates"],
+      properties: {
+        schema_version: { const: ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION },
+      },
+    });
     expect(request?.input).toMatchObject({
       existing_cards: [{
         card_id: "card-policy-existing",

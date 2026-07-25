@@ -2,6 +2,7 @@ import type { AnalysisResult, PortfolioSnapshot } from "../contracts/index.js";
 
 export const ATLAS_CARD_SCHEMA_VERSION = "atlas-card.v1" as const;
 export const ATLAS_CANDIDATE_SCHEMA_VERSION = "atlas-candidate.v1" as const;
+export const ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION = "atlas-candidate-batch.v1" as const;
 
 export const ATLAS_CARD_KINDS = ["professional_term", "meme"] as const;
 export type AtlasCardKind = (typeof ATLAS_CARD_KINDS)[number];

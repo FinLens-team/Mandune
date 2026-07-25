@@ -69,7 +69,7 @@ describe("long-card rendering and interaction boundaries", () => {
       "evidence",
       420,
     );
-    expect(firstSwitch).toEqual({ narrative: 420, evidence: 420 });
+    expect(firstSwitch).toEqual({ narrative: 420, evidence: 0 });
     expect(preserveFaceScrollOffsets(firstSwitch, "evidence", "narrative", 810)).toEqual({
       narrative: 420,
       evidence: 810,
@@ -242,8 +242,10 @@ describe("long-card rendering and interaction boundaries", () => {
     const stylesheet = readFileSync("src/features/long-card/LongCard.css", "utf8");
     expect(stylesheet).toContain("var(--content-reading)");
     expect(stylesheet).toContain("touch-action: pan-y");
+    expect(stylesheet).toContain("display: block");
     expect(stylesheet).toContain("rotateY(180deg)");
     expect(stylesheet).toContain("pointer-events: none");
+    expect(stylesheet).not.toContain("grid-area: 1 / 1");
     expect(stylesheet).toContain("transition: none");
     expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
     expect(stylesheet).toContain('data-reduced-motion="true"');

@@ -60,7 +60,7 @@
   --long-card-drag-rotation: 0deg;
   --long-card-drag-x: 0px;
   position: relative;
-  display: grid;
+  display: block;
   transform-style: preserve-3d;
   transform: translate3d(var(--long-card-drag-x), 0, 0)
     rotateY(calc(var(--long-card-face-rotation) + var(--long-card-drag-rotation)));
@@ -77,7 +77,6 @@
 }
 
 .mandong-long-card__face {
-  grid-area: 1 / 1;
   min-width: 0;
   padding: var(--space-6);
   border: 1px solid var(--color-border-subtle);

@@ -158,7 +158,7 @@ export function preserveFaceScrollOffsets(
   return {
     ...offsets,
     [currentFace]: currentOffset,
-    [targetFace]: offsets[targetFace] ?? currentOffset,
+    [targetFace]: offsets[targetFace] ?? 0,
   };
 }
 

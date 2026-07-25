@@ -11,7 +11,7 @@
 
 - A normal letter requires a valid owned analysis, matching snapshot/theme/constraints, non-`unavailable` status, and a narrative bound to the exact ordered conclusion and advice IDs.
 - Missing or mismatched narrative renders a recovery state. The front consumes the supplied narrative text and never substitutes static theme prose.
-- Pointer handling does not capture or cancel a gesture until horizontal intent is established; normal window scrolling remains the only vertical reading region.
+- Pointer handling does not capture or cancel a gesture until horizontal intent is established; normal window scrolling remains the only vertical reading region. Each face restores only its own saved reading offset, and the first visit to a face starts at its top instead of inheriting the other face's depth.
 - Horizontal dragging uses bounded exponential damping to preview the 3D rotation. A committed switch keeps both faces mounted, reveals the destination in nonlinear layers, and disables those transitions under either reduced-motion control.
 - Report-adjacent Atlas banners live outside the 3D face height. They use equal-height clamped summaries and a viewport-bounded detail sheet, so multiple cards and inactive long-card faces cannot inflate document height.
 - Evidence rows always expose the contract's value/unit/source/observation/fetch fields. Missing fields are labelled as missing and relationships are never inferred.
