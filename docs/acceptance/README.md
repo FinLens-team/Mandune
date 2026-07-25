@@ -64,3 +64,5 @@ HTML 报告输出到 `playwright-report/`，失败 trace、截图和视频输出
 - 公网完成还要求 HTTPS、候选版本绑定、日志隐私、硬截止任务清理和回滚演练证据。
 - 截图、视频、trace、日志摘录只使用虚构最小数据，并在分享前检查 Cookie、请求头、路径、主机用户和凭据。
 - Qoder 会话或未合并分支不替代最终 commit、公开 URL 和真实浏览器结果。
+
+A2A 深度复盘使用独立验收记录；本地 Card 和调用通过不替代公网 HTTPS、候选版本、Bearer 管理和人工模型声明核验。参见 [`2026-07-25-a2a-deep-review.md`](2026-07-25-a2a-deep-review.md)。

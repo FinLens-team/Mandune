@@ -14,6 +14,10 @@ import {
 } from "../providers/index.js";
 import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
+import {
+  DeepSeekDeepReviewAgent,
+  UnconfiguredAuthorizedMarketEvidenceSource,
+} from "../a2a/index.js";
 import { openSqliteDatabase } from "./database.js";
 import { SqliteAtlasStore } from "./atlas-store.js";
 import { SqliteEvidenceCacheStore } from "./evidence-cache-store.js";
@@ -64,6 +68,18 @@ export function createDurableServices(config: ServerConfig) {
   const journey = executor
     ? new JourneyAnalysisService(journeyStore, history, executor, undefined, undefined, atlas)
     : new JourneyAnalysisService(journeyStore, history, undefined, undefined, undefined, atlas);
+  const a2a = config.a2a
+    ? {
+        runner: new DeepSeekDeepReviewAgent({
+          baseURL: config.a2a.baseURL,
+          apiKey: config.a2a.apiKey,
+          modelId: config.a2a.modelId,
+          marketEvidenceSource: new UnconfiguredAuthorizedMarketEvidenceSource(),
+        }),
+        bearerToken: config.a2a.bearerToken,
+        ...(config.a2a.publicBaseUrl ? { publicBaseUrl: config.a2a.publicBaseUrl } : {}),
+      }
+    : undefined;
   return {
     database,
     workspaces,
@@ -72,6 +88,7 @@ export function createDurableServices(config: ServerConfig) {
     evidenceCache,
     journey,
     journeyStore,
+    ...(a2a ? { a2a } : {}),
     lifecycle: new HistoryWorkspaceLifecycle(workspaces, history),
   };
 }

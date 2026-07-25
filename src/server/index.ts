@@ -31,6 +31,7 @@ export function startServer(
     atlas: services.atlas,
     history: services.history,
     journey: services.journey,
+    ...(services.a2a ? { a2a: services.a2a } : {}),
   });
 
   let server: ServerType;

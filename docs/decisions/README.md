@@ -7,6 +7,8 @@
 - `0006`：框架中立的 OpenAI-compatible `ModelGateway`；
 - `0007`：服务端使用 Vercel AI SDK Core 与 `@ai-sdk/openai-compatible` 实现初始模型运行时；
 - `0008`：Demo V1 工程基线——单包 pnpm、TypeScript、Vite+React SPA（`src/client`）、Hono on Node（`src/server`）、框架中立契约（`src/contracts`）、Vitest smoke、GitHub Actions CI、仅 `.env.example` 与 fail-closed 配置；耐久私人存储 / 匿名工作区定位推迟到 #26，公开托管推迟到 #35。
+- `0009`：Node 22 内置 `node:sqlite` 单机耐久状态；
+- `0010`：独立 A2A 1.0 深度复盘接口与受控 DeepSeek 工具循环。
 
 旧 `0001` 至 `0003` 已从当前文档集删除：产品与隐私规则已进入 [`../../PRODUCT.md`](../../PRODUCT.md)、[`../specs/demo-v1.md`](../specs/demo-v1.md) 和 [`../specs/analysis-contract.md`](../specs/analysis-contract.md)；其中提出的 Vite/Fastify 技术基线从未被接受，不能约束后续实现。前端、服务端、测试与 CI 基线现以 `0008` 为准；存储、认证与部署仍按后续票据开放。接受 ADR 不代表下游运行验收已经完成；#24 / MD-002、#29 / MD-007 与 #30 / MD-008 仍需提供对应证据。票号映射见 [`../tickets/README.md`](../tickets/README.md)。
 
