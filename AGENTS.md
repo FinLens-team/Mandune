@@ -20,13 +20,14 @@
 ## 当前仓库状态
 
 - 仓库是单包 pnpm 项目，使用 Node `>=22 <23`、pnpm `10.33.2`、ESM 与严格 TypeScript。应用代码位于 `src/`，构建产物位于 `dist/`；不要创建 pnpm workspace 或 `apps/`、`packages/` 布局。
-- 当前接受的 ADR 为 0004-0009：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时、Vite + React/Hono/Vitest 单包工程基线，以及 Node 22 `node:sqlite` 单机耐久状态。旧 0001-0003 已退出当前契约。
+- 当前接受的 ADR 为 0004-0010：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时、Vite + React/Hono/Vitest 单包工程基线、Node 22 `node:sqlite` 单机耐久状态，以及独立受限的 A2A 深度复盘 Agent。旧 0001-0003 已退出当前契约。
 - ADR-0009 已完成 ADR-0008 推迟的耐久私人存储选择；公开部署仍由 #35 决定。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
 - 每日复盘 V2 使用 SQLite schema v4 的市场观察、资产资料、事件搜索、候选和来源文档缓存；`CachedPandaEvidenceCollector` 每次复盘最多启动一个隔离 Python 批处理进程，批处理启动失败映射为逐持仓失败。冻结交易日会从候选工作日回退到批次中最近的有效市场观察日。`BochaEvidenceCollector` 只把白名单官方/可信媒体正文中的相关内容升级为已核验事件；搜索候选不能进入事实引用，单位不明的 Panda 原值不能进入模型允许数字清单。
 - `src/analysis/validation.ts` 接受契约允许的 date-only 市场观察日，只在调用旧共享校验器的副本中规范化为 UTC 零点；最终 `AnalysisResult` 必须保留供应商原始日期精度。
-- 每日复盘 V2 在调用前构建 `ReviewPacket v2`，由一次 `step-explore` 结构化调用同时生成理性背面、人格正面和一个预选类型 Atlas 候选；报告失败最多用同一模型修复一次，全部市场数据失败时模型调用次数为零。四份 FINAL skill 原文位于 `src/analysis/skills-v1/`，调用层约束优先，源文件哈希在 Prompt Compiler 中固定。
-- `src/atlas/` 按复盘 ID 稳定选择专业名词或 AI 趣味梗。V2 实时路径只消费主分析响应中的候选，不再独立调用模型；后端继续执行类型/引用校验、查重、复遇、确定性外观和工作区持久化。Atlas 子对象失败只产生无卡结果，不能改写已通过校验的报告。
+- 每日复盘 V2 在调用前构建 `ReviewPacket v2`，按理性背面、人格正面、Atlas 候选的顺序执行三次 `step-explore` 受约束生成。理性或人格报告失败时不展示或保存部分文本；全部市场数据失败时模型调用次数为零。四份 FINAL skill 原文位于 `src/analysis/skills-v1/`，调用层约束优先，源文件哈希在 Prompt Compiler 中固定。
+- V2 理性或人格生成未通过校验时，`unavailable` 结果仍须保存并可从不可变历史重放；没有成套 `generated_review` 的失败结果不得携带孤立 `review_packet`，否则历史 V2 原子元数据校验会拒绝记录。
+- `src/atlas/` 按复盘 ID 稳定选择专业名词或 AI 趣味梗。V2 实时路径使用第三次独立模型调用生成预选类型候选；后端继续执行类型/引用校验、查重、复遇、确定性外观和工作区持久化。Atlas 子对象失败只产生无卡结果，不能改写已通过校验的报告。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
 
 ## 已接受的技术决策

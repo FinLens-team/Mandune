@@ -135,7 +135,6 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
         reason,
         unavailable: true,
       }),
-      ...(reviewPacket ? { review_packet: reviewPacket } : {}),
       rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
       source: unavailableSource(),
     });

@@ -198,7 +198,20 @@ describe("DailyReviewV2Executor", () => {
 
     expect(generate).toHaveBeenCalledTimes(1);
     expect(result.source.kind).toBe("unavailable");
+    expect(result.review_packet).toBeUndefined();
     expect(result.generated_review).toBeUndefined();
+
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    const history = new HistoryService();
+    await history.createResultSink("workspace-v2-unavailable", snapshot).save({
+      analysis: result.analysis,
+      rational_analysis_version: result.rational_analysis_version,
+    }, { signal: new AbortController().signal, canCommit: () => true });
+    await expect(history.replay("workspace-v2-unavailable", result.analysis.analysis_id)).resolves.toMatchObject({
+      status: "replayed",
+      source: "immutable_history",
+      record: { analysis: { status: "unavailable" } },
+    });
   });
 
   it("stops before Atlas when the persona changes the rational references", async () => {
