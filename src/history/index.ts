@@ -9,6 +9,8 @@ export {
   HISTORY_SCHEMA_VERSION,
   HistoryAccessError,
   HistorySaveError,
+  isHistoryExperienceSource,
+  type HistoryExperienceSource,
   type HistoryReadability,
   type HistoryReadResult,
   type HistoryRecordV1,

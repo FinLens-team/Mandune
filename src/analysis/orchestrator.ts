@@ -80,6 +80,8 @@ export interface AnalysisResultSink {
     ai_text?: string;
     /** Relaxed Demo mode: observation-theme rewrite of the same report. */
     ai_theme_text?: string;
+    /** Optional analysis-time provenance persisted by the owning application. */
+    experience_source?: "random" | "edited";
   }, fence: AnalysisCommitFence): Promise<void>;
 }
 

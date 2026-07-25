@@ -28,11 +28,24 @@ interface EventRow {
   event_json: string;
 }
 
+interface StoredSnapshotEnvelope {
+  snapshot: StoredAnalysisRun["snapshot"];
+  experience_source?: StoredAnalysisRun["experience_source"];
+}
+
+function decodeSnapshot(value: string): StoredSnapshotEnvelope {
+  const parsed = JSON.parse(value) as StoredSnapshotEnvelope | StoredAnalysisRun["snapshot"];
+  if ("snapshot" in parsed) return parsed;
+  return { snapshot: parsed };
+}
+
 function decodeRun(row: RunRow): StoredAnalysisRun {
+  const frozen = decodeSnapshot(row.snapshot_json);
   return {
     workspace_id: row.workspace_id,
     analysis_id: row.analysis_id,
-    snapshot: JSON.parse(row.snapshot_json) as StoredAnalysisRun["snapshot"],
+    snapshot: frozen.snapshot,
+    ...(frozen.experience_source ? { experience_source: frozen.experience_source } : {}),
     state: row.state,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -81,7 +94,10 @@ export class SqliteJourneyStore implements JourneyStore {
         `).run(
           run.workspace_id,
           run.analysis_id,
-          JSON.stringify(run.snapshot),
+          JSON.stringify({
+            snapshot: run.snapshot,
+            ...(run.experience_source ? { experience_source: run.experience_source } : {}),
+          }),
           run.state,
           run.created_at,
           run.updated_at,

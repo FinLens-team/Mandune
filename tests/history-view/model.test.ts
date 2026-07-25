@@ -86,6 +86,7 @@ function record(sourceName = "fixture-structured"): HistoryRecordV1 {
       theme_id: "eastern_observation",
     },
     rational_analysis_version: "rational-analysis.v1",
+    experience_source: "random",
     record_id: summary.record_id,
     schema_version: "analysis-history.v1",
     snapshot: {

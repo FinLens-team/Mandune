@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import type { HistoryService } from "../../history/index.js";
+import { isHistoryExperienceSource } from "../../history/index.js";
 import {
   INSTRUMENT_DICTIONARY_AS_OF,
   INSTRUMENT_QUERY_MAX_LENGTH,
@@ -82,10 +83,20 @@ export function createJourneyRoutes(input: {
   app.post("/analyses", async (c) => {
     const id = await workspaceId(c, input.workspaces);
     if (!id) return c.json(UNAUTHORIZED, 401);
+    let body: { experience_source?: unknown };
     try {
-      const result = await input.journey.start(id);
+      body = await c.req.json() as { experience_source?: unknown };
+    } catch {
+      return c.json({ error: "invalid_experience_source" }, 400);
+    }
+    if (!isHistoryExperienceSource(body.experience_source)) {
+      return c.json({ error: "invalid_experience_source" }, 400);
+    }
+    try {
+      const result = await input.journey.start(id, body.experience_source);
       return c.json({
         analysis_id: result.run.analysis_id,
+        experience_source: result.run.experience_source,
         state: result.run.state,
         reused_active: !result.created,
       }, 202);

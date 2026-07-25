@@ -159,7 +159,10 @@ describe("#34 backend journey transport", () => {
       body: JSON.stringify({ draft }),
     });
 
-    const started = await request(app, cookie, "/api/analyses", { method: "POST" });
+    const started = await request(app, cookie, "/api/analyses", {
+      method: "POST",
+      body: JSON.stringify({ experience_source: "edited" }),
+    });
     expect(started.status).toBe(202);
     const startBody = await started.json() as { analysis_id: string };
     expect(startBody.analysis_id).toMatch(/^analysis_[A-Za-z0-9-]+$/);
@@ -199,7 +202,13 @@ describe("#34 backend journey transport", () => {
     expect(historyBody.history[0]?.record_id).toBe(startBody.analysis_id);
     const detail = await request(app, cookie, `/api/history/${startBody.analysis_id}`);
     expect(await detail.json()).toMatchObject({
-      history: { status: "found", record: { analysis: { analysis_id: startBody.analysis_id } } },
+      history: {
+        status: "found",
+        record: {
+          analysis: { analysis_id: startBody.analysis_id },
+          experience_source: "edited",
+        },
+      },
     });
     const replay = await request(app, cookie, `/api/history/${startBody.analysis_id}/replay`);
     expect(await replay.json()).toMatchObject({
@@ -209,6 +218,29 @@ describe("#34 backend journey transport", () => {
         record: { analysis: { analysis_id: startBody.analysis_id } },
       },
     });
+  });
+
+  it.each([
+    undefined,
+    "unknown",
+    42,
+  ])("rejects %s experience source before creating a run", async (experienceSource) => {
+    const { app } = composition();
+    const cookie = await createCookie(app);
+    await request(app, cookie, "/api/current-draft", {
+      method: "PUT",
+      body: JSON.stringify({ draft: draftFor("supported_full") }),
+    });
+
+    const response = await request(app, cookie, "/api/analyses", {
+      method: "POST",
+      body: JSON.stringify(
+        experienceSource === undefined ? {} : { experience_source: experienceSource },
+      ),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_experience_source" });
   });
 
   it("rejects fixture substitution when a confirmed symbol no longer maps", async () => {
@@ -222,7 +254,10 @@ describe("#34 backend journey transport", () => {
       method: "PUT",
       body: JSON.stringify({ draft }),
     });
-    const response = await request(app, cookie, "/api/analyses", { method: "POST" });
+    const response = await request(app, cookie, "/api/analyses", {
+      method: "POST",
+      body: JSON.stringify({ experience_source: "random" }),
+    });
     const { analysis_id } = await response.json() as { analysis_id: string };
     await journey.waitForIdle();
     const result = await request(app, cookie, `/api/analyses/${analysis_id}/result`);
@@ -286,11 +321,18 @@ describe("#34 backend journey transport", () => {
       method: "PUT",
       body: JSON.stringify({ draft: draftFor("supported_full") }),
     });
-    const started = await request(app, cookie, "/api/analyses", { method: "POST" });
+    const started = await request(app, cookie, "/api/analyses", {
+      method: "POST",
+      body: JSON.stringify({ experience_source: "random" }),
+    });
     const { analysis_id } = await started.json() as { analysis_id: string };
-    const duplicate = await request(app, cookie, "/api/analyses", { method: "POST" });
+    const duplicate = await request(app, cookie, "/api/analyses", {
+      method: "POST",
+      body: JSON.stringify({ experience_source: "edited" }),
+    });
     expect(await duplicate.json()).toMatchObject({
       analysis_id,
+      experience_source: "random",
       reused_active: true,
     });
     expect((await workspaces.delete(locator)).ok).toBe(true);
@@ -347,7 +389,7 @@ describe("fixture execution status boundaries", () => {
     await service.putDraft("workspace-status-test", draft);
 
     // Memory history intentionally has no workspace FK; this isolates execution/result semantics.
-    const started = await service.start("workspace-status-test");
+    const started = await service.start("workspace-status-test", "random");
     await service.waitForIdle();
     const run = await service.getRun("workspace-status-test", started.run.analysis_id);
     expect(run?.execution?.analysis.status).toBe(status);
@@ -369,7 +411,7 @@ describe("fixture execution status boundaries", () => {
     draft.constraints.near_term_liquidity = "unknown";
     await service.putDraft("workspace-unknown-constraint", draft);
 
-    const started = await service.start("workspace-unknown-constraint");
+    const started = await service.start("workspace-unknown-constraint", "random");
     await service.waitForIdle();
     const run = await service.getRun("workspace-unknown-constraint", started.run.analysis_id);
 

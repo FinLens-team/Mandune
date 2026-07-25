@@ -135,6 +135,25 @@ describe("journey HTTP gateway privacy and isolation", () => {
     ]);
   });
 
+  it("sends and validates the analysis-time experience source", async () => {
+    let requestBody: unknown;
+    const gateway = new FetchJourneyGateway(async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return json({
+        analysis_id: "analysis_source",
+        experience_source: "edited",
+        reused_active: false,
+      }, 202);
+    });
+
+    await expect(gateway.startAnalysis("edited")).resolves.toEqual({
+      analysis_id: "analysis_source",
+      experience_source: "edited",
+      reused_active: false,
+    });
+    expect(requestBody).toEqual({ experience_source: "edited" });
+  });
+
   it("preserves an unsupported history version instead of replaying it", async () => {
     const fetcher: JourneyFetch = async (url) => {
       if (url.endsWith("/replay")) {

@@ -121,6 +121,30 @@ describe("S10 history list and detail", () => {
     expect(resolveRecordSource).toHaveBeenCalledWith(entry.detail.record);
   });
 
+  it("does not label a legacy V1 record as random when its source was not saved", async () => {
+    const { HistoryDetail, HistoryList } = await loadHistoryView();
+    const legacyRecord = record();
+    delete legacyRecord.experience_source;
+    const entry = { detail: { status: "found", record: legacyRecord } as const, summary };
+    const listMarkup = renderToStaticMarkup(createElement(HistoryList, {
+      entries: [entry],
+      onNavigateHome: vi.fn(),
+      onSelectRecord: vi.fn(),
+      resolveRecordSource: () => undefined,
+    }));
+    const detailMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
+      detail: entry.detail,
+      onBack: vi.fn(),
+      onNavigateHome: vi.fn(),
+      onOpenRecord: vi.fn(),
+      resolveRecordSource: () => undefined,
+    }));
+
+    expect(listMarkup).toContain("体验来源未保存");
+    expect(detailMarkup).toContain("体验来源未保存");
+    expect(listMarkup).not.toContain("随机体验身份 · 示例数据");
+  });
+
   it("renders immutable detail and only offers the saved long card when complete", async () => {
     const { HistoryDetail } = await loadHistoryView();
     const markup = renderToStaticMarkup(createElement(HistoryDetail, {
@@ -147,6 +171,22 @@ describe("S10 history list and detail", () => {
     }));
     expect(unavailableMarkup).toContain("本次分析未生成复盘报告");
     expect(unavailableMarkup).not.toContain("打开本次复盘报告");
+  });
+
+  it("offers replay for an ai_text-only record through the existing open action", async () => {
+    const { HistoryDetail } = await loadHistoryView();
+    const streamed = record();
+    delete streamed.narrative;
+    streamed.theme_narrative_version = null;
+    streamed.ai_text = "已校验并完整保存的模型复盘文本。";
+    const markup = renderToStaticMarkup(createElement(HistoryDetail, {
+      detail: { status: "found", record: streamed },
+      onBack: vi.fn(),
+      onNavigateHome: vi.fn(),
+      onOpenRecord: vi.fn(),
+    }));
+
+    expect(markup).toContain("打开本次复盘报告");
   });
 
   it("keeps unsupported, unreadable, not-found, and storage failures explicit", async () => {

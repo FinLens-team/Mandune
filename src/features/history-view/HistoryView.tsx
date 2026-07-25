@@ -128,10 +128,16 @@ function EntryBoundary({
 }) {
   if (entry.detail.status === "found") {
     const boundary = historyRecordBoundary(entry.detail.record);
+    const recordSource = resolveRecordSource?.(entry.detail.record) ??
+      entry.detail.record.experience_source;
     return (
       <div className="history-entry__badges">
         {boundary.isExample ? (
-          <DemoBadge source={resolveRecordSource?.(entry.detail.record) ?? "random"} />
+          recordSource ? (
+            <DemoBadge source={recordSource} />
+          ) : (
+            <Badge tone="neutral">体验来源未保存</Badge>
+          )
         ) : (
           <Badge tone="neutral">用户确认快照</Badge>
         )}
@@ -290,7 +296,9 @@ function FoundDetail({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const boundary = historyRecordBoundary(record);
-  const canOpenLongCard = record.analysis.status !== "unavailable" && Boolean(record.narrative);
+  const recordSource = resolveRecordSource?.(record) ?? record.experience_source;
+  const canOpenLongCard = record.analysis.status !== "unavailable" &&
+    (Boolean(record.narrative) || Boolean(record.ai_text?.trim()));
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -309,7 +317,11 @@ function FoundDetail({
         </div>
         <div className="history-entry__badges">
           {boundary.isExample ? (
-            <DemoBadge source={resolveRecordSource?.(record) ?? "random"} />
+            recordSource ? (
+              <DemoBadge source={recordSource} />
+            ) : (
+              <Badge tone="neutral">体验来源未保存</Badge>
+            )
           ) : (
             <Badge tone="neutral">用户确认快照</Badge>
           )}
@@ -375,7 +387,7 @@ function FoundDetail({
           <Button onClick={() => onOpenRecord(record)} variant="primary">打开本次复盘报告</Button>
         ) : (
           <p className="history-detail__no-card">
-            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未生成主题叙事，不能展示不完整的复盘报告。"}
+            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未保存可重放的模型文本或主题叙事。"}
           </p>
         )}
       </div>
