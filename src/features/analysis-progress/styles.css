@@ -75,26 +75,21 @@
 }
 
 .analysis-progress__scene {
-  min-height: 10rem;
+  min-height: 9rem;
   margin-top: var(--space-4);
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
-.analysis-progress__guide {
-  width: 5.5rem;
+.analysis-progress__mascot {
+  display: block;
+  width: 6rem;
+  max-width: 100%;
   aspect-ratio: 1;
-  border: 2px solid var(--color-text-primary);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--color-text-primary);
-  background: var(--color-bg-letter);
-  box-shadow: inset 0 -0.75rem 0 var(--color-theme-accent);
-  font-family: var(--font-serif);
-  font-weight: 700;
+  object-fit: contain;
+  user-select: none;
 }
 
 .analysis-progress__bubble {
@@ -204,17 +199,8 @@
   margin-top: var(--space-6);
 }
 
-.analysis-progress[data-animation-active="true"] .analysis-progress__guide {
-  animation: analysis-guide-breathe 3.6s var(--ease-move) infinite alternate;
-}
-
 .analysis-progress[data-animation-active="true"] .analysis-progress__bubble[data-event-id] {
   animation: analysis-bubble-event var(--duration-base) var(--ease-enter) both;
-}
-
-@keyframes analysis-guide-breathe {
-  from { transform: translateY(0); }
-  to { transform: translateY(-4px); }
 }
 
 @keyframes analysis-bubble-event {
@@ -222,9 +208,7 @@
   to { opacity: 1; }
 }
 
-.analysis-progress[data-animation-active="false"] .analysis-progress__guide,
 .analysis-progress[data-animation-active="false"] .analysis-progress__bubble,
-.analysis-progress[data-reduce-motion="true"] .analysis-progress__guide,
 .analysis-progress[data-reduce-motion="true"] .analysis-progress__bubble {
   animation: none;
 }
@@ -252,7 +236,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .analysis-progress__guide,
   .analysis-progress__bubble {
     animation: none !important;
   }
