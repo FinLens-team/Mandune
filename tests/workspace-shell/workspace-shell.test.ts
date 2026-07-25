@@ -69,7 +69,7 @@ describe("S4-S7 workspace shell", () => {
 
     expect(markup).not.toContain("随机体验身份 · 示例数据");
     expect(markup).toContain('class="workspace-home__danmaku"');
-    expect(markup).toContain("点奶龙，开始今日复盘");
+    expect(markup).toContain("进行今日复盘");
     expect(markup).toContain('aria-label="点击奶龙，确认发起今日复盘"');
     expect(markup).toContain('class="workspace-home__hero"');
     expect(markup).toContain('alt=""');

@@ -46,6 +46,10 @@ export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
   ).length;
 }
 
+export function formatConstraintValue(value: string): string {
+  return value === "unknown" || value === "not_decided" ? "未知／尚未决定" : value;
+}
+
 /** 主题弹幕库：后续拓展主题文案时只需在此追加一条。 */
 export const THEME_DANMAKU = [
   "我是奶龙！哈哈哈哈哈",
@@ -76,7 +80,6 @@ export function WorkspaceShell({
   draft: controlledDraft,
   experienceSource,
   initialDraft,
-  latestCompleteTradingDay,
   onDraftChange,
   onExperienceSourceChange,
   onNavigateAbout,
@@ -107,7 +110,7 @@ export function WorkspaceShell({
   const introPreloadRef = useRef<HTMLImageElement | null>(null);
   const draft = controlledDraft ?? uncontrolledDraft;
   const reduceMotion = controlledReducedMotion ?? uncontrolledReducedMotion;
-  const homeCtaLabel = activeAnalysis ? "复盘进行中，点奶龙继续" : "点奶龙，开始今日复盘";
+  const homeCtaLabel = activeAnalysis ? "复盘进行中" : "进行今日复盘";
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -309,6 +312,7 @@ export function WorkspaceShell({
                       src={nailongLaugh}
                       width="658"
                     />
+                    <span className="workspace-home__hint">{homeCtaLabel}</span>
                   </button>
                 </div>
 
@@ -320,7 +324,6 @@ export function WorkspaceShell({
                     onClick={(event) => openDrawer(event.currentTarget)}
                     tooltip="工作区导航"
                   />
-                  <p className="workspace-home__hint">{homeCtaLabel}</p>
                 </div>
               </div>
 
@@ -366,8 +369,6 @@ export function WorkspaceShell({
         />
 
         <AnalysisConfirmDialog
-          experienceSource={experienceSource}
-          latestCompleteTradingDay={latestCompleteTradingDay}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={(snapshot) => {
             setConfirmOpen(false);

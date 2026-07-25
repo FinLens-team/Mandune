@@ -207,6 +207,7 @@
   z-index: 2;
   display: grid;
   justify-items: center;
+  gap: var(--space-2);
   width: min(68vw, 22rem);
   max-height: 100%;
   padding: 0;
@@ -234,6 +235,20 @@
   pointer-events: none;
   user-select: none;
   transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Natural action hint under the mascot — plain text, not a button */
+.workspace-home__hint {
+  margin: 0;
+  color: var(--poster-gold);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 40%);
+  opacity: 0.92;
+  pointer-events: none;
 }
 
 /* Arrival: slight overshoot gives weight */
@@ -321,27 +336,15 @@
   letter-spacing: 0.14em;
 }
 
-/* ─── Menu button + natural action hint, thumb zone bottom-left ─── */
+/* ─── Menu button: rounded tile, thumb zone bottom-left ─── */
 
 .workspace-home__menu {
   position: absolute;
   z-index: 8;
   left: max(var(--space-4), env(safe-area-inset-left));
   bottom: max(var(--space-4), env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   opacity: 0;
   animation: menu-slide 320ms 900ms var(--ease-enter) forwards;
-}
-
-.workspace-home__hint {
-  margin: 0;
-  color: var(--poster-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  line-height: 1.4;
-  text-shadow: 0 1px 8px rgb(0 0 0 / 40%);
 }
 
 @keyframes menu-slide {
@@ -643,88 +646,7 @@
   margin: 0;
   color: var(--poster-ink);
   font-size: var(--font-size-xl);
-}
-
-.analysis-confirm__lede {
-  margin: var(--space-2) 0 var(--space-4);
-  color: var(--poster-ink-soft);
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-}
-
-.analysis-confirm__section {
-  margin: 0 0 var(--space-4);
-}
-
-.analysis-confirm__group {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-1);
-  color: var(--poster-gold);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-
-.analysis-confirm__unknown {
-  color: var(--poster-risk);
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.analysis-confirm__constraints {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0 var(--space-4);
-  margin: 0;
-}
-
-.analysis-confirm__constraints > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--poster-line);
-}
-
-.analysis-confirm__constraints dt {
-  color: var(--poster-ink-soft);
-  font-size: var(--font-size-sm);
-}
-
-.analysis-confirm__constraints dd {
-  margin: 0;
-  color: var(--poster-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  text-align: right;
-}
-
-.analysis-confirm__value--unknown {
-  color: var(--poster-ink-soft);
-  font-weight: 500;
-}
-
-.analysis-confirm__runtime {
-  margin: 0;
-  color: var(--poster-ink-soft);
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-}
-
-/* Disclosure is a standard statement, not an alert: quiet inset block. */
-.analysis-confirm__boundary {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3);
-  border: 1px solid var(--poster-line);
-  border-radius: var(--radius-md);
-  background: rgb(255 255 255 / 6%);
-  color: var(--poster-ink-soft) !important;
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
+  line-height: 1.35;
 }
 
 .analysis-confirm__actions {
@@ -824,15 +746,11 @@
   }
 
   .analysis-confirm {
-    width: min(100% - var(--space-8), 30rem);
+    width: min(100% - var(--space-8), 24rem);
     padding: var(--space-6);
     border-bottom: 1px solid var(--poster-line);
     border-radius: 18px;
     transform: translate3d(0, 10px, 0) scale(.96);
-  }
-
-  .analysis-confirm__constraints {
-    grid-template-columns: 1fr 1fr;
   }
 
   .analysis-confirm-layer[data-state="open"] .analysis-confirm {
@@ -870,7 +788,7 @@
   }
 
   .workspace-home__hint {
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-sm);
   }
 }
 
