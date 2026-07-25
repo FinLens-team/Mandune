@@ -8,14 +8,20 @@ import {
   X,
 } from "lucide-react";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import { DemoBadge, IconButton, LockBadge } from "../../client/ui/index.js";
-import { handleOverlayKeyDown, useOverlayFocus } from "./focus.js";
+import {
+  DemoBadge,
+  IconButton,
+  LockBadge,
+  type DemoBadgeSource,
+} from "../../client/ui/index.js";
+import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
 
 export type WorkspaceView = "home" | "portfolio";
 
 export interface WorkspaceDrawerProps {
   open: boolean;
   currentView: WorkspaceView;
+  experienceSource?: DemoBadgeSource;
   workspace: WorkspacePublicStatus | null;
   reduceMotion: boolean;
   returnFocus: HTMLElement | null;
@@ -41,13 +47,14 @@ export function formatWorkspaceTime(value: string): string {
 
 export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
   const drawerRef = useRef<HTMLElement>(null);
+  const presence = useOverlayPresence(props.open, props.reduceMotion ? 100 : 180);
   useOverlayFocus({
-    open: props.open,
+    open: presence.present,
     focusScopeRef: drawerRef,
     returnFocus: props.returnFocus,
   });
 
-  if (!props.open) return null;
+  if (!presence.present) return null;
 
   function navigate(action: () => void) {
     action();
@@ -55,7 +62,11 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
   }
 
   return (
-    <div className="workspace-drawer-layer" data-reduce-motion={props.reduceMotion || undefined}>
+    <div
+      className="workspace-drawer-layer"
+      data-reduce-motion={props.reduceMotion || undefined}
+      data-state={presence.phase}
+    >
       <button
         aria-label="关闭导航菜单"
         className="workspace-drawer__backdrop"
@@ -90,7 +101,8 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
         </header>
 
         <div className="workspace-drawer__identity">
-          <DemoBadge />
+          <DemoBadge source={props.experienceSource} />
+          <span>匿名体验数据</span>
         </div>
 
         <nav className="workspace-drawer__nav" aria-label="主要导航">
@@ -127,20 +139,30 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
 
         <footer className="workspace-drawer__footer">
           {props.workspace ? (
-            <dl>
-              <div>
-                <dt>最后活动</dt>
-                <dd>{formatWorkspaceTime(props.workspace.last_active_at)}</dd>
-              </div>
-              <div>
-                <dt>预计删除</dt>
-                <dd>{formatWorkspaceTime(props.workspace.expires_at)}</dd>
-              </div>
-            </dl>
+            <>
+              <p className="workspace-drawer__expiry">
+                <span>预计删除</span>
+                <strong>{formatWorkspaceTime(props.workspace.expires_at)}</strong>
+              </p>
+              <details className="workspace-drawer__details">
+                <summary>工作区详情</summary>
+                <dl>
+                  <div>
+                    <dt>最后活动</dt>
+                    <dd>{formatWorkspaceTime(props.workspace.last_active_at)}</dd>
+                  </div>
+                  <div>
+                    <dt>保留规则</dt>
+                    <dd>{props.workspace.ttl_days} 天无活动后自动删除</dd>
+                  </div>
+                </dl>
+                <p>到期前可主动删除；删除后不能通过正常产品路径恢复。</p>
+                <p>匿名工作区只保留在当前设备，不提供账号或跨设备找回。</p>
+              </details>
+            </>
           ) : (
             <p>正在读取工作区保留时间。</p>
           )}
-          <p>30 天无活动后自动删除；不提供账号或跨设备找回。</p>
           <label className="workspace-drawer__toggle">
             <input
               checked={props.reduceMotion}

@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { AssetClass, PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import { createExampleDraft, listUnresolvedLines, listUsableLines } from "../../portfolio/index.js";
-import { Button, DemoBadge, IconButton } from "../../client/ui/index.js";
+import {
+  Button,
+  DemoBadge,
+  IconButton,
+  type DemoBadgeSource,
+} from "../../client/ui/index.js";
 import { ConstraintsForm } from "../constraints/ConstraintsForm.js";
 import { InstrumentField } from "./InstrumentField.js";
 import {
@@ -18,9 +23,23 @@ type EditorTab = "holdings" | "constraints";
 
 export interface PortfolioEditorProps {
   draft: PortfolioDraft;
+  experienceSource?: DemoBadgeSource;
   onChange: (draft: PortfolioDraft) => void;
+  onExperienceSourceChange?: (source: DemoBadgeSource) => void;
   onSave?: (snapshot: PortfolioSnapshot) => void;
   onCancel?: () => void;
+}
+
+const EDITOR_TABS: readonly EditorTab[] = ["holdings", "constraints"];
+
+function formatDraftValue(value: string | undefined): string {
+  return !value || value === "unknown" || value === "not_decided" ? "未知" : value;
+}
+
+function assetClassLabel(value: AssetClass): string {
+  if (value === "a_share") return "A 股";
+  if (value === "etf") return "ETF";
+  return "基金";
 }
 
 const EMPTY_HOLDING = {
@@ -32,12 +51,40 @@ const EMPTY_HOLDING = {
   observation_date: "",
 };
 
-export function PortfolioEditor({ draft, onCancel, onChange, onSave }: PortfolioEditorProps) {
+export function PortfolioEditor({
+  draft,
+  experienceSource: controlledExperienceSource,
+  onCancel,
+  onChange,
+  onExperienceSourceChange,
+  onSave,
+}: PortfolioEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
   const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
   const [message, setMessage] = useState<string | null>(null);
+  const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
+    useState<DemoBadgeSource>("random");
+  const experienceSource = controlledExperienceSource ?? uncontrolledExperienceSource;
   const usable = useMemo(() => listUsableLines(draft), [draft]);
   const unresolved = useMemo(() => listUnresolvedLines(draft), [draft]);
+
+  function emitChange(nextDraft: PortfolioDraft) {
+    onChange(nextDraft);
+    if (experienceSource === "random") {
+      if (controlledExperienceSource === undefined) setUncontrolledExperienceSource("edited");
+      onExperienceSourceChange?.("edited");
+    }
+  }
+
+  function selectAdjacentTab(event: KeyboardEvent<HTMLButtonElement>, current: EditorTab) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const currentIndex = EDITOR_TABS.indexOf(current);
+    const next = EDITOR_TABS[(currentIndex + direction + EDITOR_TABS.length) % EDITOR_TABS.length]!;
+    setActiveTab(next);
+    document.getElementById(`portfolio-${next}-tab`)?.focus();
+  }
 
   function save() {
     const result = snapshotCurrentDraft(draft);
@@ -54,9 +101,12 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
     <div className="portfolio-editor">
       <header className="portfolio-editor__header">
         <div>
-          <DemoBadge />
+          <DemoBadge source={experienceSource} />
           <h1>仓位／身份</h1>
           <p>编辑只影响后续复盘；已生成的历史快照不会被改写。</p>
+          <p className="portfolio-editor__source">
+            当前数据来源：{draft.source_label ?? "体验草稿"}。这里只展示草稿中真实存在的输入字段。
+          </p>
         </div>
       </header>
 
@@ -67,7 +117,9 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           className={activeTab === "holdings" ? "is-active" : undefined}
           id="portfolio-holdings-tab"
           onClick={() => setActiveTab("holdings")}
+          onKeyDown={(event) => selectAdjacentTab(event, "holdings")}
           role="tab"
+          tabIndex={activeTab === "holdings" ? 0 : -1}
           type="button"
         >
           持仓（{draft.lines.length}）
@@ -78,7 +130,9 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           className={activeTab === "constraints" ? "is-active" : undefined}
           id="portfolio-constraints-tab"
           onClick={() => setActiveTab("constraints")}
+          onKeyDown={(event) => selectAdjacentTab(event, "constraints")}
           role="tab"
+          tabIndex={activeTab === "constraints" ? 0 : -1}
           type="button"
         >
           四项约束
@@ -114,17 +168,33 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                   <IconButton
                     icon={Trash2}
                     label={`删除 ${line.name}`}
-                    onClick={() => onChange(deleteHolding(draft, line.line_id))}
+                    onClick={() => emitChange(deleteHolding(draft, line.line_id))}
                     tooltip="删除持仓"
                   />
                 </div>
-                <div className="portfolio-line__fields">
+                <dl className="portfolio-line__summary">
+                  <div>
+                    <dt>代码</dt>
+                    <dd>{formatDraftValue(line.symbol)}</dd>
+                  </div>
+                  <div>
+                    <dt>类型</dt>
+                    <dd>{assetClassLabel(line.asset_class)}</dd>
+                  </div>
+                  <div>
+                    <dt>观察日</dt>
+                    <dd>{formatDraftValue(line.observation_date)}</dd>
+                  </div>
+                </dl>
+                <details className="portfolio-line__details">
+                  <summary>核对与编辑完整字段</summary>
+                  <div className="portfolio-line__fields">
                   <label className="field">
                     <span className="field-label">资产类型</span>
                     <select
                       value={line.asset_class}
                       onChange={(event) =>
-                        onChange(
+                        emitChange(
                           editHolding(draft, line.line_id, {
                             asset_class: event.target.value as AssetClass,
                           }),
@@ -141,7 +211,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                     <input
                       value={line.name}
                       onChange={(event) =>
-                        onChange(editHolding(draft, line.line_id, { name: event.target.value }))
+                        emitChange(editHolding(draft, line.line_id, { name: event.target.value }))
                       }
                     />
                   </label>
@@ -150,7 +220,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                     <input
                       value={String(line.symbol)}
                       onChange={(event) =>
-                        onChange(
+                        emitChange(
                           editHolding(draft, line.line_id, {
                             symbol: event.target.value.trim() || "unknown",
                           }),
@@ -163,7 +233,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                     <input
                       value={String(line.size_basis)}
                       onChange={(event) =>
-                        onChange(
+                        emitChange(
                           editHolding(draft, line.line_id, {
                             size_basis: event.target.value.trim() || "unknown",
                           }),
@@ -178,7 +248,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                       placeholder="YYYY-MM-DD，未知可留空"
                       value={String(line.observation_date)}
                       onChange={(event) =>
-                        onChange(
+                        emitChange(
                           editHolding(draft, line.line_id, {
                             observation_date: event.target.value.trim() || "unknown",
                           }),
@@ -186,7 +256,24 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                       }
                     />
                   </label>
-                </div>
+                  </div>
+                  <dl className="portfolio-line__provenance">
+                    <div>
+                      <dt>市场</dt>
+                      <dd>{formatDraftValue(line.market)}</dd>
+                    </div>
+                    <div>
+                      <dt>录入方式</dt>
+                      <dd>{line.entry_method === "example" ? "体验生成" : "用户草稿"}</dd>
+                    </div>
+                    {line.notes ? (
+                      <div>
+                        <dt>说明</dt>
+                        <dd>{line.notes}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </details>
                 {!line.is_usable ? (
                   <p className="portfolio-line__unknown">
                     待补充：{line.unresolved_fields.join("、") || "资产身份或规模依据"}
@@ -200,7 +287,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
             className="portfolio-add"
             onSubmit={(event) => {
               event.preventDefault();
-              onChange(appendHolding(draft, newHolding));
+              emitChange(appendHolding(draft, newHolding));
               setNewHolding(EMPTY_HOLDING);
             }}
           >
@@ -292,7 +379,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           <ConstraintsForm
             compact
             value={draft.constraints}
-            onChange={(constraints) => onChange(editConstraints(draft, constraints))}
+            onChange={(constraints) => emitChange(editConstraints(draft, constraints))}
           />
         </div>
       </div>

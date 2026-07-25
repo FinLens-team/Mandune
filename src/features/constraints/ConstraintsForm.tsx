@@ -51,12 +51,13 @@ export function ConstraintsForm({ compact = false, onChange, value }: Constraint
       <div className="constraint-grid">
         {CONSTRAINT_FIELDS.map((field) => {
           const current = value[field.key];
+          const currentUnknown = current === "not_decided" ? "not_decided" : UNKNOWN;
           return (
             <label key={field.key} className="field">
               <span className="field-label">{field.label}</span>
               <select
                 name={field.key}
-                value={typeof current === "string" ? current : UNKNOWN}
+                value={current}
                 onChange={(event) => {
                   onChange({
                     ...value,
@@ -64,7 +65,7 @@ export function ConstraintsForm({ compact = false, onChange, value }: Constraint
                   });
                 }}
               >
-                <option value={UNKNOWN}>未知／尚未决定</option>
+                <option value={currentUnknown}>未知／尚未决定</option>
                 {field.options.map((option) => (
                   <option key={option} value={option}>
                     {option}

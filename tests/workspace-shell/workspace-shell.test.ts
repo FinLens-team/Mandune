@@ -7,6 +7,15 @@ import type { WorkspacePublicStatus } from "../../src/workspace/index.js";
 import type { snapshotCurrentDraft } from "../../src/features/review/model.js";
 
 interface WorkspaceShellModule {
+  AnalysisConfirmDialog: ComponentType<{
+    open: boolean;
+    snapshot: PortfolioSnapshot | null;
+    latestCompleteTradingDay?: string;
+    reduceMotion: boolean;
+    returnFocus: null;
+    onCancel: () => void;
+    onConfirm: (snapshot: PortfolioSnapshot) => void;
+  }>;
   WorkspaceDrawer: ComponentType<{
     open: boolean;
     currentView: "home" | "portfolio";
@@ -22,14 +31,17 @@ interface WorkspaceShellModule {
   WorkspaceShell: ComponentType<{
     activeAnalysis?: { analysisId: string };
     draft?: PortfolioDraft;
+    experienceSource?: "random" | "edited";
     initialDraft?: PortfolioDraft;
     onDraftChange?: (draft: PortfolioDraft) => void;
     onReducedMotionChange?: (enabled: boolean) => void;
+    onResumeAnalysis?: (analysisId: string) => void;
     reducedMotion?: boolean;
     workspace: WorkspacePublicStatus | null;
     onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
     onNavigateHistory: () => void;
     onNavigateAbout: () => void;
+    reviewCoachmarkVisible?: boolean;
   }>;
   countUnknownConstraints: (snapshot: PortfolioSnapshot) => number;
   prepareAnalysisSnapshot: (draft: PortfolioDraft) => ReturnType<typeof snapshotCurrentDraft>;
@@ -56,7 +68,7 @@ const workspace = {
 };
 
 describe("S4-S7 workspace shell", () => {
-  it("renders a quiet mascot-led home where the mascot is the single analysis entry", async () => {
+  it("renders licensed Doudou as the sole new-analysis trigger with first-use guidance", async () => {
     const { WorkspaceShell } = await loadWorkspaceShell();
     const markup = renderToStaticMarkup(
       createElement(WorkspaceShell, {
@@ -69,17 +81,35 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("熊猫兜兜，东方观象向导");
-    expect(markup).toContain("点击兜兜，发起今日复盘");
-    expect(markup).not.toContain("体验证据将在发起后按最新完整交易日核对");
-    expect(markup).not.toContain("最近一次复盘");
+    expect(markup).toContain("熊猫兜兜，东方观象主题的观察向导");
+    expect(markup).toContain("doudou-observer.png");
+    expect(markup).toContain("点击兜兜，确认发起今日复盘");
+    expect(markup).toContain("点击兜兜，先确认本次复盘");
+    expect(markup).not.toMatch(/>发起今日复盘</);
     expect(markup).not.toContain("查看持仓与约束");
-    expect(markup).not.toContain("确认发起");
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("登录");
   });
 
-  it("accepts controlled journey state and keeps the mascot as the resume entry", async () => {
+  it("accepts canonical edited-source and coachmark state from journey integration", async () => {
+    const { WorkspaceShell } = await loadWorkspaceShell();
+    const markup = renderToStaticMarkup(
+      createElement(WorkspaceShell, {
+        draft: createExampleDraft(),
+        experienceSource: "edited",
+        reviewCoachmarkVisible: false,
+        workspace,
+        onStartAnalysis: vi.fn(),
+        onNavigateHistory: vi.fn(),
+        onNavigateAbout: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("体验持仓 · 已编辑");
+    expect(markup).not.toContain("点击兜兜，先确认本次复盘");
+  });
+
+  it("accepts controlled journey state and exposes the active-analysis resume seam", async () => {
     const { WorkspaceShell } = await loadWorkspaceShell();
     const markup = renderToStaticMarkup(
       createElement(WorkspaceShell, {
@@ -119,6 +149,7 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('aria-modal="true"');
     expect(markup).toContain('data-initial-focus="true"');
+    expect(markup).toContain('data-state="opening"');
     expect(markup).toContain("主页");
     expect(markup).toContain("仓位／身份");
     expect(markup).toContain("历史记录");
@@ -126,6 +157,10 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain("最后活动");
     expect(markup).toContain("预计删除");
     expect(markup).toContain("30 天无活动后自动删除");
+    expect(markup).toContain("工作区详情");
+    expect(markup).toContain("到期前可主动删除");
+    expect(markup).toContain("不能通过正常产品路径恢复");
+    expect(markup).toContain("只保留在当前设备");
     expect(markup).toContain("减少动态效果");
     expect(markup).not.toContain("手机号");
     expect(markup).not.toContain("登录");
@@ -197,5 +232,37 @@ describe("S4-S7 workspace shell", () => {
     expect(second.snapshot.snapshot_id).not.toBe(first.snapshot.snapshot_id);
     expect(first.snapshot.lines[0]?.name).not.toBe("修改后的体验持仓");
     expect(second.snapshot.lines[0]?.name).toBe("修改后的体验持仓");
+  });
+  it("puts default focus on start and states the evidence and timeout boundaries", async () => {
+    const { AnalysisConfirmDialog, prepareAnalysisSnapshot } = await loadWorkspaceShell();
+    const prepared = prepareAnalysisSnapshot(createExampleDraft());
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+
+    const markup = renderToStaticMarkup(
+      createElement(AnalysisConfirmDialog, {
+        open: true,
+        snapshot: prepared.snapshot,
+        latestCompleteTradingDay: "2026-07-24",
+        reduceMotion: false,
+        returnFocus: null,
+        onCancel: vi.fn(),
+        onConfirm: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain('role="dialog"');
+    expect(markup).toContain('aria-modal="true"');
+    expect(markup).toContain("2026-07-24");
+    expect(markup).toContain("约 90 秒");
+    expect(markup).toContain("180 秒");
+    expect(markup).toContain("4 项未知，相关判断将受限");
+    expect(markup).toContain("投资期限");
+    expect(markup).toContain("近期流动性需求");
+    expect(markup).toContain("可承受回撤");
+    expect(markup).toContain("投资目标");
+    expect(markup).toContain("未知／尚未决定");
+    expect(markup).toMatch(/data-initial-focus="true"[^>]*><span[^>]*>开始复盘/);
+    expect(markup).toContain("取消");
   });
 });
