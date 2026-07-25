@@ -1,11 +1,17 @@
 import { Clock3, Database, House, ShieldCheck, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import { Badge, Button } from "../../client/ui/index.js";
+import {
+  Badge,
+  Button,
+  DemoBadge,
+  type DemoBadgeSource,
+} from "../../client/ui/index.js";
 import type { HistoryAvailability } from "../history-view/HistoryView.js";
 
 export interface AboutViewProps {
   availability?: HistoryAvailability;
+  experienceSource?: DemoBadgeSource;
   onNavigateHome: () => void;
   onRequestDeleteWorkspace?: () => void;
   workspace: WorkspacePublicStatus | null;
@@ -23,6 +29,7 @@ function formatWorkspaceTime(value: string): string {
 
 export function AboutView({
   availability = "active",
+  experienceSource,
   onNavigateHome,
   onRequestDeleteWorkspace,
   workspace,
@@ -36,7 +43,11 @@ export function AboutView({
   return (
     <article className="about-view" aria-labelledby="about-heading">
       <header className="about-view__header">
-        <Badge tone="observed">每日持仓复盘</Badge>
+        {experienceSource ? (
+          <DemoBadge source={experienceSource} />
+        ) : (
+          <Badge tone="observed">每日持仓复盘</Badge>
+        )}
         <h2 id="about-heading" ref={headingRef} tabIndex={-1}>关于满懂</h2>
         <p>满懂帮助轻投资者把已确认的持仓、个人约束和带时点证据整理成可核对的方向性复盘。</p>
       </header>
@@ -45,7 +56,7 @@ export function AboutView({
         <ShieldCheck aria-hidden="true" size={24} />
         <div>
           <h3 id="about-boundary-heading">不是投资建议，也不替你交易</h3>
-          <p>满懂不提供精确金额、份额、比例、价格或交易时点，不保证收益、回撤、胜率或市场结果，也不连接券商、持有资金或执行交易。所有判断和操作仍由你决定。</p>
+          <p>满懂只提供可追溯的方向性复盘，不提供精确金额、份额、比例、价格或交易时点，不保证收益、回撤、胜率或市场结果，也不连接券商、持有资金或执行交易。它不构成持牌投资意见，所有判断和操作仍由你决定。</p>
         </div>
       </section>
 
@@ -53,7 +64,7 @@ export function AboutView({
         <Database aria-hidden="true" size={24} />
         <div>
           <h3 id="about-private-heading">匿名私密工作区</h3>
-          <p>公开应用入口不会公开或授予他人访问当前工作区的持仓、约束、复盘与历史。无需账号，但也不承诺跨设备找回。</p>
+          <p>公开应用入口不会公开或授予他人访问当前工作区的持仓、约束、复盘与历史。私人持仓不会进入公开页面、URL 或默认日志。无需账号，但也不支持跨设备找回。</p>
           <p>如果未来启用截图提取，原始截图会在提取成功、失败或中止后删除，不进入历史、分析证据或默认日志；Demo V1 的截图入口仍未开放。</p>
         </div>
       </section>
@@ -61,8 +72,8 @@ export function AboutView({
       <section className="about-section" aria-labelledby="about-retention-heading">
         <Clock3 aria-hidden="true" size={24} />
         <div>
-          <h3 id="about-retention-heading">30 天保留与主动删除</h3>
-          <p>工作区在最后一次活动后保留 30 天。到期会自动删除持仓、约束、复盘与历史，无法通过正常产品路径恢复。</p>
+          <h3 id="about-retention-heading">30 天无活动后自动删除</h3>
+          <p>每次活动都会刷新保留期；连续 30 天无活动后，系统自动删除持仓、约束、复盘与历史。你也可以在到期前主动删除，删除后无法通过正常产品路径恢复。</p>
           {availability === "active" && workspace ? (
             <dl className="about-workspace-times">
               <div><dt>最后活动</dt><dd><time dateTime={workspace.last_active_at}>{formatWorkspaceTime(workspace.last_active_at)}</time></dd></div>

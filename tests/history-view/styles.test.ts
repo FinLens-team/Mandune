@@ -15,6 +15,8 @@ describe("S10 responsive, text, and motion styles", () => {
     expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(css).toContain("overflow-wrap: anywhere");
     expect(css).toContain("min-height: var(--icon-control-size)");
+    expect(css).toContain("border-top: 1px solid var(--color-border-subtle)");
+    expect(css).not.toContain("history-eyebrow");
   });
 
   it("removes transitions for system and in-product reduced motion", async () => {
@@ -39,5 +41,6 @@ describe("S10 responsive, text, and motion styles", () => {
     expect(css).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(css).toContain("width: 100%");
     expect(css).toContain("overflow-wrap: anywhere");
+    expect(css).not.toContain("border-left:");
   });
 });
