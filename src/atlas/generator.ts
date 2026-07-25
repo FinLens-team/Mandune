@@ -114,8 +114,13 @@ export class ModelAtlasCandidateGenerator implements AtlasCandidateGenerator {
       input: safeModelInput(input),
       signal,
       timeoutMs: this.timeoutMs,
+      temperature: professional ? 0.3 : 0.8,
+      maxOutputTokens: 1_200,
     });
-    return response.ok ? response.value : null;
+    return response.ok &&
+      (response.finishReason === undefined || response.finishReason === "stop")
+      ? response.value
+      : null;
   }
 }
 
@@ -127,7 +132,7 @@ const COMMON_MEMES: readonly FixtureMeme[] = [
 ];
 
 const EASTERN_OBSERVATION_MEMES: readonly FixtureMeme[] = [
-  { canonical_name: "兜兜先观后断", meme_text: "兜兜把小本本摊开：先看清，再下判断。", plain_explanation: "先核对今天能确认的内容。", theme: "东方观象", aliases: ["先观后断"] },
+  { canonical_name: "兜兜先观后断", meme_text: "兜兜把小本本摊开：先看清，再下判断。", plain_explanation: "先核对今天能确认的内容。", theme: "兜兜玄学版", aliases: ["先观后断"] },
 ];
 
 function pickIndex(value: string, modulo: number): number {

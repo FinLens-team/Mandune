@@ -1,9 +1,16 @@
 import {
   buildReviewPacket,
   deriveAnalysisInputs,
-  generatedDailyReviewSchema,
+  GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
+  GENERATED_PERSONA_REPORT_SCHEMA_VERSION,
+  GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
+  generatedPersonaReportSchema,
+  generatedRationalReportSchema,
   RATIONAL_ANALYSIS_SCHEMA_VERSION,
   validateGeneratedDailyReview,
+  validateGeneratedPersonaReport,
+  validateGeneratedRationalReport,
+  type GeneratedReportV2,
   type ReviewPacketV2,
   type ValidatedGeneratedDailyReviewV2,
 } from "../../analysis/index.js";
@@ -17,9 +24,13 @@ import {
   normalizeMarketEvidenceDates,
   omitDuplicateEvidenceIds,
 } from "../../analysis/runtime.js";
-import { selectAtlasKind, type AtlasCardV1 } from "../../atlas/index.js";
-import type { EvidenceRecord } from "../../contracts/index.js";
-import type { ModelGateway, ModelGatewayFailureCode } from "../../model/index.js";
+import {
+  selectAtlasKind,
+  type AtlasCandidateGenerator,
+  type AtlasCardV1,
+} from "../../atlas/index.js";
+import type { AnalysisResult, EvidenceRecord } from "../../contracts/index.js";
+import type { ModelGateway } from "../../model/index.js";
 import type { BochaEvidenceCollector, CachedPandaEvidenceCollector } from "../../providers/index.js";
 import { latestCompleteTradingDay } from "./live-executor.js";
 import type { AnalysisExecution, AnalysisExecutor } from "./types.js";
@@ -33,6 +44,7 @@ export interface DailyReviewV2ExecutorDependencies {
   marketEvidenceCollector: Pick<CachedPandaEvidenceCollector, "collect">;
   eventEvidenceCollector?: Pick<BochaEvidenceCollector, "collect">;
   listAtlasCards: (workspaceId: string) => Promise<AtlasCardV1[]>;
+  atlasCandidateGenerator: Pick<AtlasCandidateGenerator, "generate">;
 }
 
 export interface DailyReviewV2ExecutorOptions {
@@ -208,23 +220,6 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
       });
       const compiled = compileDailyReviewPrompt(reviewPacket, personaId);
 
-      activeStage = "form_conclusions_and_advice";
-      input.emit(activeStage, "running", { message: "通过一次结构化调用生成正反面报告与图鉴候选。" });
-      const generated = await this.generate(compiled, reviewPacket, modelTimeoutMs, deadlineAt, deadlineController.signal);
-      if (!generated) {
-        input.emit(activeStage, "failed", { message: "模型输出在有限重试后仍未通过完整校验。" });
-        input.emit("render_theme_and_validate_output", "failed", { message: "未校验文本不展示或保存。" });
-        return unavailable("模型输出未通过版本化结构、引用或内容边界校验。");
-      }
-      input.emit(activeStage, "succeeded");
-      activeStage = "render_theme_and_validate_output";
-      input.emit(activeStage, "running", { message: "校验人格一致性和 Atlas 子对象。" });
-      input.emit(activeStage, generated.atlas_validation === "invalid_candidate" ? "failed" : "succeeded", {
-        ...(generated.atlas_validation === "invalid_candidate"
-          ? { message: "报告有效，但图鉴候选无效；本次保存报告并记为无卡。" }
-          : {}),
-      });
-
       const analysis = fallbackAnalysis({
         analysisId: input.analysisId,
         snapshotId: snapshot.snapshot_id,
@@ -236,10 +231,49 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
         cutoffAt: evidenceCutoffAt,
         evidence,
         derivations,
-        reason: "本次复盘使用确定性证据与派生结果，并通过单次结构化模型调用生成正反面报告。",
+        reason: "本次复盘使用确定性证据与派生结果，并分别生成理性背面、角色正面和 Atlas 候选。",
         unavailable: false,
       });
       if (analysis.status === "unavailable") return unavailable("结构化证据不足以形成可展示报告。");
+
+      activeStage = "form_conclusions_and_advice";
+      input.emit(activeStage, "running", { message: "生成并校验理性客观背面。" });
+      const rationalReport = await this.generateRational(
+        compiled,
+        reviewPacket,
+        modelTimeoutMs,
+        deadlineAt,
+        deadlineController.signal,
+      );
+      if (!rationalReport) {
+        input.emit(activeStage, "failed", { message: "理性报告未通过完整校验。" });
+        input.emit("render_theme_and_validate_output", "failed", { message: "未校验文本不展示或保存。" });
+        return unavailable("理性报告未通过版本化结构、引用或内容边界校验。");
+      }
+      input.emit(activeStage, "succeeded");
+      activeStage = "render_theme_and_validate_output";
+      input.emit(activeStage, "running", { message: "生成角色正面和独立 Atlas 候选并执行一致性校验。" });
+      const generated = await this.generatePersonaAndAtlas(
+        compiled,
+        reviewPacket,
+        rationalReport,
+        analysis,
+        snapshot,
+        existingAtlasCards,
+        modelTimeoutMs,
+        deadlineAt,
+        deadlineController.signal,
+      );
+      if (!generated) {
+        input.emit(activeStage, "failed", { message: "角色报告未通过一致性或内容边界校验。" });
+        return unavailable("角色报告未通过版本化结构、引用或内容边界校验。");
+      }
+      input.emit(activeStage, generated.atlas_validation === "invalid_candidate" ? "failed" : "succeeded", {
+        ...(generated.atlas_validation === "invalid_candidate"
+          ? { message: "报告有效，但图鉴候选无效；本次保存报告并记为无卡。" }
+          : {}),
+      });
+
       input.onText?.(generated.rational_report.markdown);
       return {
         analysis,
@@ -252,7 +286,7 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
         skill_versions: compiled.skill_versions,
         atlas_policy_version: compiled.atlas_policy_version,
         rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
-        source: { kind: "live", is_live: true, label: "PandaAI/Bocha 证据 + step-explore 单次生成" },
+        source: { kind: "live", is_live: true, label: "PandaAI/Bocha 证据 + step-explore 三次受约束生成" },
       };
     } catch (error) {
       if (!(error instanceof HardDeadlineReached)) throw error;
@@ -270,46 +304,74 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
     return remaining;
   }
 
-  private async generate(
+  private async generateRational(
     compiled: ReturnType<typeof compileDailyReviewPrompt>,
     packet: ReviewPacketV2,
     modelTimeoutMs: number,
     deadlineAt: number,
     signal: AbortSignal,
-  ): Promise<ValidatedGeneratedDailyReviewV2 | null> {
-    let priorErrors: string[] = [];
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const timeoutMs = Math.min(modelTimeoutMs, this.remainingMs(deadlineAt));
-      const response = await waitForAbort(this.dependencies.modelGateway.generate<unknown>({
-        operation: "daily_review_v2",
-        schemaVersion: "generated-daily-review.v2",
-        schema: generatedDailyReviewSchema(compiled.persona_id),
-        instructions: attempt === 0
-          ? compiled.instructions
-          : `${compiled.instructions}\n\n【唯一一次修复】\n上次输出未通过：${priorErrors.join(", ")}。只修复 JSON、引用或内容边界；不得新增事实。`,
-        input: compiled.input,
-        signal,
-        timeoutMs,
-      }), signal);
-      if (!response.ok) {
-        if (!this.shouldRetry(response.code, response.retryable, attempt)) return null;
-        priorErrors = [response.code];
-        continue;
-      }
-      if (response.finishReason !== undefined && response.finishReason !== "stop") {
-        priorErrors = [`finish_reason:${response.finishReason}`];
-        if (attempt === 1) return null;
-        continue;
-      }
-      const checked = validateGeneratedDailyReview(response.value, packet);
-      if (checked.ok) return checked.value;
-      priorErrors = checked.errors;
-      if (attempt === 1) return null;
-    }
-    return null;
+  ): Promise<GeneratedReportV2 | null> {
+    const rationalResponse = await waitForAbort(this.dependencies.modelGateway.generate<unknown>({
+      operation: "daily_review_rational_v2",
+      schemaVersion: GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
+      schema: generatedRationalReportSchema(),
+      instructions: compiled.rational_instructions,
+      input: compiled.input,
+      signal,
+      timeoutMs: Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
+      temperature: 0.2,
+      maxOutputTokens: 5_000,
+    }), signal);
+    if (!rationalResponse.ok ||
+      (rationalResponse.finishReason !== undefined && rationalResponse.finishReason !== "stop")) return null;
+    return validateGeneratedRationalReport(rationalResponse.value, packet);
   }
 
-  private shouldRetry(code: ModelGatewayFailureCode, retryable: boolean, attempt: number): boolean {
-    return attempt === 0 && retryable && code !== "privacy_violation" && code !== "cancelled";
+  private async generatePersonaAndAtlas(
+    compiled: ReturnType<typeof compileDailyReviewPrompt>,
+    packet: ReviewPacketV2,
+    rationalReport: GeneratedReportV2,
+    analysis: AnalysisResult,
+    snapshot: Parameters<AtlasCandidateGenerator["generate"]>[0]["snapshot"],
+    existingAtlasCards: AtlasCardV1[],
+    modelTimeoutMs: number,
+    deadlineAt: number,
+    signal: AbortSignal,
+  ): Promise<ValidatedGeneratedDailyReviewV2 | null> {
+    const personaResponse = await waitForAbort(this.dependencies.modelGateway.generate<unknown>({
+      operation: "daily_review_persona_v2",
+      schemaVersion: GENERATED_PERSONA_REPORT_SCHEMA_VERSION,
+      schema: generatedPersonaReportSchema(compiled.persona_id),
+      instructions: compiled.persona_instructions,
+      input: { review_packet: compiled.input, rational_report: rationalReport },
+      signal,
+      timeoutMs: Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
+      temperature: 0.8,
+      maxOutputTokens: 3_000,
+    }), signal);
+    if (!personaResponse.ok ||
+      (personaResponse.finishReason !== undefined && personaResponse.finishReason !== "stop")) return null;
+    const personaReport = validateGeneratedPersonaReport(personaResponse.value, packet, rationalReport);
+    if (!personaReport) return null;
+
+    let atlasCandidate: unknown | null = null;
+    try {
+      atlasCandidate = await waitForAbort(this.dependencies.atlasCandidateGenerator.generate({
+        analysis,
+        existing_cards: existingAtlasCards,
+        snapshot,
+        selected_kind: packet.atlas.selected_kind,
+      }, signal), signal);
+    } catch (error) {
+      if (error instanceof HardDeadlineReached) throw error;
+    }
+
+    const checked = validateGeneratedDailyReview({
+      schema_version: GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
+      rational_report: rationalReport,
+      persona_report: personaReport,
+      atlas_candidate: atlasCandidate,
+    }, packet);
+    return checked.ok ? checked.value : null;
   }
 }

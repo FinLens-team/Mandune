@@ -3,8 +3,14 @@ import { ATLAS_CANDIDATE_SCHEMA_VERSION } from "../../src/atlas/index.js";
 import { deriveAnalysisInputs } from "../../src/analysis/derivations.js";
 import {
   GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
+  GENERATED_PERSONA_REPORT_SCHEMA_VERSION,
+  GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
   generatedDailyReviewSchema,
+  generatedPersonaReportSchema,
+  generatedRationalReportSchema,
   validateGeneratedDailyReview,
+  validateGeneratedPersonaReport,
+  validateGeneratedRationalReport,
 } from "../../src/analysis/generated-review.js";
 import { buildReviewPacket } from "../../src/analysis/review-packet.js";
 import { getFixture } from "../../src/fixtures/index.js";
@@ -66,6 +72,31 @@ function output(referenceId: string) {
 }
 
 describe("generated daily review v2", () => {
+  it("validates the rational and persona envelopes independently", () => {
+    const reviewPacket = packet();
+    const referenceId = reviewPacket.fact_ids[0]!;
+    const rationalEnvelope = {
+      schema_version: GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
+      rational_report: output(referenceId).rational_report,
+    };
+    const rational = validateGeneratedRationalReport(rationalEnvelope, reviewPacket);
+
+    expect(generatedRationalReportSchema()).toMatchObject({
+      properties: { schema_version: { const: GENERATED_RATIONAL_REPORT_SCHEMA_VERSION } },
+    });
+    expect(rational).toEqual(rationalEnvelope.rational_report);
+    expect(generatedPersonaReportSchema("doudou")).toMatchObject({
+      properties: {
+        schema_version: { const: GENERATED_PERSONA_REPORT_SCHEMA_VERSION },
+        persona_report: { properties: { persona_id: { const: "doudou" } } },
+      },
+    });
+    expect(validateGeneratedPersonaReport({
+      schema_version: GENERATED_PERSONA_REPORT_SCHEMA_VERSION,
+      persona_report: output(referenceId).persona_report,
+    }, reviewPacket, rational!)).toEqual(output(referenceId).persona_report);
+  });
+
   it("publishes a versioned schema and accepts matching, cited reports", () => {
     const reviewPacket = packet();
     const referenceId = reviewPacket.fact_ids[0]!;

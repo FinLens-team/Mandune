@@ -122,7 +122,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
 - `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
-- `src/analysis/`：确定性派生、`ReviewPacket v2`、Prompt Compiler、`generated-daily-review.v2` 校验、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。
+- `src/analysis/`：确定性派生、`ReviewPacket v2`、Prompt Compiler、`generated-daily-review.v2` 校验、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。每日复盘 V2 使用理性、人格、Atlas 三次有序结构化调用；前两次原子失败，Atlas 独立降级。
 - `src/model/`：框架中立 `ModelGateway` 与服务端 OpenAI-compatible AI SDK 适配器；不承载自主 Agent loop、供应商凭据日志或 UI 类型。
 - `src/atlas/` 与 `src/features/atlas/`：图鉴候选校验、确定性抽选/外观、查重复遇、卡片墙和单卡轨迹；客户端只能导入纯类型/校验器，不能通过图鉴 barrel 把服务端 `node:crypto` 带入浏览器包。
 - `src/a2a/`：独立 A2A 1.0 深度复盘 Card、Bearer HTTP 边界、DeepSeek 受控工具循环和版本化终态；不读取浏览器工作区或保存跨请求模型记忆。

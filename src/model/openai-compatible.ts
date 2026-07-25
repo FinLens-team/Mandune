@@ -93,7 +93,10 @@ export function createOpenAICompatibleModelGateway(
           abortSignal: combinedSignal,
           timeout: request.timeoutMs,
           maxRetries: 0,
-          temperature: 0,
+          temperature: request.temperature ?? 0,
+          ...(request.maxOutputTokens !== undefined
+            ? { maxOutputTokens: request.maxOutputTokens }
+            : {}),
           include: {
             requestBody: false,
             requestMessages: false,

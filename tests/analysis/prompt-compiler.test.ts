@@ -20,6 +20,12 @@ const EXPECTED_HASHES = {
 } as const;
 
 describe("daily review prompt compiler", () => {
+  it("maps every supported frontend theme id to the intended backend persona", () => {
+    expect(personaForTheme("eastern_observation")).toBe("doudou");
+    expect(personaForTheme("nailong")).toBe("nailong");
+    expect(personaForTheme("sun_ge")).toBe("sunge");
+  });
+
   it("keeps every FINAL skill byte-identical to the reviewed intake", () => {
     for (const [fileName, expected] of Object.entries(EXPECTED_HASHES)) {
       const body = readFileSync(new URL(`../../src/analysis/skills-v1/${fileName}`, import.meta.url));
@@ -27,7 +33,7 @@ describe("daily review prompt compiler", () => {
     }
   });
 
-  it("places application constraints before untouched skills, Atlas policy and ReviewPacket", () => {
+  it("separates rational and persona instructions while keeping untouched skills behind application constraints", () => {
     const fixture = structuredClone(getFixture("supported_full"));
     const personaId = personaForTheme(fixture.snapshot.theme_id);
     const derivations = deriveAnalysisInputs({
@@ -56,16 +62,22 @@ describe("daily review prompt compiler", () => {
       atlas_policy_version: ATLAS_GENERATION_POLICY_VERSION,
       input: packet,
     });
-    const application = compiled.instructions.indexOf("【应用级事实、安全和输出约束");
-    const core = compiled.instructions.indexOf("【核心持仓分析 skill｜原文】");
-    const persona = compiled.instructions.indexOf("【当前人格 skill：doudou｜原文】");
-    const atlas = compiled.instructions.indexOf("【Atlas 生成策略");
-    const input = compiled.instructions.indexOf("【输入说明】");
-    expect(application).toBeLessThan(core);
-    expect(core).toBeLessThan(persona);
-    expect(persona).toBeLessThan(atlas);
-    expect(atlas).toBeLessThan(input);
-    expect(compiled.instructions).toContain("[FINAL — DO NOT MODIFY]");
-    expect(compiled.instructions).toContain("报告正文都不得包含“每日扫盲”");
+    const rationalApplication = compiled.rational_instructions.indexOf("【应用级事实、安全和输出约束");
+    const core = compiled.rational_instructions.indexOf("【核心持仓分析 skill｜原文】");
+    const rationalInput = compiled.rational_instructions.indexOf("【输入说明】");
+    expect(rationalApplication).toBeLessThan(core);
+    expect(core).toBeLessThan(rationalInput);
+    expect(compiled.rational_instructions).not.toContain("【当前人格 skill");
+
+    const personaApplication = compiled.persona_instructions.indexOf("【应用级事实、安全和输出约束");
+    const persona = compiled.persona_instructions.indexOf("【当前人格 skill：doudou｜原文】");
+    const personaInput = compiled.persona_instructions.indexOf("【输入说明】");
+    expect(personaApplication).toBeLessThan(persona);
+    expect(persona).toBeLessThan(personaInput);
+    expect(compiled.persona_instructions).not.toContain("【核心持仓分析 skill｜原文】");
+    expect(compiled.rational_instructions).toContain("[FINAL — DO NOT MODIFY]");
+    expect(compiled.persona_instructions).toContain("[FINAL — DO NOT MODIFY]");
+    expect(compiled.rational_instructions).toContain("报告正文都不得包含“每日扫盲”");
+    expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
   });
 });

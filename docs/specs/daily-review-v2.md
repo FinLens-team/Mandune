@@ -14,18 +14,19 @@
 3. 用 Bocha 发现事件候选，并回到官方或可信来源核验；
 4. 确定性计算今日变化、盈亏贡献、敞口、集中度、覆盖和缺口；
 5. 组装版本化 `ReviewPacket`；
-6. 通过一次 `step-explore` 调用生成理性报告、人格报告和一个 Atlas 候选；
-7. 校验并保存不可变结果，再把候选交给 Atlas 的查重、复遇、外观和持久化边界。
+6. 通过两次有序 `step-explore` 调用分别生成理性报告和人格报告；
+7. 通过第三次独立 `step-explore` 调用生成一个 Atlas 候选；
+8. 校验并保存不可变结果，再把候选交给 Atlas 的查重、复遇、外观和持久化边界。
 
 不引入 Agent loop、模型工具调用或多 Agent 编排。模型不负责取数、缓存选择和金融计算。
 
 ## 页面结果
 
-同一次模型响应提供分析页的全部生成内容：
+服务端按顺序生成分析页内容，并只在报告整体通过校验后返回：
 
 - `persona_report`：长报告卡正面的人格叙事；
 - `rational_report`：长报告卡背面的理性客观叙事；
-- `atlas_candidate`：长报告卡底部的一张图鉴候选。
+- `atlas_candidate`：第三次独立调用生成的图鉴候选。
 
 正反面使用同一份快照、证据、派生结果、结论和建议。报告正文不再包含独立“每日扫盲”段落，学习或趣味内容只由底部图鉴承载。
 
@@ -103,42 +104,56 @@ SQLite schema v4 新增：
 - `孙哥转述-skill`；
 - `兜兜转述-玄学版-skill`。
 
-调用优先级：
+理性报告调用优先级：
 
 1. 应用级事实、安全和输出约束；
 2. 核心持仓分析 skill；
-3. 当前人格 skill；
-4. Atlas 版本化生成策略；
-5. `ReviewPacket`。
+3. `ReviewPacket`。
+
+人格报告调用优先级：
+
+1. 应用级事实、安全和输出约束；
+2. 当前人格 skill；
+3. `ReviewPacket` 与已经通过校验的理性报告。
+
+Atlas 调用只接收版本化 Atlas 策略、确定性分析、允许引用和同类型已有卡片的最小指纹，不接收两份报告正文。
 
 应用级约束覆盖 skill 示例中的预测、真实人物冒充、迷信暗示、精确交易引导或未提供数字。覆盖只发生在调用层。
 
-## 单次模型输出
+## 三次模型输出
 
-唯一目标模型为 `step-explore`。先 capability-test JSON Mode；不支持时仍使用同一模型，以提示词强制 JSON 并严格解析。
+唯一目标模型为 `step-explore`。先 capability-test structured output；不支持时仍使用同一模型，以提示词强制 JSON 并严格解析。每个阶段只执行一次 provider attempt，不在应用层自动重试，因此一次成功复盘固定为三次模型调用。
+
+第一次使用低温生成 `generated-rational-report.v2`：
 
 ```json
 {
-  "schema_version": "generated-daily-review.v2",
+  "schema_version": "generated-rational-report.v2",
   "rational_report": {
     "markdown": "...",
     "fact_ids": [],
     "event_ids": []
-  },
+  }
+}
+```
+
+第二次使用较高温度生成 `generated-persona-report.v2`：
+
+```json
+{
+  "schema_version": "generated-persona-report.v2",
   "persona_report": {
     "persona_id": "...",
     "markdown": "...",
     "fact_ids": [],
     "event_ids": []
-  },
-  "atlas_candidate": {
-    "schema_version": "atlas-candidate.v1",
-    "kind": "professional_term or meme"
   }
 }
 ```
 
-服务端在调用前用 `analysis_id` 稳定选择 Atlas 类型，并只允许响应返回该类型：50% `professional_term`，50% `meme`。同时传入当前工作区同类型卡片的最小指纹，后端仍执行独立查重护栏。
+第三次生成 `atlas-candidate.v1`。服务端在调用前用 `analysis_id` 稳定选择 Atlas 类型，并只允许响应返回该类型：50% `professional_term`，50% `meme`。同时传入当前工作区同类型卡片的最小指纹，后端仍执行独立查重护栏。
+
+服务端最终组合为 `generated-daily-review.v2` 后再进入历史持久化；该组合对象不是第四次模型调用。
 
 ## 校验与持久化
 
@@ -151,7 +166,7 @@ SQLite schema v4 新增：
 - 不含精确交易指令、收益保证、代客操作、凭据、身份或 reasoning；
 - Atlas 类型与预选类型一致；专业名词引用存在；趣味梗不冒充金融事实。
 
-结构失败使用同一模型和修复提示最多重试一次。第二次失败后不展示未校验报告。若正反面已通过校验而 Atlas 子对象无效，报告仍可保存和展示，Atlas 记为无卡；Atlas 失败不能改写分析状态。
+理性报告失败时不发起人格或 Atlas 调用；人格报告失败时不发起 Atlas 调用。两种情况都不展示或保存部分生成文本。若正反面已通过校验而 Atlas 调用失败、超时或候选无效，报告仍可保存和展示，Atlas 记为无卡；Atlas 失败不能改写分析状态。
 
 历史保存快照、证据、派生结果、`ReviewPacket`、模型、prompt、skill、Atlas 策略版本和已校验生成结果。历史重放不重新请求供应商或模型。
 
@@ -161,10 +176,10 @@ SQLite schema v4 新增：
 - 缓存命中不调用供应商；缺失时请求并写回。
 - 一批持仓只初始化一次 PandaAI 会话。
 - 部分供应商失败仍能诚实生成；全部市场数据失败时模型调用次数为零。
-- 一次 `step-explore` 成功调用返回正面、背面和一个预选类型 Atlas 候选。
-- Atlas 不再发起第二次模型调用。
+- 一次成功复盘按理性、人格、Atlas 顺序发起且只发起三次 `step-explore` 调用。
+- 理性或人格报告失败时保持原子降级，不显示部分文本；Atlas 失败时保留已校验报告并记为无卡。
 - 新数字、无效引用、错人格、错卡片类型、交易指令或畸形 JSON 不进入历史或 API。
-- 正常、部分失败、全部失败、缓存命中、重试、超时、取消、复遇和历史重放测试通过。
+- 正常、部分失败、全部失败、缓存命中、报告原子失败、Atlas 降级、超时、取消、复遇和历史重放测试通过。
 - 仓库、日志、任务事件、fixture 和生成结果不含凭据。
 
 ## 非目标

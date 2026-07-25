@@ -2,6 +2,7 @@ import { HistoryService, HistoryWorkspaceLifecycle } from "../history/index.js";
 import {
   AtlasService,
   FixtureAtlasCandidateGenerator,
+  ModelAtlasCandidateGenerator,
 } from "../atlas/index.js";
 import { JourneyAnalysisService } from "../app/server/index.js";
 import { DailyReviewV2Executor } from "../app/server/daily-review-v2-executor.js";
@@ -42,10 +43,10 @@ export function createDurableServices(config: ServerConfig) {
         supportsStructuredOutputs: config.model.supportsStructuredOutputs,
       })
     : undefined;
-  const atlas = new AtlasService(
-    new SqliteAtlasStore(database),
-    new FixtureAtlasCandidateGenerator(),
-  );
+  const atlasCandidateGenerator = modelGateway
+    ? new ModelAtlasCandidateGenerator(modelGateway)
+    : new FixtureAtlasCandidateGenerator();
+  const atlas = new AtlasService(new SqliteAtlasStore(database), atlasCandidateGenerator);
   const journeyStore = new SqliteJourneyStore(database);
   journeyStore.recoverInterruptedRunsNow(new Date().toISOString());
   const evidenceCache = new SqliteEvidenceCacheStore(database);
@@ -62,6 +63,7 @@ export function createDurableServices(config: ServerConfig) {
             evidenceCache,
           ),
           listAtlasCards: (workspaceId) => atlas.listCards(workspaceId),
+          atlasCandidateGenerator,
         },
       )
     : undefined;

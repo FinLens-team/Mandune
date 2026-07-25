@@ -8,6 +8,8 @@ export interface ModelGatewayRequest {
   input: unknown;
   signal: AbortSignal;
   timeoutMs: number;
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 export type ModelGatewayFailureCode =

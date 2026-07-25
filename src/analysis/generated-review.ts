@@ -9,6 +9,8 @@ import type { DailyReviewPersonaId } from "./prompt-compiler.js";
 import type { ReviewPacketV2 } from "./review-packet.js";
 
 export const GENERATED_DAILY_REVIEW_SCHEMA_VERSION = "generated-daily-review.v2" as const;
+export const GENERATED_RATIONAL_REPORT_SCHEMA_VERSION = "generated-rational-report.v2" as const;
+export const GENERATED_PERSONA_REPORT_SCHEMA_VERSION = "generated-persona-report.v2" as const;
 
 export interface GeneratedReportV2 {
   markdown: string;
@@ -31,6 +33,16 @@ export interface ValidatedGeneratedDailyReviewV2 {
 export type GeneratedDailyReviewValidation =
   | { ok: true; value: ValidatedGeneratedDailyReviewV2 }
   | { ok: false; errors: string[] };
+
+export interface GeneratedRationalReportEnvelopeV2 {
+  schema_version: typeof GENERATED_RATIONAL_REPORT_SCHEMA_VERSION;
+  rational_report: GeneratedReportV2;
+}
+
+export interface GeneratedPersonaReportEnvelopeV2 {
+  schema_version: typeof GENERATED_PERSONA_REPORT_SCHEMA_VERSION;
+  persona_report: GeneratedPersonaReportV2;
+}
 
 const REPORT_SCHEMA = {
   type: "object",
@@ -77,6 +89,37 @@ export function generatedDailyReviewSchema(personaId: DailyReviewPersonaId): Jso
           { type: "object" },
           { type: "null" },
         ],
+      },
+    },
+  };
+}
+
+export function generatedRationalReportSchema(): JsonSchema {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["schema_version", "rational_report"],
+    properties: {
+      schema_version: { type: "string", const: GENERATED_RATIONAL_REPORT_SCHEMA_VERSION },
+      rational_report: REPORT_SCHEMA,
+    },
+  };
+}
+
+export function generatedPersonaReportSchema(personaId: DailyReviewPersonaId): JsonSchema {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["schema_version", "persona_report"],
+    properties: {
+      schema_version: { type: "string", const: GENERATED_PERSONA_REPORT_SCHEMA_VERSION },
+      persona_report: {
+        ...REPORT_SCHEMA,
+        required: ["persona_id", ...REPORT_SCHEMA.required],
+        properties: {
+          persona_id: { type: "string", const: personaId },
+          ...REPORT_SCHEMA.properties,
+        },
       },
     },
   };
@@ -226,6 +269,27 @@ export function validateGeneratedDailyReview(
         : candidate ? "valid" : "invalid_candidate",
     },
   };
+}
+
+export function validateGeneratedRationalReport(
+  value: unknown,
+  packet: ReviewPacketV2,
+): GeneratedReportV2 | null {
+  if (!object(value) || !onlyKeys(value, ["schema_version", "rational_report"]) ||
+    value.schema_version !== GENERATED_RATIONAL_REPORT_SCHEMA_VERSION) return null;
+  return report(value.rational_report, packet) as GeneratedReportV2 | null;
+}
+
+export function validateGeneratedPersonaReport(
+  value: unknown,
+  packet: ReviewPacketV2,
+  rationalReport: GeneratedReportV2,
+): GeneratedPersonaReportV2 | null {
+  if (!object(value) || !onlyKeys(value, ["schema_version", "persona_report"]) ||
+    value.schema_version !== GENERATED_PERSONA_REPORT_SCHEMA_VERSION) return null;
+  const persona = report(value.persona_report, packet, true) as GeneratedPersonaReportV2 | null;
+  return persona && sameIds(rationalReport.fact_ids, persona.fact_ids) &&
+    sameIds(rationalReport.event_ids, persona.event_ids) ? persona : null;
 }
 
 export function validateStoredGeneratedDailyReview(

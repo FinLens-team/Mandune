@@ -49,6 +49,8 @@ describe("OpenAI-compatible AI SDK model gateway", () => {
       input: { public_fact: "fixture" },
       signal: new AbortController().signal,
       timeoutMs: 1_000,
+      temperature: 0.35,
+      maxOutputTokens: 777,
     });
 
     expect(result).toMatchObject({ ok: true, value: { schema_version: "test.v1", answer: "ok" } });
@@ -56,6 +58,7 @@ describe("OpenAI-compatible AI SDK model gateway", () => {
     const init = fetch.mock.calls[0]?.[1];
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
     expect(body).not.toHaveProperty("tools");
+    expect(body).toMatchObject({ temperature: 0.35, max_tokens: 777 });
     expect(JSON.stringify(body)).not.toContain("server-only-secret");
   });
 

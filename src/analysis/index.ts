@@ -35,11 +35,19 @@ export {
 } from "./review-packet.js";
 export {
   GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
+  GENERATED_PERSONA_REPORT_SCHEMA_VERSION,
+  GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
   generatedDailyReviewSchema,
+  generatedPersonaReportSchema,
+  generatedRationalReportSchema,
   validateGeneratedDailyReview,
+  validateGeneratedPersonaReport,
+  validateGeneratedRationalReport,
   validateStoredGeneratedDailyReview,
   type GeneratedDailyReviewValidation,
+  type GeneratedPersonaReportEnvelopeV2,
   type GeneratedPersonaReportV2,
+  type GeneratedRationalReportEnvelopeV2,
   type GeneratedReportV2,
   type ValidatedGeneratedDailyReviewV2,
 } from "./generated-review.js";
