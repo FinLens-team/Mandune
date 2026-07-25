@@ -25,8 +25,8 @@ export interface AboutViewProps {
   workspace: WorkspacePublicStatus | null;
 }
 
-const PROJECT_REPO_URL = "https://github.com/FinLens-team/finlens";
-const PROJECT_REPO_NAME = "FinLens-team/finlens";
+const PROJECT_REPO_URL = "https://github.com/FinLens-team/Mandune";
+const PROJECT_REPO_NAME = "FinLens-team/Mandune";
 
 interface DeveloperEntry {
   handle: string;

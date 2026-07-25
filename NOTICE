@@ -1,0 +1,42 @@
+Mandune
+Copyright 2026 Mandune contributors
+
+This product includes software developed by the Mandune contributors and
+licensed under the Apache License, Version 2.0.
+
+Asset and identity boundary
+---------------------------
+
+The Apache License applies to Mandune's original source code and documentation.
+It does not grant rights in third-party trademarks, character likenesses,
+personal likenesses, names, or other material for which the contributors do not
+own the necessary rights.
+
+Unless a file carries a separate license notice, the binary visual and media
+assets under the following paths are distributed only as part of this project
+and are not offered for independent reuse under Apache-2.0. See ASSETS.md for
+the repository's asset licensing inventory and reuse boundary:
+
+  src/client/assets/mandong-logo.webp
+  src/client/assets/mascot/**
+  src/client/assets/themes/**
+  docs/media/**
+
+The product currently contains references to the "Nailong" character and to
+the public persona of Justin Sun, as well as other character-style artwork.
+Those references and likenesses are not endorsements, and no trademark,
+publicity, personality, or merchandising rights are granted by this repository.
+Redistributors are responsible for replacing these materials or obtaining the
+permissions required for their intended use.
+
+Google Noto Emoji
+-----------------
+
+The files src/client/assets/theme-previews/theme-preview-1.png through
+theme-preview-3.png are derived from Google Noto Emoji resources. They are
+licensed under the Apache License, Version 2.0. The corresponding license text
+is included at src/client/assets/theme-previews/NOTO-EMOJI-LICENSE.txt, and
+source URLs are recorded in src/client/assets/theme-previews/README.md.
+
+Third-party dependencies retain their respective licenses. Their inclusion in
+package metadata or a lockfile does not relicense them under Mandune's license.

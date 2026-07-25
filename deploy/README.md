@@ -1,6 +1,6 @@
-# Mandong single-host deployment
+# Mandune single-host deployment
 
-This directory defines the Demo V1 deployment contract: one Node 22 process,
+This directory defines the Mandune single-host deployment contract: one Node 22 process,
 one local SQLite database, systemd supervision, and an HTTPS Nginx reverse
 proxy. The production service binds `127.0.0.1:8791`; only Nginx is public.
 Local development keeps the application default `127.0.0.1:8787`.

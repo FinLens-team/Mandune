@@ -1,9 +1,9 @@
 {
-  "name": "mandong",
+  "name": "mandune",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "满懂 Demo V1 可运行工程基线脚手架",
+  "description": "Mandune（满懂）：带证据边界的每日持仓复盘",
   "packageManager": "pnpm@10.33.2",
   "engines": {
     "node": ">=22 <23",
