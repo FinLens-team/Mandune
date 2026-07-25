@@ -37,17 +37,17 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("inert");
   });
 
-  it("keeps edited example provenance explicit without changing existing callers", () => {
+  it("accepts provenance fields from existing callers without rendering source badges", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
-    const randomMarkup = renderToStaticMarkup(createElement(LongCard, { input }));
     const editedMarkup = renderToStaticMarkup(createElement(LongCard, {
       input: { ...input, experienceSource: "edited" },
     }));
-    expect(randomMarkup).toContain("随机体验身份 · 示例数据");
-    expect(editedMarkup).toContain("体验持仓 · 已编辑");
-    expect(renderToStaticMarkup(createElement(LongCard, {
+    const cachedMarkup = renderToStaticMarkup(createElement(LongCard, {
       input: { ...input, exampleLabel: "随机体验身份 · 缓存证据（非实时）" },
-    }))).toContain("随机体验身份 · 缓存证据（非实时）");
+    }));
+    expect(editedMarkup).toContain("mandong-long-card__stage");
+    expect(editedMarkup).not.toContain("体验持仓 · 已编辑");
+    expect(cachedMarkup).not.toContain("随机体验身份 · 缓存证据（非实时）");
   });
 
   it("renders an unavailable result without a normal long-card stage", () => {
