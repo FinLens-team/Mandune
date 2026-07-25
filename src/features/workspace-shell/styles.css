@@ -77,9 +77,8 @@
   display: grid;
   grid-template-areas:
     "masthead"
-    "copy"
     "stage";
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   overflow: clip;
 }
 
@@ -165,72 +164,6 @@
   letter-spacing: 0.32em;
   opacity: 0;
   animation: title-lift 550ms 80ms var(--ease-enter) forwards;
-}
-
-/* ─── Top-right capsules: real evidence date + experience source ─── */
-
-.workspace-home__badges {
-  position: absolute;
-  z-index: 7;
-  top: max(var(--space-6), env(safe-area-inset-top));
-  right: max(var(--space-4), env(safe-area-inset-right));
-  max-width: 62%;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.workspace-home__badge {
-  min-height: 26px;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  display: inline-grid;
-  place-items: center;
-  background: var(--poster-pill-bg);
-  color: var(--poster-pill-ink);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  line-height: 18px;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 22%);
-  opacity: 0;
-  animation: badge-fade 360ms 260ms var(--ease-enter) forwards;
-}
-
-.workspace-home__badge--demo {
-  color: var(--color-demo);
-  animation-delay: 340ms;
-}
-
-@keyframes badge-fade {
-  from { opacity: 0; transform: translate3d(0, -4px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
-}
-
-/* ─── Copy block: runtime state title, the page's only headline ─── */
-
-.workspace-home__copy {
-  position: relative;
-  z-index: 5;
-  grid-area: copy;
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-}
-
-.workspace-home h1 {
-  margin: 0;
-  color: var(--poster-ink);
-  font-family: var(--font-sans);
-  font-size: clamp(36px, 9vw, 56px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  text-align: left;
-  text-wrap: balance;
-  opacity: 0;
-  animation: title-lift 550ms 140ms var(--ease-enter) forwards;
 }
 
 @keyframes title-lift {
@@ -850,10 +783,6 @@
     font-size: var(--font-size-base);
   }
 
-  .workspace-home h1 {
-    font-size: 64px;
-  }
-
   .workspace-home__stage {
     min-height: 0;
   }
@@ -897,10 +826,6 @@
 }
 
 @media (max-width: 23.4375rem) {
-  .workspace-home h1 {
-    font-size: 32px;
-  }
-
   .workspace-home__hero {
     width: min(74vw, 19rem);
   }
@@ -916,10 +841,6 @@
 }
 
 @media (max-height: 36rem) {
-  .workspace-home h1 {
-    font-size: 28px;
-  }
-
   .workspace-home__poster {
     padding-block-start: max(var(--space-4), env(safe-area-inset-top));
   }

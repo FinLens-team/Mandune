@@ -41,9 +41,9 @@ export function OnboardingFlow({
   const [step, setStep] = useState<OnboardingStep>("s0");
   const [splashLeaving, setSplashLeaving] = useState(false);
   const [splashReady, setSplashReady] = useState(false);
-  const [themeSelected, setThemeSelected] = useState(false);
+  const [themeSelected, setThemeSelected] = useState(true);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(2);
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
   const [identity, setIdentity] = useState<DemoExperienceIdentity | null>(null);
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
@@ -170,8 +170,10 @@ export function OnboardingFlow({
                 setPreviewMessage(null);
               }}
               onSelect={() => {
-                setThemeSelected(true);
-                setPreviewIndex(2);
+                // 奶龙主题默认选中；再次点击可取消（点锁定预览卡同样会取消）
+                const next = !themeSelected;
+                setThemeSelected(next);
+                setPreviewIndex(next ? 2 : null);
                 setPreviewMessage(null);
               }}
               previewIndex={previewIndex}

@@ -25,7 +25,8 @@ export async function completeOnboarding(page: Page): Promise<string> {
     await expect(lockedThemes.nth(index)).toHaveAttribute("aria-disabled", "true");
     await expect(lockedThemes.nth(index)).toContainText("暂未开放");
   }
-  await page.getByRole("button", { name: "选择东方观象" }).click();
+  // 奶龙主题默认选中（可取消），无需手动点选
+  await expect(page.getByRole("button", { name: "选择我是龙主题" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "下一步" }).click();
   await checkpoint(page, "S1 theme selection");
 
@@ -102,17 +103,16 @@ export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<Journey
   expect(typeof startBody.analysis_id).toBe("string");
   const analysisId = String(startBody.analysis_id);
 
-  await expect(page.getByRole("heading", { level: 1, name: "正在核对本次复盘" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2, name: "完整阶段列表" })).toBeVisible();
-  await expect(page.locator(".analysis-progress__stages > li")).toHaveCount(8);
+  await expect(page.getByRole("heading", { level: 1, name: "复盘进行中" })).toBeVisible();
+  await expect(page.locator(".analysis-progress__mascot")).toBeVisible();
+  await expect(page.locator(".analysis-progress__log-line")).not.toHaveCount(4);
   await expect(page.locator("main.analysis-progress")).toHaveAttribute("data-reduce-motion", "true");
   await checkpoint(page, "S8 analysis progress");
 
   let openResult = page.getByRole("button", { name: "查看复盘报告" });
   await expect(openResult).toBeVisible({ timeout: 45_000 });
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "正在核对本次复盘" })).toBeVisible();
-  await expect(page.getByText(/阶段只随真实任务事件更新/)).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "复盘进行中" })).toBeVisible();
   openResult = page.getByRole("button", { name: "查看复盘报告" });
   await expect(openResult).toBeVisible({ timeout: 45_000 });
   await openResult.click();
@@ -161,7 +161,7 @@ export async function verifyImmutableHistory(
   await checkpoint(page, "S10 immutable history detail");
 
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: /正在核对本次复盘|和兜兜一起/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /复盘进行中|和兜兜一起/ })).toBeVisible();
   const resultButton = page.getByRole("button", { name: "查看复盘报告" });
   await expect(resultButton).toBeVisible({ timeout: 45_000 });
   await resultButton.click();

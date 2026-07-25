@@ -55,10 +55,6 @@ const HOME_SPEECH_BUBBLES = [
 /** One caption cycle above the mascot: fade in, hold, fade out. */
 const HOME_CAPTION_CYCLE_MS = 4800;
 
-function sourceLabel(source: ExperienceSource | undefined): string {
-  return source === "edited" ? "体验持仓已编辑" : "随机体验数据";
-}
-
 export function WorkspaceShell({
   activeAnalysis,
   draft: controlledDraft,
@@ -211,20 +207,15 @@ export function WorkspaceShell({
                 </svg>
 
                 <header className="workspace-home__masthead">
-                  <p className="workspace-home__signature">哈呃呃涨涨</p>
-                </header>
-
-                <div className="workspace-home__badges">
-                  <span className="workspace-home__badge workspace-home__badge--demo">
-                    {sourceLabel(experienceSource)}
-                  </span>
-                </div>
-
-                <div className="workspace-home__copy">
-                  <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
-                    {activeAnalysis ? "复盘进行中" : "今日持仓观察"}
+                  <h1
+                    className="workspace-home__signature"
+                    id="workspace-home-heading"
+                    ref={homeHeadingRef}
+                    tabIndex={-1}
+                  >
+                    哈呃呃涨涨
                   </h1>
-                </div>
+                </header>
 
                 <div
                   className="workspace-home__stage"
