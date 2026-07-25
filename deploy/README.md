@@ -24,6 +24,7 @@ The host layout is fixed:
 | `/etc/mandong/mandong.env` | `root:root`, `0600` | Optional server-only secrets/config |
 | `/etc/mandong/release.env` | `root:root`, `0600` | Generated commit SHA and migration path |
 | `/etc/systemd/system/mandong-purge.*` | `root:root`, `0644` | Hardened daily private-workspace expiry job |
+| `/run/lock/mandong/maintenance.lock` | `root:mandong`, `0660`; root-managed `0750` parent | Shared release/rollback/purge transaction lock |
 
 Do not put `HOST`, `PORT`, `APP_VERSION`, `MANDONG_DB_PATH`, or
 `MANDONG_MIGRATIONS_DIR` in `mandong.env`; the unit and release transaction own
@@ -42,8 +43,11 @@ Run repository-local validation first:
 The command always checks shell/config invariants and exercises the release
 archive validator with traversal, control-character, link, FIFO, device,
 duplicate, and required-type faults. Device-fixture construction is mandatory:
-the validation fails rather than silently skipping that case. It prints `NOT
-RUN` instead of claiming success when `systemd-analyze` or the Nginx/OpenSSL
+the validation fails rather than silently skipping that case. It also runs a
+bounded shared-lock contention test, SQLite-backed rollback recovery faults,
+and two full same-commit builds with different untracked Vite `public/` inputs.
+The archives must be byte-identical and exclude the untracked input. It prints
+`NOT RUN` instead of claiming success when `systemd-analyze` or the Nginx/OpenSSL
 rendering tools are unavailable. On the target host all checks must run.
 
 Install the unit and Nginx config without starting Mandong:
@@ -74,16 +78,21 @@ immutable release directories. It also installs and runs `systemctl enable
 The timer is persistent and has a 45-minute randomized delay. Before the first
 release, `ConditionPathExists` makes the oneshot a clean no-op rather than a
 failed unit. The purge service has no network namespace and can only write the
-Mandong state directory.
+Mandong state directory. A tmpfiles rule recreates the shared lock after boot
+with a root-owned parent, so the service user can open the lock but cannot
+replace it. Installation fails unless the parent is `root:mandong 0750` and the
+regular lock file is `root:mandong 0660`.
 
 ## Build a candidate
 
-Use a clean, committed candidate and a full 40-character commit SHA. The build
-script resolves and rejects output paths inside archived source directories,
-uses the lockfile, removes the entire ignored `dist` tree before building,
-rejects public client `.map` paths, and creates a stable archive plus SHA-256
-file. Removing all of `dist` prevents an old server chunk from leaking into a
-new candidate when TypeScript no longer emits that path.
+Use a full 40-character commit SHA for the checked-out candidate. The script
+exports that exact commit into an isolated temporary tree before installing or
+building, so worktree edits and untracked build inputs cannot alter the archive
+for that SHA. It rejects output paths inside archived source directories, uses
+the lockfile, removes the isolated tree's entire `dist` before building, rejects
+public client `.map` paths, normalizes tar metadata and gzip headers, and writes
+the archive plus SHA-256 from staged files. The isolated build tree and staging
+files are removed on success or failure.
 
 ```sh
 commit_sha="$(git rev-parse HEAD)"
@@ -106,7 +115,10 @@ sudo ./deploy/scripts/release.sh \
   "$expected_sha256"
 ```
 
-The transaction is serialized with `flock`. Before root extraction it reads an
+The transaction takes `/run/lock/mandong/maintenance.lock` with a 30-second
+bounded `flock`. Purge and rollback use the same lock, so lock timeout fails
+explicitly instead of allowing concurrent SQLite mutation. Before root
+extraction the release script reads an
 escaped GNU tar manifest and accepts only unique regular files/directories under
 `dist`, `migrations`, `package.json`, and `pnpm-lock.yaml`. Absolute, dot-segment,
 control/backslash, unexpected, symlink, hardlink, device, FIFO, and wrong
@@ -144,8 +156,9 @@ predecessor:
 sudo ./deploy/scripts/rollback.sh
 ```
 
-Before changing anything it takes a rollback-guard snapshot of the current live
-database. It switches only the application release and starts the target
+Before changing anything it takes the shared maintenance lock and a
+rollback-guard snapshot of the current live database. It switches only the
+application release and starts the target
 against that same live database, so a successful rollback preserves every
 workspace and history write made by the current release. The target must return
 its exact SHA from `/health`; an old release that cannot open the current schema
@@ -171,11 +184,14 @@ sudo systemctl show mandong-purge.service \
 ```
 
 The oneshot loads the same generated release environment as the application and
-runs `node --preserve-symlinks-main
+runs the compiled purge under a 30-second bounded exclusive lock using
+`node --preserve-symlinks-main
 /opt/mandong/current/dist/persistence/maintenance.js purge-expired`. Output is
 limited to aggregate purge/failure counts. `Persistent=true` catches a missed
 daily run after host downtime; the randomized delay avoids a fixed thundering
-start. A nonzero exit leaves a failed unit for operator inspection and retry.
+start. Lock timeout exits with status 75; any nonzero exit leaves a failed unit
+for operator inspection and retry. `ReadOnlyPaths` prevents the oneshot from
+modifying the root-managed lock inode.
 
 ## Operational checks
 
@@ -186,6 +202,7 @@ sudo systemd-analyze verify /etc/systemd/system/mandong-purge.service /etc/syste
 sudo sqlite3 /var/lib/mandong/mandong.sqlite3 'PRAGMA integrity_check;'
 sudo systemctl show mandong.service \
   -p User -p Group -p ProtectSystem -p ProtectHome -p NoNewPrivileges
+sudo stat -c '%U:%G:%a %n' /run/lock/mandong /run/lock/mandong/maintenance.lock
 ```
 
 Do not use `journalctl` exports as public acceptance artifacts until they have

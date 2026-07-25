@@ -19,15 +19,13 @@ OUTPUT=$2
   printf 'ERROR: COMMIT_SHA is not the checked-out commit\n' >&2
   exit 1
 }
-git -C "${REPO_ROOT}" diff --quiet && git -C "${REPO_ROOT}" diff --cached --quiet || {
-  printf 'ERROR: tracked files differ from COMMIT_SHA\n' >&2
-  exit 1
-}
 
-command -v corepack >/dev/null 2>&1 || {
-  printf 'ERROR: Corepack is required\n' >&2
-  exit 1
-}
+for command_name in corepack git gzip node sha256sum tar; do
+  command -v "${command_name}" >/dev/null 2>&1 || {
+    printf 'ERROR: %s is required\n' "${command_name}" >&2
+    exit 1
+  }
+done
 [[ "$(node --version)" == "v22.22.1" ]] || {
   printf 'ERROR: Node 22.22.1 is required\n' >&2
   exit 1
@@ -45,17 +43,32 @@ for archived_directory in "${REPO_ROOT}/dist" "${REPO_ROOT}/migrations"; do
   fi
 done
 install -d "$(dirname -- "${OUTPUT}")"
-corepack pnpm --dir "${REPO_ROOT}" install --frozen-lockfile
-rm -rf -- "${REPO_ROOT}/dist"
-corepack pnpm --dir "${REPO_ROOT}" build
-if find "${REPO_ROOT}/dist/client" -name '*.map' -print -quit | grep -q .; then
+BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/mandong-release-build.XXXXXX")"
+OUTPUT_TEMP="$(mktemp "$(dirname -- "${OUTPUT}")/.mandong-release.XXXXXX")"
+CHECKSUM_TEMP="$(mktemp "$(dirname -- "${OUTPUT}")/.mandong-release-sha256.XXXXXX")"
+cleanup() {
+  rm -rf -- "${BUILD_ROOT}"
+  rm -f -- "${OUTPUT_TEMP}" "${CHECKSUM_TEMP}"
+}
+trap cleanup EXIT
+
+git -C "${REPO_ROOT}" archive --format=tar "${COMMIT_SHA}" | tar -xf - -C "${BUILD_ROOT}"
+corepack pnpm --dir "${BUILD_ROOT}" install --frozen-lockfile
+rm -rf -- "${BUILD_ROOT}/dist"
+corepack pnpm --dir "${BUILD_ROOT}" build
+if find "${BUILD_ROOT}/dist/client" -name '*.map' -print -quit | grep -q .; then
   printf 'ERROR: client build contains public source maps\n' >&2
   exit 1
 fi
 
 SOURCE_DATE_EPOCH="$(git -C "${REPO_ROOT}" show -s --format=%ct "${COMMIT_SHA}")"
 tar --sort=name --mtime="@${SOURCE_DATE_EPOCH}" --owner=0 --group=0 --numeric-owner \
-  -C "${REPO_ROOT}" -czf "${OUTPUT}" dist migrations package.json pnpm-lock.yaml
-HASH="$(sha256sum "${OUTPUT}" | cut -d' ' -f1)"
-printf '%s  %s\n' "${HASH}" "$(basename -- "${OUTPUT}")" >"${OUTPUT}.sha256"
+  -C "${BUILD_ROOT}" -cf - dist migrations package.json pnpm-lock.yaml \
+  | gzip -n >"${OUTPUT_TEMP}"
+HASH="$(sha256sum "${OUTPUT_TEMP}" | cut -d' ' -f1)"
+printf '%s  %s\n' "${HASH}" "$(basename -- "${OUTPUT}")" >"${CHECKSUM_TEMP}"
+mv -f -- "${OUTPUT_TEMP}" "${OUTPUT}"
+mv -f -- "${CHECKSUM_TEMP}" "${OUTPUT}.sha256"
+trap - EXIT
+cleanup
 printf 'Release archive: %s\nSHA-256: %s\n' "${OUTPUT}" "${HASH}"

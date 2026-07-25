@@ -15,7 +15,8 @@ readonly BACKUP_ROOT="/var/backups/mandong"
 readonly METADATA_ROOT="${BACKUP_ROOT}/releases"
 readonly RELEASE_ENV="/etc/mandong/release.env"
 readonly HEALTH_URL="http://127.0.0.1:8787/health"
-readonly DEPLOY_LOCK="/run/lock/mandong-deploy.lock"
+readonly DEPLOY_LOCK="/run/lock/mandong/maintenance.lock"
+readonly DEPLOY_LOCK_WAIT_SECONDS=30
 
 die() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -166,10 +167,44 @@ validate_release_tree() {
   fi
 }
 
+validate_lock_file() {
+  local lock_file=$1
+  local expected_owner=$2
+  local expected_group=$3
+  local expected_mode=$4
+  local actual
+
+  [[ -f ${lock_file} && ! -L ${lock_file} ]] || return 1
+  actual="$(stat -c '%U:%G:%a' "${lock_file}")" || return 1
+  [[ ${actual} == "${expected_owner}:${expected_group}:${expected_mode}" ]]
+}
+
+validate_deploy_lock() {
+  local lock_directory
+  local actual
+
+  lock_directory="$(dirname -- "${DEPLOY_LOCK}")"
+  [[ -d ${lock_directory} && ! -L ${lock_directory} ]] || return 1
+  actual="$(stat -c '%U:%G:%a' "${lock_directory}")" || return 1
+  [[ ${actual} == "root:${SERVICE_USER}:750" ]] || return 1
+  validate_lock_file "${DEPLOY_LOCK}" root "${SERVICE_USER}" 660
+}
+
+acquire_lock_file() {
+  local lock_file=$1
+  local wait_seconds=$2
+
+  exec 9<>"${lock_file}"
+  flock --exclusive --timeout "${wait_seconds}" --conflict-exit-code 75 9
+}
+
 acquire_deploy_lock() {
   require_command flock
-  exec 9>"${DEPLOY_LOCK}"
-  flock -n 9 || die "another Mandong deploy or rollback is active"
+  require_command stat
+  validate_deploy_lock || die "shared maintenance lock ownership or mode is invalid; rerun install-host.sh"
+  if ! acquire_lock_file "${DEPLOY_LOCK}" "${DEPLOY_LOCK_WAIT_SECONDS}"; then
+    die "another Mandong release, rollback, or purge held the maintenance lock for ${DEPLOY_LOCK_WAIT_SECONDS}s"
+  fi
 }
 
 current_release() {

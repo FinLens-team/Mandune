@@ -45,6 +45,9 @@ done < <(find "${DEPLOY_ROOT}" -type f -name '*.sh' -print | sort)
 printf 'PASS: deployment shell syntax\n'
 
 bash "${DEPLOY_ROOT}/tests/archive-validation.sh"
+bash "${DEPLOY_ROOT}/tests/deploy-lock.sh"
+bash "${DEPLOY_ROOT}/tests/rollback-recovery.sh"
+bash "${DEPLOY_ROOT}/tests/release-reproducibility.sh"
 
 NGINX_TEMPLATE="${DEPLOY_ROOT}/nginx/mandong.conf.template"
 for setting in \
@@ -78,11 +81,12 @@ done
 PURGE_UNIT="${DEPLOY_ROOT}/systemd/mandong-purge.service"
 for setting in \
   'ConditionPathExists=/opt/mandong/current/dist/persistence/maintenance.js' \
-  'ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/persistence/maintenance.js purge-expired' \
+  'ExecStart=/usr/bin/flock --exclusive --timeout 30 --conflict-exit-code 75 /run/lock/mandong/maintenance.lock /usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/persistence/maintenance.js purge-expired' \
   'User=mandong' \
   'PrivateNetwork=yes' \
   'ProtectSystem=strict' \
-  'ReadWritePaths=/var/lib/mandong'; do
+  'ReadWritePaths=/var/lib/mandong' \
+  'ReadOnlyPaths=/run/lock/mandong/maintenance.lock'; do
   assert_contains "${PURGE_UNIT}" "${setting}"
 done
 PURGE_TIMER="${DEPLOY_ROOT}/systemd/mandong-purge.timer"
@@ -98,21 +102,28 @@ assert_contains "${DEPLOY_ROOT}/scripts/lib.sh" 'readonly NODE_BIN="${RUNTIME_RO
 assert_contains "${DEPLOY_ROOT}/scripts/lib.sh" 'readonly COREPACK_BIN="${RUNTIME_ROOT}/corepack"'
 assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'MANDONG_NGINX_BIN'
 assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'MANDONG_NGINX_VHOST_PATH'
+assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'systemd-tmpfiles --create /etc/tmpfiles.d/mandong-lock.conf'
+assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'validate_deploy_lock'
 assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'systemctl enable --now mandong-purge.timer'
+assert_contains "${DEPLOY_ROOT}/tmpfiles/mandong-lock.conf" 'd /run/lock/mandong 0750 root mandong -'
+assert_contains "${DEPLOY_ROOT}/tmpfiles/mandong-lock.conf" 'f /run/lock/mandong/maintenance.lock 0660 root mandong -'
+assert_contains "${DEPLOY_ROOT}/scripts/lib.sh" 'readonly DEPLOY_LOCK_WAIT_SECONDS=30'
 assert_contains "${REPO_ROOT}/package.json" 'node --preserve-symlinks-main dist/persistence/maintenance.js purge-expired'
-printf 'PASS: systemd identity, loopback, purge scheduling, and sandbox invariants\n'
+printf 'PASS: systemd identity, shared lock, purge scheduling, and sandbox invariants\n'
 
 ROLLBACK_SCRIPT="${DEPLOY_ROOT}/scripts/rollback.sh"
 assert_contains "${ROLLBACK_SCRIPT}" 'while preserving the live database'
 assert_not_contains "${ROLLBACK_SCRIPT}" 'PRE_MIGRATION_BACKUP'
 assert_not_contains "${ROLLBACK_SCRIPT}" 'PREVIOUS_DB_PRESENT'
-assert_contains "${ROLLBACK_SCRIPT}" 'restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}"'
+assert_contains "${ROLLBACK_SCRIPT}" 'restore_database "${guard_present}" "${guard_backup}"'
 printf 'PASS: rollback preserves live data and reserves guard restore for recovery\n'
 
 CREATE_RELEASE_SCRIPT="${DEPLOY_ROOT}/scripts/create-release.sh"
-assert_contains "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${REPO_ROOT}/dist"'
-assert_before "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${REPO_ROOT}/dist"' 'corepack pnpm --dir "${REPO_ROOT}" build'
-printf 'PASS: release build removes all stale dist output before build\n'
+assert_contains "${CREATE_RELEASE_SCRIPT}" 'git -C "${REPO_ROOT}" archive --format=tar "${COMMIT_SHA}"'
+assert_contains "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${BUILD_ROOT}/dist"'
+assert_before "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${BUILD_ROOT}/dist"' 'corepack pnpm --dir "${BUILD_ROOT}" build'
+assert_contains "${CREATE_RELEASE_SCRIPT}" '| gzip -n >"${OUTPUT_TEMP}"'
+printf 'PASS: release build uses only the committed tree, removes stale dist, and normalizes gzip\n'
 
 assert_contains "${REPO_ROOT}/vite.config.ts" 'sourcemap: false'
 printf 'PASS: production client source maps are disabled\n'
@@ -131,6 +142,7 @@ for command_name in envsubst nginx openssl; do
   fi
 done
 if [[ ${#missing_nginx_tools[@]} -eq 0 ]]; then
+  install -d "${TEMP_ROOT}/logs"
   openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
     -subj '/CN=mandong.invalid' \
     -keyout "${TEMP_ROOT}/tls.key" -out "${TEMP_ROOT}/tls.crt" >/dev/null 2>&1

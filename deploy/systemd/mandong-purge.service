@@ -14,7 +14,7 @@ Environment=NODE_ENV=production
 Environment=PATH=/opt/mandong/runtime:/usr/bin:/bin
 Environment=MANDONG_DB_PATH=/var/lib/mandong/mandong.sqlite3
 Environment=MANDONG_DB_BUSY_TIMEOUT_MS=1000
-ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/persistence/maintenance.js purge-expired
+ExecStart=/usr/bin/flock --exclusive --timeout 30 --conflict-exit-code 75 /run/lock/mandong/maintenance.lock /usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/persistence/maintenance.js purge-expired
 UMask=0077
 StateDirectory=mandong
 StateDirectoryMode=0700
@@ -42,6 +42,7 @@ AmbientCapabilities=
 RestrictAddressFamilies=AF_UNIX
 SystemCallArchitectures=native
 ReadWritePaths=/var/lib/mandong
+ReadOnlyPaths=/run/lock/mandong/maintenance.lock
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=mandong-purge

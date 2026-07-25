@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
 require_root
-for command_name in envsubst getent groupadd install systemctl systemd-analyze useradd; do
+for command_name in envsubst flock getent groupadd install stat systemctl systemd-analyze systemd-tmpfiles useradd; do
   require_command "${command_name}"
 done
 
@@ -52,6 +52,11 @@ if [[ ! -e /etc/mandong/mandong.env ]]; then
 fi
 chown root:root /etc/mandong/mandong.env
 chmod 0600 /etc/mandong/mandong.env
+
+install -o root -g root -m 0644 \
+  "${SCRIPT_DIR}/../tmpfiles/mandong-lock.conf" /etc/tmpfiles.d/mandong-lock.conf
+systemd-tmpfiles --create /etc/tmpfiles.d/mandong-lock.conf
+validate_deploy_lock || die "shared maintenance lock was not installed as root:${SERVICE_USER} 0660"
 
 systemd-analyze verify \
   "${SCRIPT_DIR}/../systemd/mandong.service" \
