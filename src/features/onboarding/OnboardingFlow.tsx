@@ -37,7 +37,7 @@ export function OnboardingFlow({
 }: OnboardingFlowProps) {
   const returningVisit = useRef(hasCompletedOnboarding(storage, workspaceId));
   const [step, setStep] = useState<OnboardingStep>(() =>
-    returningVisit.current ? "complete" : "s1",
+    hasCompletedOnboarding(storage, workspaceId) ? "complete" : "s1",
   );
   const [themeSelected, setThemeSelected] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);

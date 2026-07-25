@@ -107,9 +107,6 @@ export function WorkspaceShell({
   const [view, setView] = useState<WorkspaceView>("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTrigger, setDrawerTrigger] = useState<HTMLElement | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmTrigger, setConfirmTrigger] = useState<HTMLElement | null>(null);
-  const [pendingSnapshot, setPendingSnapshot] = useState<PortfolioSnapshot | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
@@ -169,11 +166,6 @@ export function WorkspaceShell({
     onDraftChange?.(nextDraft);
   }
 
-  function changeExperienceSource(source: DemoBadgeSource) {
-    if (controlledExperienceSource === undefined) setUncontrolledExperienceSource(source);
-    onExperienceSourceChange?.(source);
-  }
-
   function changeReducedMotion(enabled: boolean) {
     if (controlledReducedMotion === undefined) setUncontrolledReducedMotion(enabled);
     onReducedMotionChange?.(enabled);
@@ -197,14 +189,7 @@ export function WorkspaceShell({
               <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
                 和兜兜一起，核对今天能确认的变化
               </h1>
-              <p>
-                {latestCompleteTradingDay
-                  ? `当前证据边界截至最新完整交易日 ${latestCompleteTradingDay}。`
-                  : "证据边界将在开始复盘时按最新完整交易日确定。"}
-                缺失或失败会保持未知，不会补写成当前值。
-              </p>
-              {lastAnalysisAt ? <p>最近一次复盘：{lastAnalysisAt}</p> : null}
-              {activeAnalysis ? <p>已有复盘仍在进行，可返回同一任务继续查看。</p> : null}
+              {activeAnalysis ? <p>已有复盘仍在进行，点击兜兜继续查看。</p> : null}
             </div>
 
             <div className="workspace-mascot-stage">
@@ -253,9 +238,7 @@ export function WorkspaceShell({
             draft={draft}
             onCancel={() => navigate("home")}
             onChange={changeDraft}
-            onExperienceSourceChange={changeExperienceSource}
             onSave={() => navigate("home")}
-            experienceSource={experienceSource}
           />
         )}
       </main>

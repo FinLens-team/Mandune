@@ -1,6 +1,6 @@
 # 满懂 Demo V1 视觉与动效规格
 
-状态：`Accepted for implementation`（MD-023 修订）。本文件是 S1-S11 的视觉与交互实现基准，S0 已移除；逐屏重塑契约见 [`../specs/demo-v1-frontend-redesign.md`](../specs/demo-v1-frontend-redesign.md)，产品行为以 [`../../PRODUCT.md`](../../PRODUCT.md) 和 [`../specs/demo-v1.md`](../specs/demo-v1.md) 为准，分析状态以 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 为准。
+状态：`Accepted for implementation`。本文件是 S1-S10 的视觉与交互实现基准，S0 已移除；产品行为以 [`../../PRODUCT.md`](../../PRODUCT.md) 和 [`../specs/demo-v1.md`](../specs/demo-v1.md) 为准，分析状态以 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 为准。
 
 ## 1. 方案取舍
 
@@ -346,9 +346,8 @@
 ## 8. 实现与验收清单
 
 - [ ] 使用本文件 token，不在每屏散落未命名 hex、间距或动效时长。
-- [ ] S1-S11 在 375/768/1280px 无重叠、截断和横向溢出；S0 不渲染。
-- [ ] S1 只有东方观象可选，并具备扇形与纵向单列等价布局；其余主题保持锁定预览。
-- [ ] S1/S4/S8 统一使用现有许可兜兜与主题预览素材，不保留 CSS/通用角色占位。
+- [ ] S1-S10 在 375/768/1280px 无重叠、截断和横向溢出；S0 不渲染。
+- [ ] S1 具备扇形与纵向单列等价布局。
 - [ ] S2 未开放入口不触发真实表单或上传。
 - [ ] S3/S4/S5/S9/S10 持续标注随机体验身份。
 - [ ] S5 显示真实最后活动与预计删除时间，不写页面关闭即清空。

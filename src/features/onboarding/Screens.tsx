@@ -4,7 +4,7 @@ import {
   ScanLine,
   Shuffle,
 } from "lucide-react";
-import { useEffect, useRef, useState, type Ref } from "react";
+import type { Ref } from "react";
 import type { PersonalConstraints } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
 import { Badge, Button, DemoBadge, LockBadge } from "../../client/ui/index.js";

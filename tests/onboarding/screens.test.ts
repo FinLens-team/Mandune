@@ -174,7 +174,6 @@ describe("S1-S3 onboarding screens", () => {
 
     expect(returning).toBe("");
     expect(firstRun).toContain("选择复盘主题");
-    expect(firstRun).toContain('data-visit="first"');
     expect(firstRun).not.toContain("只给方向，不替你下单");
     expect(firstRun).not.toContain("跳过");
   });

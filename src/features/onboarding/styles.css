@@ -463,12 +463,22 @@
   order: -1;
 }
 
-@keyframes onboarding-summary-crossfade {
-  from {
-    opacity: 0;
+@media (max-width: 23.4375rem) {
+  .onboarding-screen {
+    padding: var(--space-6) var(--space-6);
+    gap: var(--space-6);
   }
-  to {
-    opacity: 1;
+
+  .onboarding-theme-card {
+    min-height: 10.5rem;
+  }
+
+  .onboarding-actions .btn {
+    width: 100%;
+  }
+
+  .onboarding-holding dl {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -542,77 +552,7 @@
   }
 }
 
-.onboarding-theme-grid--list,
-.onboarding--keyboard .onboarding-theme-grid,
-.onboarding--reduced-motion .onboarding-theme-grid {
-  max-width: 42rem;
-  min-height: 0;
-  margin-inline: auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-}
-
-.onboarding-theme-grid--list .onboarding-theme-card,
-.onboarding--keyboard .onboarding-theme-card,
-.onboarding--reduced-motion .onboarding-theme-card {
-  order: 0;
-  grid-area: auto;
-  z-index: auto;
-  width: 100%;
-  height: auto;
-  min-height: 10rem;
-  padding: var(--space-4);
-  overflow: visible;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  align-content: center;
-  justify-items: start;
-  text-align: left;
-  transform: none;
-}
-
-.onboarding-theme-grid--list .onboarding-theme-card input,
-.onboarding--keyboard .onboarding-theme-card input,
-.onboarding--reduced-motion .onboarding-theme-card input {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-}
-
-.onboarding-theme-grid--list .onboarding-theme-art,
-.onboarding--keyboard .onboarding-theme-art,
-.onboarding--reduced-motion .onboarding-theme-art {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  width: 5rem;
-}
-
-.onboarding-theme-grid--list .onboarding-theme-card > :not(input, .onboarding-theme-art),
-.onboarding--keyboard .onboarding-theme-card > :not(input, .onboarding-theme-art),
-.onboarding--reduced-motion .onboarding-theme-card > :not(input, .onboarding-theme-art) {
-  grid-column: 2;
-}
-
-.onboarding-theme-grid--list .onboarding-theme-card .ui-badge,
-.onboarding--keyboard .onboarding-theme-card .ui-badge,
-.onboarding--reduced-motion .onboarding-theme-card .ui-badge {
-  width: auto;
-}
-
-@media (max-width: 22rem), (max-height: 36rem) and (max-width: 47.999rem) {
-  .onboarding-screen {
-    padding: var(--space-6) var(--space-4);
-    gap: var(--space-6);
-  }
-
-  .onboarding-theme-grid {
-    max-width: 42rem;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
-  }
-
+@media (prefers-reduced-motion: reduce) {
   .onboarding-theme-card,
   .onboarding-theme-card--available,
   .onboarding-theme-card--locked[data-preview],
@@ -689,8 +629,4 @@
     transform: none;
     transition-duration: var(--duration-instant);
   }
-}
-
-.onboarding--reduced-motion .onboarding-summary__identity {
-  animation: none;
 }

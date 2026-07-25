@@ -124,6 +124,10 @@ export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<Journey
   await expect(card.getByText("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。")).toBeVisible();
   await checkpoint(page, "S9 narrative front");
 
+  await card.locator(".mandong-long-card__stage").focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(card.getByRole("heading", { level: 2, name: "逐项核对这份分析" })).toBeVisible();
+  await expect(card.getByRole("heading", { level: 3, name: "确认输入与覆盖" })).toBeVisible();
   const snapshotId = (await card.locator("dt", { hasText: "组合快照" }).locator("+ dd").first().textContent())?.trim() ?? "";
   const cutoff = (await card.locator("dt", { hasText: "证据截止" }).locator("+ dd").first().textContent())?.trim() ?? "";
   expect(snapshotId).not.toBe("");
