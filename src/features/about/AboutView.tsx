@@ -3,11 +3,14 @@ import {
   Clock3,
   Database,
   ExternalLink,
+  Gift,
   House,
   ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import easterEggImage from "../../client/assets/developer-easter-egg.webp";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import {
   Badge,
@@ -128,10 +131,33 @@ export function AboutView({
   workspace,
 }: AboutViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const easterEggButtonRef = useRef<HTMLButtonElement>(null);
+  const easterEggCloseRef = useRef<HTMLButtonElement>(null);
+  const [easterEggOpen, setEasterEggOpen] = useState(false);
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!easterEggOpen) return;
+    easterEggCloseRef.current?.focus();
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setEasterEggOpen(false);
+      easterEggButtonRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [easterEggOpen]);
+
+  function closeEasterEgg() {
+    setEasterEggOpen(false);
+    easterEggButtonRef.current?.focus();
+  }
 
   return (
     <article className="about-view" aria-labelledby="about-heading">
@@ -233,6 +259,17 @@ export function AboutView({
       </section>
 
       <div className="about-actions">
+        <Button
+          aria-haspopup="dialog"
+          onClick={(event) => {
+            easterEggButtonRef.current = event.currentTarget;
+            setEasterEggOpen(true);
+          }}
+          variant="secondary"
+        >
+          <Gift aria-hidden="true" size={20} />
+          彩蛋
+        </Button>
         {availability === "active" && onRequestDeleteWorkspace ? (
           <Button onClick={onRequestDeleteWorkspace} variant="danger">
             <Trash2 aria-hidden="true" size={20} />
@@ -240,6 +277,44 @@ export function AboutView({
           </Button>
         ) : null}
       </div>
+
+      {easterEggOpen ? (
+        <div className="about-easter-egg-layer">
+          <button
+            aria-label="关闭彩蛋"
+            className="about-easter-egg__backdrop"
+            onClick={closeEasterEgg}
+            tabIndex={-1}
+            type="button"
+          />
+          <section
+            aria-labelledby="about-easter-egg-heading"
+            aria-modal="true"
+            className="about-easter-egg"
+            role="dialog"
+          >
+            <div className="about-easter-egg__heading">
+              <h2 id="about-easter-egg-heading">写完提示词的开发be like:</h2>
+              <button
+                aria-label="关闭彩蛋"
+                className="about-easter-egg__close"
+                onClick={closeEasterEgg}
+                ref={easterEggCloseRef}
+                type="button"
+              >
+                <X aria-hidden="true" size={20} />
+              </button>
+            </div>
+            <img
+              alt="写完提示词后瘫在椅子上的开发者"
+              decoding="async"
+              height={600}
+              src={easterEggImage}
+              width={640}
+            />
+          </section>
+        </div>
+      ) : null}
     </article>
   );
 }

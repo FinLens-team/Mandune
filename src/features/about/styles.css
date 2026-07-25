@@ -324,15 +324,97 @@
 
 .about-actions {
   display: grid;
-  grid-template-columns: minmax(0, auto);
-  justify-content: end;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
   animation: about-enter 500ms var(--about-ease-out) 420ms backwards;
 }
 
+.about-actions .ui-button:first-child {
+  justify-self: start;
+}
+
 .about-actions .ui-button:last-child {
   justify-self: end;
+}
+
+.about-easter-egg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.about-easter-egg__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: var(--color-overlay);
+  cursor: pointer;
+}
+
+.about-easter-egg {
+  position: relative;
+  width: min(100%, 34rem);
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-overlay);
+  animation: about-easter-egg-enter 240ms var(--about-ease-out) both;
+}
+
+@keyframes about-easter-egg-enter {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+
+.about-easter-egg__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.about-easter-egg__heading h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+.about-easter-egg__close {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  cursor: pointer;
+}
+
+.about-easter-egg__close:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+.about-easter-egg__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.about-easter-egg img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 @media (min-width: 48rem) {
@@ -343,7 +425,7 @@
 
 @media (max-width: 23.4375rem) {
   .about-actions {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .about-actions .ui-button {
@@ -357,7 +439,8 @@
   .about-topic,
   .about-topic[open] .about-topic__body,
   .about-devs > li,
-  .about-actions {
+  .about-actions,
+  .about-easter-egg {
     animation: none;
   }
 
