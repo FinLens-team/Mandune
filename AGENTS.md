@@ -99,7 +99,7 @@ pnpm maintenance:purge
 ./deploy/validate.sh
 ```
 
-`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `HOST=127.0.0.1`、`PORT=8787`，并在绑定端口前打开 `MANDONG_DB_PATH`（默认 `/var/lib/mandong/mandong.sqlite3`）和执行迁移；父目录须预先存在且仅服务用户可访问。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。过期清理只运行本地 `pnpm maintenance:purge`，不提供公开 purge route。
+`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `HOST=127.0.0.1`、`PORT=8787`，并在绑定端口前打开 `MANDONG_DB_PATH`（默认 `/var/lib/mandong/mandong.sqlite3`）和执行迁移；父目录须预先存在且仅服务用户可访问。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。过期清理使用已编译的 `pnpm maintenance:purge` 入口；生产由无网络、只写状态目录的 `mandong-purge.timer` 每日持久调度，不提供公开 purge route。
 
 Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确保不早于产品的 180 秒应用级分析截止截断请求；Nginx 的读写和发送 timeout 同为 210 秒，且禁用代理缓存、请求日志和公开 source map。
 
@@ -122,7 +122,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
 - `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。
 - `tests/e2e/` 与 `docs/acceptance/`：目标 URL/候选版本绑定的公开 Playwright 验收，以及不伪造四状态、硬截止、日志和回滚证据的模板。
-- `deploy/`：单主机 Nginx/systemd/SQLite 发布边界。安装时显式校验并固定 Node 22、Corepack 和实际运行的 Nginx/vhost；release/rollback 必须校验归档、备份迁移前数据库、原子切换并验证精确 `/health.version`。
+- `deploy/`：单主机 Nginx/systemd/SQLite 发布边界。安装时显式校验并固定 Node 22、Corepack 和实际运行的 Nginx/vhost；root 解包前后拒绝危险归档成员，构建前清空整个 `dist`；release 失败才恢复迁移前快照，成功 rollback 保留 live DB，并始终验证精确 `/health.version`。
 - `pnpm-lock.yaml`、根 `package.json`、`tsconfig*.json`、`vite.config.ts`、`vitest.config.ts`、`eslint.config.js` 与 `.github/workflows/ci.yml`：全局工程边界，后续改动需与当前 Issue owner 协调。
 
 仓库提交信息由 `.githooks/commit-msg` 校验；首次克隆后执行 `git config core.hooksPath .githooks` 启用。主题和正文必须包含中文但允许混用英文术语，正文格式和长度不作限制；主题后使用真实空行，不得使用字面量 `\\n`。PowerShell 执行 `powershell -ExecutionPolicy Bypass -File .githooks/test-commit-msg.ps1`，POSIX shell 执行 `sh .githooks/test-commit-msg.sh`，可离线验证 Hook。
