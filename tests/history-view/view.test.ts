@@ -77,14 +77,11 @@ describe("S10 history list and detail", () => {
     expect(markup).toContain("证据截止");
     expect(markup).not.toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("fixture 证据 · 非实时");
-    expect(markup).toContain("主题叙事已保存");
-    expect(markup).toContain("analysis-history.v1");
-    expect(markup).toContain("rational-analysis.v1");
     expect(markup).toContain("查看本次记录");
     expect(markup).not.toContain("实时行情");
   });
 
-  it("uses the immutable record source hook for edited experience history", async () => {
+  it("keeps experience-source badges out of the compact history surfaces", async () => {
     const { HistoryDetail, HistoryList } = await loadHistoryView();
     const resolveRecordSource = vi.fn(() => "edited" as const);
     const entry = { detail: { status: "found", record: record() } as const, summary };
@@ -102,9 +99,9 @@ describe("S10 history list and detail", () => {
       resolveRecordSource,
     }));
 
-    expect(listMarkup).toContain("体验持仓 · 已编辑");
-    expect(detailMarkup).toContain("体验持仓 · 已编辑");
-    expect(resolveRecordSource).toHaveBeenCalledWith(entry.detail.record);
+    expect(listMarkup).not.toContain("体验持仓 · 已编辑");
+    expect(detailMarkup).not.toContain("体验持仓 · 已编辑");
+    expect(resolveRecordSource).not.toHaveBeenCalled();
   });
 
   it("does not label a legacy V1 record as random when its source was not saved", async () => {
@@ -126,8 +123,8 @@ describe("S10 history list and detail", () => {
       resolveRecordSource: () => undefined,
     }));
 
-    expect(listMarkup).toContain("体验来源未保存");
-    expect(detailMarkup).toContain("体验来源未保存");
+    expect(listMarkup).not.toContain("体验来源未保存");
+    expect(detailMarkup).not.toContain("体验来源未保存");
     expect(listMarkup).not.toContain("随机体验身份 · 示例数据");
   });
 

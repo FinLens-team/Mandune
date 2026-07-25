@@ -3,7 +3,11 @@ import type {
   AnalysisResultStatus,
   PortfolioSnapshot,
 } from "../contracts/index.js";
-import type { ThemeModelOutput } from "../analysis/index.js";
+import type {
+  ReviewPacketV2,
+  ThemeModelOutput,
+  ValidatedGeneratedDailyReviewV2,
+} from "../analysis/index.js";
 
 export const HISTORY_SCHEMA_VERSION = "analysis-history.v1" as const;
 
@@ -18,6 +22,10 @@ export interface HistoryVersions {
   contracts: string;
   rational_analysis: string;
   theme_narrative: string | null;
+  review_packet?: string | null;
+  generated_daily_review?: string | null;
+  prompt?: string | null;
+  atlas_policy?: string | null;
 }
 
 export interface HistoryRecordV1 {
@@ -34,6 +42,12 @@ export interface HistoryRecordV1 {
   ai_text?: string;
   /** Relaxed Demo mode: observation-theme rewrite of the same report. */
   ai_theme_text?: string;
+  review_packet?: ReviewPacketV2;
+  generated_review?: ValidatedGeneratedDailyReviewV2;
+  model_id?: string;
+  prompt_version?: string;
+  skill_versions?: { core: string; persona: string };
+  atlas_policy_version?: string;
 }
 
 /**
@@ -73,7 +87,11 @@ export type HistoryVersionComponent =
   | "history_schema"
   | "contracts"
   | "rational_analysis"
-  | "theme_narrative";
+  | "theme_narrative"
+  | "review_packet"
+  | "generated_daily_review"
+  | "prompt"
+  | "atlas_policy";
 
 export interface UnsupportedHistoryVersion {
   component: HistoryVersionComponent;

@@ -200,6 +200,7 @@ export class JourneyAnalysisService {
       const marked = await this.store.markRunning(run.workspace_id, run.analysis_id, this.now().toISOString());
       if (!marked) return;
       const execution = await this.executor.execute({
+        workspaceId: run.workspace_id,
         analysisId: run.analysis_id,
         snapshot: run.snapshot,
         emit,
@@ -230,11 +231,27 @@ export class JourneyAnalysisService {
         execution,
       });
       try {
-        await this.atlas?.start({
-          workspaceId: run.workspace_id,
-          analysis: execution.analysis,
-          snapshot: run.snapshot,
-        });
+        if (execution.generated_review && execution.review_packet) {
+          await this.atlas?.consume({
+            workspaceId: run.workspace_id,
+            analysis: execution.analysis,
+            snapshot: run.snapshot,
+            candidate: execution.generated_review.atlas_candidate,
+            allowed_reference_ids: [
+              ...execution.review_packet.fact_ids,
+              ...execution.review_packet.event_ids,
+            ],
+            ...(execution.generated_review.atlas_validation === "invalid_candidate"
+              ? { invalid_candidate: true }
+              : {}),
+          });
+        } else {
+          await this.atlas?.start({
+            workspaceId: run.workspace_id,
+            analysis: execution.analysis,
+            snapshot: run.snapshot,
+          });
+        }
       } catch {
         // 图鉴是非阻塞后置任务，初始化失败不能改写已完成复盘。
       }
@@ -273,6 +290,14 @@ export class JourneyAnalysisService {
         ...(execution.narrative ? { narrative: execution.narrative } : {}),
         ...(execution.ai_text ? { ai_text: execution.ai_text } : {}),
         ...(execution.ai_theme_text ? { ai_theme_text: execution.ai_theme_text } : {}),
+        ...(execution.review_packet ? { review_packet: execution.review_packet } : {}),
+        ...(execution.generated_review ? { generated_review: execution.generated_review } : {}),
+        ...(execution.model_id ? { model_id: execution.model_id } : {}),
+        ...(execution.prompt_version ? { prompt_version: execution.prompt_version } : {}),
+        ...(execution.skill_versions ? { skill_versions: execution.skill_versions } : {}),
+        ...(execution.atlas_policy_version
+          ? { atlas_policy_version: execution.atlas_policy_version }
+          : {}),
         ...(run.experience_source ? { experience_source: run.experience_source } : {}),
       }, {
         signal: controller.signal,

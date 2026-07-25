@@ -28,17 +28,6 @@ export interface AssetProfileCacheRecord {
   lastErrorCode?: string;
 }
 
-export interface EventSearchCacheRecord {
-  queryHash: string;
-  query: unknown;
-  status: string;
-  payload: unknown;
-  fetchedAt: string;
-  refreshAfter: string;
-  lastErrorCode?: string;
-  candidates: EventCandidateCacheRecord[];
-}
-
 export interface EventCandidateCacheRecord {
   candidateId: string;
   queryHash: string;
@@ -49,6 +38,17 @@ export interface EventCandidateCacheRecord {
   sourceTier: SourceTier;
   verificationStatus: string;
   fetchedAt: string;
+}
+
+export interface EventSearchCacheRecord {
+  queryHash: string;
+  query: unknown;
+  status: string;
+  payload: unknown;
+  fetchedAt: string;
+  refreshAfter: string;
+  lastErrorCode?: string;
+  candidates: EventCandidateCacheRecord[];
 }
 
 export interface SourceDocumentCacheRecord {

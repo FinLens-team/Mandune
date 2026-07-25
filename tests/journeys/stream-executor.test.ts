@@ -70,6 +70,7 @@ async function execute(input: {
     modelTimeoutMs: 10_000,
   });
   const result = await executor.execute({
+    workspaceId: "workspace-stream-safety",
     analysisId: "analysis-stream-safety",
     snapshot: structuredClone(getFixture("supported_full").snapshot),
     emit: (stage, state, extra) => events.push({

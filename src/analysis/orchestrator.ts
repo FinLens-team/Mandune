@@ -80,6 +80,12 @@ export interface AnalysisResultSink {
     ai_text?: string;
     /** Relaxed Demo mode: observation-theme rewrite of the same report. */
     ai_theme_text?: string;
+    review_packet?: import("./review-packet.js").ReviewPacketV2;
+    generated_review?: import("./generated-review.js").ValidatedGeneratedDailyReviewV2;
+    model_id?: string;
+    prompt_version?: string;
+    skill_versions?: { core: string; persona: string };
+    atlas_policy_version?: string;
     /** Optional analysis-time provenance persisted by the owning application. */
     experience_source?: "random" | "edited";
   }, fence: AnalysisCommitFence): Promise<void>;

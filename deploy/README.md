@@ -32,6 +32,24 @@ them. Never use `VITE_*` for model or provider credentials. The installer does
 not print environment values, and Nginx request/error logging is disabled so
 Cookies, query strings, and private payloads cannot enter proxy logs.
 
+The optional A2A deep-review interface reads only server-side values from
+`/etc/mandong/mandong.env`:
+
+```dotenv
+ARK_API_KEY=<one-protected-competition-token>
+A2A_BEARER_TOKEN=<independent-opaque-token-at-least-24-characters>
+A2A_PUBLIC_BASE_URL=https://demo.example.com
+```
+
+Setting any A2A value without both credentials fails startup. The public base
+URL is an origin, not a path. The server fixes the Ark OpenAI-compatible base
+URL to `https://ark.cn-beijing.volces.com/api/v3` and the DeepSeek-Pro endpoint
+ID to `ep-20260708162855-pcf9x`; `ARK_BASE_URL` is only an optional controlled
+gateway/local-test override. The model key and caller token must be different,
+must remain `root:root 0600`, and must never be passed in a URL or copied into
+an Agent Card. Nginx keeps the browser path at 210 seconds and gives only
+`/a2a/` a 930-second transport margin for the Agent's 900-second deadline.
+
 ## Validate and install host configuration
 
 Run repository-local validation first:
@@ -138,6 +156,7 @@ Cookie:
 ```sh
 curl --fail --silent http://127.0.0.1:8787/health
 curl --fail --silent https://demo.example.com/health
+curl --fail --silent https://demo.example.com/.well-known/agent-card.json
 sudo systemctl is-active mandong.service nginx.service
 sudo ss -ltnp | grep -E ':(443|8787)\b'
 ```

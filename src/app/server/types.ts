@@ -6,7 +6,9 @@ import type {
 } from "../../contracts/index.js";
 import {
   RATIONAL_ANALYSIS_SCHEMA_VERSION,
+  type ReviewPacketV2,
   type ThemeModelOutput,
+  type ValidatedGeneratedDailyReviewV2,
 } from "../../analysis/index.js";
 import type { HistoryExperienceSource } from "../../history/index.js";
 
@@ -25,6 +27,12 @@ export interface AnalysisExecution {
   ai_text?: string;
   /** Relaxed Demo mode: observation-theme rewrite of the same report. */
   ai_theme_text?: string;
+  review_packet?: ReviewPacketV2;
+  generated_review?: ValidatedGeneratedDailyReviewV2;
+  model_id?: string;
+  prompt_version?: string;
+  skill_versions?: { core: string; persona: string };
+  atlas_policy_version?: string;
   rational_analysis_version: typeof RATIONAL_ANALYSIS_SCHEMA_VERSION;
   source: AnalysisSourceLabel;
 }
@@ -71,6 +79,7 @@ export interface JourneyStore {
 
 export interface AnalysisExecutor {
   execute(input: {
+    workspaceId: string;
     analysisId: string;
     snapshot: PortfolioSnapshot;
     emit: (stage: TaskEvent["stage"], state: TaskEvent["state"], extra?: Partial<TaskEvent>) => void;

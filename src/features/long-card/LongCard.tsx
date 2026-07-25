@@ -168,7 +168,7 @@ export function preserveFaceScrollOffsets(
 }
 
 function formatConstraint(value: string): string {
-  return value === "unknown" ? "未知／尚未决定" : value;
+  return value === "unknown" || value === "not_decided" ? "未知／尚未决定" : value;
 }
 
 function provenanceLabel(provenance: ProvenanceKind): string {
@@ -526,7 +526,8 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
               <li key={derived.id}>
                 <div><strong>{derived.label}：{derived.value}</strong><span>{provenanceLabel(derived.provenance)}</span></div>
                 <p>{derived.formula_or_rule}</p>
-                <p>输入 {derived.input_refs.join("、")}；证据 {derived.evidence_refs.join("、")}</p>
+                {derived.input_refs.length > 0 ? <p>输入 {derived.input_refs.join("、")}</p> : null}
+                {derived.evidence_refs.length > 0 ? <p>证据 {derived.evidence_refs.join("、")}</p> : null}
               </li>
             ))}
           </ul>

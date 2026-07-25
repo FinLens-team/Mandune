@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ATLAS_GENERATION_POLICY_VERSION,
   ATLAS_CANDIDATE_SCHEMA_VERSION,
@@ -270,6 +270,62 @@ describe("atlas service boundaries", () => {
     expect(await service.getOutcome("workspace-delete", analysisId)).toMatchObject({
       status: "no_card",
       reason: "card_deleted",
+    });
+  });
+
+  it("consumes the main response candidate without invoking the Atlas generator", async () => {
+    const store = new MemoryAtlasStore();
+    const generate = vi.fn();
+    const service = new AtlasService(store, { generate });
+    const analysisId = idFor("professional_term", "consume");
+    const currentAnalysis = analysis(analysisId);
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    const consumed = candidateFor({
+      analysis: currentAnalysis,
+      existing_cards: [],
+      snapshot,
+      selected_kind: "professional_term",
+    });
+    if (consumed.kind !== "professional_term") throw new Error("unexpected_candidate_kind");
+    consumed.generation_mode = "model";
+    consumed.reference_ids = ["review-packet-fact"];
+
+    await service.consume({
+      workspaceId: "workspace-consume",
+      analysis: currentAnalysis,
+      snapshot,
+      candidate: consumed,
+      allowed_reference_ids: ["review-packet-fact"],
+    });
+    await service.waitForIdle();
+
+    expect(generate).not.toHaveBeenCalled();
+    expect(await service.getOutcome("workspace-consume", analysisId)).toMatchObject({ status: "new_card" });
+    expect(await service.listCards("workspace-consume")).toHaveLength(1);
+  });
+
+  it("records an invalid main-response Atlas subobject as no-card", async () => {
+    const store = new MemoryAtlasStore();
+    const generate = vi.fn();
+    const service = new AtlasService(store, { generate });
+    const analysisId = idFor("meme", "consume-invalid");
+    const currentAnalysis = analysis(analysisId);
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+
+    await service.consume({
+      workspaceId: "workspace-consume-invalid",
+      analysis: currentAnalysis,
+      snapshot,
+      candidate: null,
+      allowed_reference_ids: [],
+      invalid_candidate: true,
+    });
+    await service.waitForIdle();
+
+    expect(generate).not.toHaveBeenCalled();
+    expect(await service.getOutcome("workspace-consume-invalid", analysisId)).toMatchObject({
+      status: "no_card",
+      reason: "invalid_candidate",
     });
   });
 });

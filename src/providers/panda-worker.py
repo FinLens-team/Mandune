@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated PandaAI batch worker. Reads one JSON request and writes one JSON result."""
+"""Run one isolated PandaAI session for a batch of normalized market requests."""
 
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
+
+
+ASSET_CLASSES = {"a_share", "etf", "fund"}
 
 
 def emit(value: dict[str, Any]) -> None:
@@ -71,6 +74,8 @@ def row_value(row: Any) -> tuple[str | None, Any]:
 
 
 def normalize_frame(frame: Any) -> list[dict[str, Any]]:
+    if frame is None or not hasattr(frame, "iterrows"):
+        return []
     rows: list[dict[str, Any]] = []
     for _, source in frame.iterrows():
         date = row_date(source)
@@ -79,6 +84,17 @@ def normalize_frame(frame: Any) -> list[dict[str, Any]]:
             rows.append({"date": date, "metric": metric, "value": value})
     rows.sort(key=lambda item: item["date"])
     return rows
+
+
+def valid_request(request: Any) -> bool:
+    return (
+        isinstance(request, dict)
+        and isinstance(request.get("lineId"), str)
+        and isinstance(request.get("symbol"), str)
+        and request.get("assetClass") in ASSET_CLASSES
+        and isinstance(request.get("startDate"), str)
+        and isinstance(request.get("endDate"), str)
+    )
 
 
 def call_market(panda_data: Any, request: dict[str, Any]) -> dict[str, Any]:
@@ -136,7 +152,7 @@ def main() -> int:
     try:
         request = json.loads(sys.stdin.read())
         requests = request.get("requests")
-        if not isinstance(requests, list) or not requests:
+        if not isinstance(requests, list) or not requests or not all(valid_request(item) for item in requests):
             emit({"status": "invalid_request", "results": []})
             return 2
 
