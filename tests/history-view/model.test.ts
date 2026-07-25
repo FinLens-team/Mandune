@@ -8,6 +8,7 @@ import {
   formatHistoryDateTime,
   historyRecordBoundary,
   loadHistoryEntries,
+  matchingHistoryRecordId,
   type HistoryReader,
 } from "../../src/features/history-view/model.js";
 
@@ -149,6 +150,16 @@ describe("history view read projection", () => {
         summary,
       }],
     });
+  });
+
+  it("targets only a record present in the loaded immutable history", () => {
+    const loaded = {
+      status: "loaded" as const,
+      entries: [{ detail: { status: "found" as const, record: record() }, summary }],
+    };
+    expect(matchingHistoryRecordId(loaded, summary.record_id)).toBe(summary.record_id);
+    expect(matchingHistoryRecordId(loaded, "analysis-missing")).toBeNull();
+    expect(matchingHistoryRecordId({ status: "unavailable" }, summary.record_id)).toBeNull();
   });
 
   it("derives only honest example and evidence-source labels from committed bytes", () => {

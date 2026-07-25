@@ -22,6 +22,7 @@ import {
   formatHistoryDateTime,
   historyRecordBoundary,
   loadHistoryEntries,
+  matchingHistoryRecordId,
   type HistoryEntriesResult,
   type HistoryListEntry,
   type HistoryReader,
@@ -32,6 +33,7 @@ export type HistoryAvailability = "active" | "deleted" | "expired";
 
 export interface HistoryViewProps {
   availability?: HistoryAvailability;
+  initialRecordId?: string;
   onOpenRecord: (record: HistoryRecordV1) => void;
   reader: HistoryReader;
   reduceMotion?: boolean;
@@ -392,6 +394,7 @@ function WorkspaceUnavailable({
 
 export function HistoryView({
   availability = "active",
+  initialRecordId,
   onOpenRecord,
   reader,
   reduceMotion = false,
@@ -411,12 +414,15 @@ export function HistoryView({
     setSelectedRecordId(null);
     setVisibleCount(HISTORY_PAGE_SIZE);
     void loadHistoryEntries(reader, workspaceId).then((nextResult) => {
-      if (active) setResult(nextResult);
+      if (!active) return;
+      setResult(nextResult);
+      const matchedRecordId = matchingHistoryRecordId(nextResult, initialRecordId);
+      if (matchedRecordId) setSelectedRecordId(matchedRecordId);
     });
     return () => {
       active = false;
     };
-  }, [availability, loadRevision, reader, workspaceId]);
+  }, [availability, initialRecordId, loadRevision, reader, workspaceId]);
 
   // 从详情返回列表时，把焦点交还给页头标题，与进入页面时一致。
   useEffect(() => {

@@ -27,6 +27,7 @@ interface HistoryViewModule {
   }>;
   HistoryView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
+    initialRecordId?: string;
     onOpenRecord: (record: HistoryRecordV1) => void;
     reader: HistoryReader;
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;

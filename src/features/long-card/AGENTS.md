@@ -12,6 +12,7 @@
 - A normal letter requires a valid owned analysis, matching snapshot/theme/constraints, non-`unavailable` status, and a narrative bound to the exact ordered conclusion and advice IDs.
 - Missing or mismatched narrative renders a recovery state. The front consumes the supplied narrative text and never substitutes static theme prose.
 - Pointer handling does not capture or cancel a gesture until horizontal intent is established; normal window scrolling remains the only vertical reading region.
+- Horizontal dragging uses bounded exponential damping to preview the 3D rotation. A committed switch keeps both faces mounted, reveals the destination in nonlinear layers, and disables those transitions under either reduced-motion control.
 - Evidence rows always expose the contract's value/unit/source/observation/fetch fields. Missing fields are labelled as missing and relationships are never inferred.
 - Every analysis `risk_note` remains visible on both faces; the evidence face also exposes any material references attached to a risk note.
 

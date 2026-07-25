@@ -7,6 +7,7 @@ export {
   formatHistoryDateTime,
   historyRecordBoundary,
   loadHistoryEntries,
+  matchingHistoryRecordId,
 } from "./model.js";
 export type {
   HistoryEntriesResult,

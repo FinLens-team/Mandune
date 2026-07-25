@@ -18,6 +18,16 @@ export type HistoryEntriesResult =
   | { status: "loaded"; entries: HistoryListEntry[] }
   | { status: "unavailable" };
 
+export function matchingHistoryRecordId(
+  result: HistoryEntriesResult,
+  recordId: string | undefined,
+): string | null {
+  if (!recordId || result.status !== "loaded") return null;
+  return result.entries.some((entry) => entry.summary.record_id === recordId)
+    ? recordId
+    : null;
+}
+
 export type HistoryEvidenceBoundary = "cache" | "fixture" | "recorded";
 
 export interface HistoryRecordBoundary {

@@ -150,10 +150,7 @@ export async function verifyImmutableHistory(
   page: Page,
   evidence: Pick<JourneyEvidence, "analysisId" | "cutoff" | "snapshotId">,
 ): Promise<void> {
-  await page.getByRole("button", { name: "查看全部历史" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "历史记录" })).toBeVisible();
-  await expect(page.getByText("共 1 次复盘 · 按完成时间倒序")).toBeVisible();
-  await page.locator("button.history-row").first().click();
+  await page.getByRole("button", { name: "查看本次历史" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "本次复盘边界" })).toBeVisible();
   await expect(page.getByText(evidence.snapshotId, { exact: true })).toBeVisible();
   await expect(page.locator(`time[datetime="${evidence.cutoff}"]`)).toBeVisible();
@@ -165,7 +162,7 @@ export async function verifyImmutableHistory(
   const resultButton = page.getByRole("button", { name: "查看复盘报告" });
   await expect(resultButton).toBeVisible({ timeout: 45_000 });
   await resultButton.click();
-  await page.getByRole("button", { name: "查看全部历史" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "历史记录" })).toBeVisible();
-  await expect(page.getByText("共 1 次复盘 · 按完成时间倒序")).toBeVisible();
+  await page.getByRole("button", { name: "查看本次历史" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "本次复盘边界" })).toBeVisible();
+  await expect(page.getByText(evidence.snapshotId, { exact: true })).toBeVisible();
 }

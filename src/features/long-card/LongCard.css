@@ -56,10 +56,19 @@
 }
 
 .mandong-long-card__motion {
+  --long-card-face-rotation: 0deg;
+  --long-card-drag-rotation: 0deg;
+  --long-card-drag-x: 0px;
   position: relative;
   display: grid;
   transform-style: preserve-3d;
-  transition: transform var(--duration-flip) var(--ease-standard);
+  transform: translate3d(var(--long-card-drag-x), 0, 0)
+    rotateY(calc(var(--long-card-face-rotation) + var(--long-card-drag-rotation)));
+  transition: transform var(--duration-flip) cubic-bezier(0.22, 0.78, 0.18, 1);
+}
+
+.mandong-long-card__motion[data-face="evidence"] {
+  --long-card-face-rotation: 180deg;
 }
 
 .mandong-long-card__stage[data-dragging="true"] .mandong-long-card__motion {
@@ -76,6 +85,7 @@
   background: var(--color-bg-letter);
   box-shadow: var(--shadow-paper);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   overflow-wrap: anywhere;
   transform-style: preserve-3d;
 }
@@ -100,6 +110,22 @@
 
 .mandong-long-card__motion:not([data-transitioning="true"]) .mandong-long-card__face[aria-hidden="true"] {
   visibility: hidden;
+}
+
+.mandong-long-card__motion[data-transition] .mandong-long-card__face[aria-hidden="false"] > * {
+  animation: long-card-content-reveal 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mandong-long-card__motion[data-transition] .mandong-long-card__face[aria-hidden="false"] > :nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.mandong-long-card__motion[data-transition] .mandong-long-card__face[aria-hidden="false"] > :nth-child(3) {
+  animation-delay: 105ms;
+}
+
+.mandong-long-card__motion[data-transition] .mandong-long-card__face[aria-hidden="false"] > :nth-child(n + 4) {
+  animation-delay: 135ms;
 }
 
 .mandong-long-card__face h2,
@@ -173,6 +199,8 @@
   width: 4rem;
   height: 4rem;
   object-fit: contain;
+  transform-origin: 50% 85%;
+  transition: transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .mandong-doudou figcaption {
@@ -513,6 +541,21 @@
   .mandong-long-card__stage {
     cursor: ew-resize;
   }
+
+  .mandong-long-card__stage:hover .mandong-doudou img {
+    transform: translateY(-0.2rem) rotate(2deg) scale(1.04);
+  }
+}
+
+@keyframes long-card-content-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.75rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @media (min-width: 48rem) {
@@ -612,6 +655,10 @@
   transition: none;
 }
 
+.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face > * {
+  animation: none !important;
+}
+
 .mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face[aria-hidden="true"] {
   opacity: 0;
 }
@@ -629,6 +676,10 @@
   .mandong-long-card__face {
     transform: none;
     transition: none;
+  }
+
+  .mandong-long-card__face > * {
+    animation: none !important;
   }
 
   .mandong-long-card__face[aria-hidden="true"] {

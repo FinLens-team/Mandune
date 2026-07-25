@@ -26,9 +26,11 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).not.toContain("查看证据");
     expect(markup).not.toContain("查看理性分析");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
     expect(markup).toContain("mandong-long-card__front");
-    expect(markup).not.toContain("mandong-long-card__back");
+    expect(markup).toContain("mandong-long-card__back");
+    expect(markup).toContain('data-face="narrative"');
+    expect(markup).toContain('aria-hidden="true"');
   });
 
   it("accepts provenance fields from existing callers without rendering source badges", () => {
@@ -80,6 +82,7 @@ describe("long-card rendering and interaction boundaries", () => {
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
         faceId: "evidence-face",
+        active: true,
         input,
         headingId: "evidence-heading",
         headingRef: { current: null },
@@ -114,6 +117,7 @@ describe("long-card rendering and interaction boundaries", () => {
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
         faceId: "evidence-face",
+        active: true,
         input: {
           ...input,
           analysis: { ...input.analysis, constraints },
@@ -141,6 +145,7 @@ describe("long-card rendering and interaction boundaries", () => {
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
         faceId: "evidence-face",
+        active: true,
         input: { ...input, analysis: { ...input.analysis, derived } },
         headingId: "evidence-heading",
         headingRef: { current: null },
@@ -202,7 +207,7 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(longCardRuntimeIsDisplayable(input)).toBe(true);
     expect(markup).toContain("<h2>核心观察</h2>");
     expect(markup).toContain("<strong>保持观察</strong>");
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
     expect(markup).toContain("mandong-long-card__front");
   });
 
@@ -217,6 +222,7 @@ describe("long-card rendering and interaction boundaries", () => {
     const markup = renderToStaticMarkup(createElement(LongCard, { input, reducedMotion: true }));
     const evidenceMarkup = renderToStaticMarkup(createElement(RationalEvidenceBack, {
       faceId: "evidence-face",
+      active: true,
       input,
       headingId: "evidence-heading",
       headingRef: { current: null },
@@ -229,7 +235,7 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(evidenceMarkup).toContain("本次分析用到的持仓");
     expect(evidenceMarkup).toContain("本次分析用到的行情证据");
     expect(markup).toContain('data-reduced-motion="true"');
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

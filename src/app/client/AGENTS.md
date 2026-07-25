@@ -16,6 +16,7 @@
 - Leaving analysis does not cancel it. Persist the analysis ID so bootstrap can resume the same task after refresh.
 - The analysis SSE carries cumulative, progress-only Markdown headings. `App` keeps one subscription per active `analysisId`; `AnalysisProgress` derives deduplicated `正在生成 …` lines from headings while durable task events remain the reconnect fallback. Full model prose is exposed only by the terminal result endpoint after validation.
 - History replay uses the saved immutable record and never re-fetches providers or recalculates with current contracts.
+- The result-page history action carries the displayed `analysis_id` into S10 and opens that exact committed record after the history list loads. Drawer navigation clears that target and shows the complete list.
 - Send `random` versus `edited` when starting analysis so the server-owned run freezes it into immutable history. S9 and S10 read the record-owned value; legacy V1 records without it remain unknown and are never inferred from the current draft or browser storage.
 
 ## Commands

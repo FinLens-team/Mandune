@@ -38,6 +38,7 @@ const FLIP_THRESHOLD_PX = 64;
 const INTENT_THRESHOLD_PX = 10;
 const HORIZONTAL_INTENT_RATIO = 1.2;
 const MAX_DRAG_OFFSET_PX = 52;
+const DRAG_DAMPING_PX = 72;
 
 export type LongCardFace = "narrative" | "evidence";
 
@@ -233,6 +234,7 @@ function CoverageSummary({ input }: { input: LongCardRuntimeInput }) {
 }
 
 interface FaceProps {
+  active: boolean;
   faceId: string;
   headingId: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
@@ -248,6 +250,7 @@ interface AiNarrativeFaceProps extends FaceProps {
 }
 
 export function NarrativeFront({
+  active,
   faceId,
   headingId,
   headingRef,
@@ -257,7 +260,13 @@ export function NarrativeFront({
   const { analysis } = input;
   const theme = themeForId(analysis.theme_id);
   return (
-    <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
+    <article
+      aria-hidden={!active}
+      aria-labelledby={headingId}
+      className="mandong-long-card__face mandong-long-card__front"
+      id={faceId}
+      inert={!active}
+    >
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
           <p>
@@ -329,6 +338,7 @@ export function NarrativeFront({
  * the expression, never the analysis, coverage, or risk judgement.
  */
 export function AiNarrativeFront({
+  active,
   faceId,
   headingId,
   headingRef,
@@ -338,7 +348,13 @@ export function AiNarrativeFront({
   const { analysis } = input;
   const theme = themeForId(analysis.theme_id);
   return (
-    <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
+    <article
+      aria-hidden={!active}
+      aria-labelledby={headingId}
+      className="mandong-long-card__face mandong-long-card__front"
+      id={faceId}
+      inert={!active}
+    >
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
           <p>
@@ -395,14 +411,20 @@ function Constraints({ constraints }: { constraints: PersonalConstraints }) {
   );
 }
 
-export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: FaceProps) {
+export function RationalEvidenceBack({ active, faceId, headingId, headingRef, input }: FaceProps) {
   const { analysis, snapshot } = input;
   // Relaxed Demo mode: the back face is the formal rational analysis report
   // (the model's report text plus the inputs it was given). The placeholder
   // conclusion/advice shells and derivation bookkeeping stay hidden.
   const relaxed = Boolean(input.aiText && !input.narrative);
   return (
-    <article className="mandong-long-card__face mandong-long-card__back" aria-labelledby={headingId} id={faceId}>
+    <article
+      aria-hidden={!active}
+      aria-labelledby={headingId}
+      className="mandong-long-card__face mandong-long-card__back"
+      id={faceId}
+      inert={!active}
+    >
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
           <p>{relaxed ? "理性分析背面" : "理性证据背面"}</p>
@@ -636,7 +658,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
       face: targetFace,
       offset: nextOffsets[targetFace] ?? currentOffset,
     };
-    setTransitionDirection(targetFace === "evidence" ? "forward" : "backward");
+    setTransitionDirection(reducedMotion ? null : targetFace === "evidence" ? "forward" : "backward");
     setFace(targetFace);
   }
 
@@ -653,8 +675,13 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     if (nextIntent !== gestureIntent) setGestureIntent(nextIntent);
     if (nextIntent !== "horizontal") return;
     event.preventDefault();
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     const delta = event.clientX - pointerStart.x;
-    setDragOffset(Math.max(-MAX_DRAG_OFFSET_PX, Math.min(MAX_DRAG_OFFSET_PX, delta * 0.45)));
+    const damped = Math.sign(delta) * MAX_DRAG_OFFSET_PX *
+      (1 - Math.exp(-Math.abs(delta) / DRAG_DAMPING_PX));
+    setDragOffset(damped);
   }
 
   function handlePointerUp(event: PointerEvent<HTMLElement>) {
@@ -663,6 +690,9 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     setPointerStart(null);
     setGestureIntent(null);
     setDragOffset(0);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     if (target !== null) {
       switchFace(target ? "evidence" : "narrative");
     }
@@ -691,7 +721,10 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const relaxedMode = Boolean(aiText && !narrative);
   const theme = themeForId(analysis.theme_id);
   const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : theme.label;
-  const stageStyle = { "--long-card-drag-x": `${dragOffset}px` } as CSSProperties;
+  const stageStyle = {
+    "--long-card-drag-rotation": `${dragOffset * -0.42}deg`,
+    "--long-card-drag-x": `${dragOffset}px`,
+  } as CSSProperties;
   return (
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
@@ -716,16 +749,21 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
       >
         <div
           className="mandong-long-card__motion"
+          data-face={face}
           data-transition={transitionDirection ?? undefined}
-          onAnimationEnd={() => setTransitionDirection(null)}
+          data-transitioning={transitionDirection !== null || undefined}
+          onTransitionEnd={(event) => {
+            if (event.target === event.currentTarget && event.propertyName === "transform") {
+              setTransitionDirection(null);
+            }
+          }}
         >
-          {showEvidence ? (
-            <RationalEvidenceBack faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} />
-          ) : narrative ? (
-            <NarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} narrative={narrative} />
+          {narrative ? (
+            <NarrativeFront active={!showEvidence} faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} narrative={narrative} />
           ) : (
-            <AiNarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiThemeText ?? aiText ?? ""} />
+            <AiNarrativeFront active={!showEvidence} faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiThemeText ?? aiText ?? ""} />
           )}
+          <RationalEvidenceBack active={showEvidence} faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} />
         </div>
       </div>
       <span aria-live="polite" className="mandong-long-card__keyboard-status">当前：{faceLabel}</span>
