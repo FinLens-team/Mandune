@@ -37,6 +37,14 @@ function requestLabel(request: Request): string {
   return `${request.method()} ${safeUrl(request.url())}`;
 }
 
+function isNavigationCancelledWorkspaceProbe(request: Request): boolean {
+  const url = new URL(request.url());
+  return request.method() === "GET" &&
+    url.pathname === "/api/workspaces/current" &&
+    !url.search &&
+    request.failure()?.errorText === "net::ERR_ABORTED";
+}
+
 function isFirstWorkspaceProbe401(response: Response, probeResponses: number): boolean {
   if (response.status() !== 401 || probeResponses !== 0) return false;
   const request = response.request();
@@ -65,6 +73,7 @@ export const test = base.extend<{ runtimeIssues: RuntimeIssue[] }>({
       issues.push({ kind: "page", message: safeMessage(error.message) });
     });
     page.on("requestfailed", (request) => {
+      if (isNavigationCancelledWorkspaceProbe(request)) return;
       issues.push({
         kind: "request",
         message: `${requestLabel(request)}: ${safeMessage(request.failure()?.errorText ?? "failed")}`,

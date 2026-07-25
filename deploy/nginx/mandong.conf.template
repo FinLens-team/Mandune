@@ -35,6 +35,10 @@ server {
     add_header Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
     add_header Cache-Control "no-store" always;
 
+    location ~* ^/(?:\.env(?:/|$)|\.git(?:/|$)|package\.json$|pnpm-lock\.yaml$|migrations(?:/|$)|src(?:/|$)) {
+        return 404;
+    }
+
     location ~* \.map(?:$|/) {
         return 404;
     }

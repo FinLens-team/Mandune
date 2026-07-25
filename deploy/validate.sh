@@ -30,6 +30,7 @@ for setting in \
   'proxy_request_buffering off;' \
   'proxy_read_timeout 210s;' \
   'proxy_send_timeout 210s;' \
+  'package\.json$|pnpm-lock\.yaml$|migrations(?:/|$)|src(?:/|$)' \
   'location ~* \.map'; do
   assert_contains "${NGINX_TEMPLATE}" "${setting}"
 done

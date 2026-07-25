@@ -14,6 +14,8 @@
 - URL、DOM、Web Storage、请求载荷、Cookie 属性、`/health`、敏感路径、客户端 secret 形态和 sourcemap 暴露检查。
 
 首次无 Cookie 访问时，客户端会先用 `GET /api/workspaces/current` 探测当前工作区。套件只允许该路径的第一次 GET 返回一次 401；同路径后续 401 或任何其它失败响应都不在白名单。
+测试主动 reload 时，浏览器可能把尚未完成的同一路径 GET 标为
+`net::ERR_ABORTED`；套件只忽略这一精确的幂等探测取消，其它请求失败仍会阻断验收。
 
 当前普通随机体验路径确定性证明的是它实际返回的状态。`limited`、`observation_only`、`unavailable`、180 秒截止、外部供应商失败、主机日志、任务进程清理和回滚必须由普通公开入口或运维演练单独留证。没有可达入口时写“未验证”，不得用路由拦截、mock 或隐藏参数制造通过。
 
