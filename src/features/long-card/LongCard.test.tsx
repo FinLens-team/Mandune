@@ -15,15 +15,17 @@ import {
 } from "./LongCard.js";
 
 describe("long-card rendering and interaction boundaries", () => {
-  it("renders a button-accessible front face with an announced current side", () => {
+  it("renders a gesture and keyboard-accessible front face without report source or state badges", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.limited_partial);
     const markup = renderToStaticMarkup(createElement(LongCard, { input }));
-    expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain("当前：东方观象");
-    expect(markup).toContain("查看证据");
+    expect(markup).toContain('aria-label="每日复盘报告内容，按左右方向键切换正面与理性证据。"');
+    expect(markup).toContain('tabindex="0"');
     expect(markup).toContain("横向拖动也可翻面，纵向滚动始终用于阅读。");
-    expect(markup).toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("有限分析");
+    expect(markup).not.toContain("随机体验身份 · 示例数据");
+    expect(markup).not.toContain("有限分析");
+    expect(markup).not.toContain("部分证据缺口限制了结论范围");
+    expect(markup).not.toContain("查看证据");
+    expect(markup).not.toContain("查看理性分析");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
     expect(markup.match(/风险与判断边界/g)).toHaveLength(4);
     for (const note of input.analysis.risk_notes) {

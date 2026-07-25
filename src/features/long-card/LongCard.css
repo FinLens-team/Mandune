@@ -41,6 +41,20 @@
   touch-action: pan-y;
 }
 
+.mandong-long-card__stage:focus-visible {
+  outline: 2px solid var(--color-observed);
+  outline-offset: var(--space-2);
+}
+
+.mandong-long-card__keyboard-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .mandong-long-card__motion {
   position: relative;
   display: grid;

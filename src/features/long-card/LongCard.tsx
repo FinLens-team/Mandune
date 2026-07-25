@@ -4,10 +4,10 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent,
   type PointerEvent,
 } from "react";
 import {
-  ArrowLeft,
   BookOpenCheck,
   Rotate3D,
   ScrollText,
@@ -29,9 +29,6 @@ import {
 } from "../../analysis/index.js";
 import {
   AnalysisStatus,
-  Badge,
-  Button,
-  DemoBadge,
   GeneratedMarkdown,
   LockBadge,
   type DemoBadgeSource,
@@ -136,15 +133,6 @@ export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boole
     JSON.stringify(narrative.advice_ids) ===
       JSON.stringify(analysis.advice.map((item) => item.id)) &&
     narrative.guidance_summary === analysis.advice.map((item) => item.statement).join("；");
-}
-
-function ExampleBadge({ input }: { input: LongCardRuntimeInput }) {
-  if (!input.isExample) return null;
-  if (input.experienceSource) return <DemoBadge source={input.experienceSource} />;
-  if (input.exampleLabel && input.exampleLabel !== "示例数据") {
-    return <Badge tone="demo">{input.exampleLabel}</Badge>;
-  }
-  return <DemoBadge />;
 }
 
 /** Returns the target face only for an unambiguously horizontal swipe. */
@@ -354,7 +342,6 @@ export function NarrativeFront({
           <p>
             复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
           </p>
-          <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead">
           <div>
@@ -364,7 +351,6 @@ export function NarrativeFront({
           </div>
           <Doudou />
         </div>
-        <AnalysisStatus status={analysis.status} />
         <FrontBoundarySummary input={input} />
       </header>
 
@@ -445,7 +431,6 @@ export function AiNarrativeFront({
           <p>
             复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
           </p>
-          <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead">
           <div>
@@ -454,7 +439,6 @@ export function AiNarrativeFront({
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
         </div>
-        <AnalysisStatus status={analysis.status} />
         <FrontBoundarySummary input={input} />
         <div className="mandong-long-card__guide" data-mascot-mood="calm">
           <Doudou />
@@ -515,7 +499,6 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
           <p>理性证据背面</p>
-          <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
@@ -523,7 +506,6 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           </div>
           <BookOpenCheck aria-hidden="true" size={40} strokeWidth={1.5} />
         </div>
-        <AnalysisStatus status={analysis.status} />
         <dl className="mandong-long-card__identity">
           <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
           <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
@@ -665,7 +647,6 @@ function Unavailable({ input }: { input: LongCardRuntimeInput }) {
   const { analysis } = input;
   return (
     <section className="mandong-long-card mandong-long-card--unavailable" aria-labelledby="analysis-unavailable-heading">
-      <ExampleBadge input={input} />
       <AnalysisStatus status="unavailable" />
       <h2 id="analysis-unavailable-heading">当前证据不足以生成复盘报告</h2>
       <p>{analysis.limitations.join(" ")}</p>
@@ -677,14 +658,13 @@ function Unavailable({ input }: { input: LongCardRuntimeInput }) {
   );
 }
 
-function IncompleteLongCard({ input }: { input: LongCardRuntimeInput }) {
+function IncompleteLongCard() {
   return (
     <section
       className="mandong-long-card mandong-long-card--unavailable"
       aria-labelledby="analysis-incomplete-heading"
       role="status"
     >
-      <ExampleBadge input={input} />
       <h2 id="analysis-incomplete-heading">复盘报告暂不可展示</h2>
       <p>分析结果或主题叙事缺失、版本不匹配，未通过同一快照与同一结论校验。</p>
       <h3>可以怎样恢复</h3>
@@ -715,6 +695,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const evidenceHeadingId = `${id}-evidence-heading`;
   const narrativeFaceId = `${id}-narrative-face`;
   const evidenceFaceId = `${id}-evidence-face`;
+  const gestureHintId = `${id}-gesture-hint`;
 
   useLayoutEffect(() => {
     const pending = pendingScrollRestoreRef.current;
@@ -733,7 +714,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   }
 
   if (!longCardRuntimeIsDisplayable(input)) {
-    return <IncompleteLongCard input={input} />;
+    return <IncompleteLongCard />;
   }
 
   function switchFace(targetFace: LongCardFace) {
@@ -807,6 +788,17 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     setTransitioning(!reducedMotion);
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      switchFace("evidence");
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      switchFace("narrative");
+    }
+  }
+
   const showEvidence = face === "evidence";
   const faceLabel = showEvidence ? "理性证据" : "东方观象";
   const rotation = reducedMotion
@@ -819,26 +811,18 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
       data-reduced-motion={reducedMotion || undefined}
       aria-label="每日复盘报告"
     >
-      <div className="mandong-long-card__toolbar">
-        <span aria-live="polite" className="mandong-long-card__face-state">当前：{faceLabel}</span>
-        <Button
-          aria-controls={`${narrativeFaceId} ${evidenceFaceId}`}
-          aria-pressed={showEvidence}
-          onClick={() => switchFace(showEvidence ? "narrative" : "evidence")}
-          variant="secondary"
-        >
-          {showEvidence ? <ArrowLeft aria-hidden="true" size={18} /> : <ScrollText aria-hidden="true" size={18} />}
-          <span>{showEvidence ? "返回观象" : "查看证据"}</span>
-        </Button>
-      </div>
       <div
+        aria-describedby={gestureHintId}
+        aria-label="每日复盘报告内容，按左右方向键切换正面与理性证据。"
         className="mandong-long-card__stage"
         data-dragging={gestureIntent === "horizontal" || undefined}
+        onKeyDown={handleKeyDown}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={cancelPointer}
         ref={stageRef}
+        tabIndex={0}
       >
         <div
           className="mandong-long-card__motion"
@@ -878,7 +862,8 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
           />
         </div>
       </div>
-      <p className="mandong-long-card__gesture-hint"><Rotate3D aria-hidden="true" size={16} />横向拖动也可翻面，纵向滚动始终用于阅读。</p>
+      <span aria-live="polite" className="mandong-long-card__keyboard-status">当前：{faceLabel}</span>
+      <p className="mandong-long-card__gesture-hint" id={gestureHintId}><Rotate3D aria-hidden="true" size={16} />横向拖动也可翻面，纵向滚动始终用于阅读。</p>
     </section>
   );
 }
