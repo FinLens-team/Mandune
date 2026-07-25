@@ -526,6 +526,7 @@
 .workspace-drawer__nav > button:nth-child(2) { animation-delay: 130ms; }
 .workspace-drawer__nav > button:nth-child(3) { animation-delay: 180ms; }
 .workspace-drawer__nav > button:nth-child(4) { animation-delay: 230ms; }
+.workspace-drawer__nav > button:nth-child(5) { animation-delay: 280ms; }
 
 @keyframes drawer-item-in {
   from { opacity: 0; transform: translate3d(-12px, 0, 0); }
@@ -603,10 +604,10 @@
 .analysis-confirm {
   position: relative;
   z-index: var(--z-dialog);
-  width: min(100% - var(--space-8), 24rem);
+  width: min(100% - var(--space-8), 20rem);
   max-height: calc(100dvh - var(--space-8));
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: var(--space-5);
   border: 1px solid var(--poster-line);
   border-radius: 18px;
   background: var(--poster-surface);
@@ -651,7 +652,7 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-4);
 }
 
 /* Dialog actions speak the poster language: gold primary, ghost secondary */
