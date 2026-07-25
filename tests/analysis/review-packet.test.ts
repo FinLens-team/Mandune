@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildReviewPacket, deriveAnalysisInputs } from "../../src/analysis/index.js";
 import type { AtlasCardV1 } from "../../src/atlas/types.js";
+import type { EvidenceRecord } from "../../src/contracts/index.js";
 import { marketEvidence, snapshot, TRADING_DAY } from "./fixtures.js";
 
 const card: AtlasCardV1 = {
@@ -79,5 +80,53 @@ describe("ReviewPacket v2", () => {
       core_meaning: "资金是否集中在少数持仓。 不能预测未来涨跌。",
     }]);
     expect(JSON.stringify(first)).not.toMatch(/encounter|first_discovered|visual_seed/);
+  });
+
+  it("does not expose unverified event references or unit-ambiguous raw values to generated text", () => {
+    const portfolio = snapshot();
+    const ambiguous = {
+      ...marketEvidence("line-1"),
+      id: "ambiguous-raw-value",
+      status: "ambiguous" as const,
+      unit: undefined,
+      normalization_note: "unitless_return_eligible:same_provider_method",
+    };
+    const candidateEvent: EvidenceRecord = {
+      id: "unverified-event-candidate",
+      scope: { kind: "asset", line_id: "line-1", symbol: "000001.SZ" },
+      metric_or_event_type: "candidate_event",
+      value: 999,
+      unit: "CNY",
+      source: { name: "Bocha candidate", locator: "https://example.test/candidate" },
+      observation_or_event_time: TRADING_DAY,
+      fetched_at: "2026-07-25T00:00:00.000Z",
+      status: "unverified",
+      limitations: ["搜索候选尚未回到来源正文核验。"],
+      provenance: "observed",
+    };
+    const evidence = [ambiguous, candidateEvent];
+    const derivations = deriveAnalysisInputs({
+      snapshot: portfolio,
+      evidence,
+      latestCompleteTradingDay: TRADING_DAY,
+    });
+
+    const packet = buildReviewPacket({
+      analysisId: "analysis-boundary",
+      snapshot: portfolio,
+      latestCompleteTradingDay: TRADING_DAY,
+      evidenceCutoffAt: "2026-07-25T00:00:00.000Z",
+      personaId: "doudou",
+      evidence,
+      derivations,
+      selectedAtlasKind: "meme",
+      existingAtlasCards: [],
+    });
+
+    expect(packet.fact_ids).not.toContain(candidateEvent.id);
+    expect(packet.allowed_numbers).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ source_id: ambiguous.id }),
+      expect.objectContaining({ source_id: candidateEvent.id }),
+    ]));
   });
 });

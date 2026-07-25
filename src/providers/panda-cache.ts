@@ -195,13 +195,27 @@ export class CachedPandaEvidenceCollector {
     }
 
     if (missing.length > 0) {
-      const fetched = await this.client.collect(missing.map((line) => ({
-        lineId: line.line_id,
-        assetClass: line.asset_class,
-        symbol: line.symbol,
-        startDate: startDate(input.tradingDay),
-        endDate: input.tradingDay,
-      })), input.signal);
+      let fetched: PandaBatchResult[];
+      try {
+        fetched = await this.client.collect(missing.map((line) => ({
+          lineId: line.line_id,
+          assetClass: line.asset_class,
+          symbol: line.symbol,
+          startDate: startDate(input.tradingDay),
+          endDate: input.tradingDay,
+        })), input.signal);
+      } catch (error) {
+        if (input.signal.aborted) throw error;
+        fetched = missing.map((line) => ({
+          lineId: line.line_id,
+          assetClass: line.asset_class,
+          symbol: line.symbol,
+          status: "failed",
+          method: null,
+          rows: [],
+          errorCode: "batch_failed",
+        }));
+      }
       const fetchedByLine = new Map(fetched.map((item) => [item.lineId, item]));
       for (const line of missing) {
         const result = fetchedByLine.get(line.line_id) ?? {

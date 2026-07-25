@@ -86,4 +86,24 @@ describe("cached PandaAI batch evidence", () => {
     expect(result.evidence.map((item) => item.status)).toContain("unsupported");
     expect(result.evidence.map((item) => item.status)).toContain("failed");
   });
+
+  it("maps a batch process failure to independent line failures", async () => {
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    const collector = new CachedPandaEvidenceCollector({
+      collect: async () => { throw new Error("worker_spawn_failed"); },
+    }, new MemoryMarketCache(), () => new Date("2026-07-25T01:00:00.000Z"));
+
+    const result = await collector.collect({
+      snapshot,
+      tradingDay: "2026-07-24",
+      signal: new AbortController().signal,
+    });
+
+    expect(result.failures).toEqual([
+      { lineId: "line-etf-300", status: "failed", errorCode: "batch_failed" },
+      { lineId: "line-fund-demo", status: "failed", errorCode: "batch_failed" },
+    ]);
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.every((item) => item.status === "failed")).toBe(true);
+  });
 });

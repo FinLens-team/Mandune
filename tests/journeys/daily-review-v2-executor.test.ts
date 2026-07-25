@@ -136,6 +136,7 @@ describe("DailyReviewV2Executor", () => {
       generated_review: {
         atlas_candidate: { kind: selectAtlasKind("analysis-daily-review-v2") },
       },
+      review_packet: { latest_complete_trading_day: "2026-07-23" },
     });
   });
 

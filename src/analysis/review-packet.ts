@@ -67,7 +67,10 @@ function allowedNumbers(
 ): ReviewPacketNumber[] {
   const numbers: ReviewPacketNumber[] = [];
   for (const item of evidence) {
-    if (typeof item.value === "number" && Number.isFinite(item.value)) {
+    const unit = item.unit?.trim();
+    if (item.status === "available" && item.metric_or_event_type !== "candidate_event" &&
+      unit && unit.toLowerCase() !== "unknown" && unit !== "未知" &&
+      typeof item.value === "number" && Number.isFinite(item.value)) {
       numbers.push({ source_id: item.id, value: item.value, ...(item.unit ? { unit: item.unit } : {}) });
     }
   }
@@ -104,7 +107,7 @@ export function buildReviewPacket(input: {
   const factIds = [
     ...input.snapshot.lines.map((line) => line.line_id),
     ...Object.keys(input.snapshot.constraints).map((key) => `constraint:${key}`),
-    ...evidence.map((item) => item.id),
+    ...evidence.filter((item) => item.metric_or_event_type !== "candidate_event").map((item) => item.id),
     ...derived.map((item) => item.id),
   ];
   const eventIds = evidence

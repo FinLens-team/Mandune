@@ -69,6 +69,19 @@ function hasUsableMarketCoverage(
       (item.status === "ambiguous" && item.normalization_note === "unitless_return_eligible:same_provider_method")));
 }
 
+function resolveTradingDay(candidateDay: string, evidence: readonly EvidenceRecord[]): string {
+  const observedDays = evidence.flatMap((item) => {
+    const eligibleStatus = item.status === "available" ||
+      (item.status === "ambiguous" && item.normalization_note === "unitless_return_eligible:same_provider_method");
+    const day = item.observation_or_event_time.slice(0, 10);
+    return (item.metric_or_event_type === "close" || item.metric_or_event_type === "nav") &&
+      eligibleStatus && /^\d{4}-\d{2}-\d{2}$/.test(day) && day <= candidateDay
+      ? [day]
+      : [];
+  });
+  return observedDays.sort().at(-1) ?? candidateDay;
+}
+
 function unavailableSource(): AnalysisExecution["source"] {
   return { kind: "unavailable", is_live: false, label: "实时数据或模型输出当前不可用" };
 }
@@ -88,7 +101,7 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
     const startedAt = input.now();
     const startedAtIso = startedAt.toISOString();
     const evidenceCutoffAt = startedAtIso;
-    const tradingDay = latestCompleteTradingDay(startedAt);
+    let tradingDay = latestCompleteTradingDay(startedAt);
     const snapshot = freezeSnapshot(input.snapshot);
     let activeStage: Parameters<typeof input.emit>[0] = "fetch_structured_data";
     let evidence: EvidenceRecord[] = [];
@@ -125,7 +138,9 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
         tradingDay,
         signal: deadlineController.signal,
       }), deadlineController.signal);
-      evidence = normalizeMarketEvidenceDates(omitDuplicateEvidenceIds(market.evidence), tradingDay);
+      const marketEvidence = omitDuplicateEvidenceIds(market.evidence);
+      tradingDay = resolveTradingDay(tradingDay, marketEvidence);
+      evidence = normalizeMarketEvidenceDates(marketEvidence, tradingDay);
       input.emit("fetch_structured_data", "succeeded", {
         covered_count: snapshot.lines.length - market.failures.length,
         ...(market.failures.length > 0 ? { message: "部分持仓市场数据不可用，已保留逐项缺口。" } : {}),
