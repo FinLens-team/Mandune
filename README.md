@@ -152,6 +152,53 @@ PandaAI 赛道要求以可发现、可调用的 A2A Remote Agent 交付。Mandun
 
 这些能力用于说明参赛实现，不代表 PandaAI、AdventureX 或任何金融机构对本项目的认可或背书。
 
+### 调用 A2A Agent
+
+线上 Agent 使用 A2A `1.0` 的 HTTP+JSON 绑定：
+
+- Agent Card：<https://mandune.wuxie233.com/.well-known/agent-card.json>
+- 接口基址：`https://mandune.wuxie233.com/a2a`
+- 消息入口：`POST /a2a/message:send`
+
+先读取 Agent Card，确认接口、协议版本、输入输出模式和鉴权方式：
+
+```sh
+curl --fail --silent \
+  https://mandune.wuxie233.com/.well-known/agent-card.json | jq .
+```
+
+消息接口需要服务端分配的独立 Bearer Token。把 Token 放在请求头中，不要写进 URL、客户端代码或提交记录：
+
+```sh
+export MANDUNE_A2A_TOKEN='<your-bearer-token>'
+
+curl --fail --silent \
+  --request POST \
+  https://mandune.wuxie233.com/a2a/message:send \
+  --header 'Content-Type: application/a2a+json' \
+  --header 'A2A-Version: 1.0' \
+  --header "Authorization: Bearer ${MANDUNE_A2A_TOKEN}" \
+  --data '{
+    "message": {
+      "role": "ROLE_USER",
+      "messageId": "example-context-review-1",
+      "parts": [
+        {
+          "text": "请总结本次任务的已知上下文、未知项和需要补充的信息，不要假设持仓。",
+          "mediaType": "text/plain"
+        }
+      ]
+    },
+    "configuration": {
+      "acceptedOutputModes": ["text/plain", "application/json"]
+    }
+  }' | jq .
+```
+
+成功响应包含一个 `ROLE_AGENT` Message。文本 Part 用于直接展示，JSON Part 包含证据、数据来源、确定性派生、工具轨迹、未知项、限制和固定风险提示。提交通过契约校验的 `PortfolioSnapshot` Data Part 后，Agent 可为快照内支持的资产查询 PandaAI 授权结构化行情；未提供快照时不会推测持仓或查询快照外资产。
+
+当前入口是非流式、无状态的一次性深度复盘，不支持任务续写、推送通知或交易执行。请求必须携带 `A2A-Version: 1.0`；缺失版本头会按 `0.3` 处理并返回版本不支持错误。
+
 ## 项目状态
 
 Mandune 是一个可运行、可自托管的黑客松作品，仍处于早期维护阶段。当前优先事项是：
