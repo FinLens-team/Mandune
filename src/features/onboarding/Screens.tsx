@@ -4,13 +4,45 @@ import {
   ScanLine,
   Shuffle,
 } from "lucide-react";
-import type { Ref } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import type { PersonalConstraints } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
-import { Button, LockBadge } from "../../client/ui/index.js";
+import { Badge, Button, DemoBadge, LockBadge } from "../../client/ui/index.js";
+import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
+import mandongLogo from "../../client/assets/mandong-logo.png";
+import previewOne from "../../client/assets/theme-previews/theme-preview-1.png";
+import previewTwo from "../../client/assets/theme-previews/theme-preview-2.png";
+import previewThree from "../../client/assets/theme-previews/theme-preview-3.png";
 
 interface ScreenTitleProps {
   titleRef?: Ref<HTMLHeadingElement>;
+}
+
+export interface SplashScreenProps {
+  returning?: boolean;
+  leaving?: boolean;
+}
+
+export function SplashScreen({ returning = false, leaving = false }: SplashScreenProps) {
+  const classes = [
+    "onboarding-screen",
+    "onboarding-splash",
+    returning ? "onboarding-splash--returning" : "",
+    leaving ? "onboarding-splash--leaving" : "",
+  ].filter(Boolean).join(" ");
+  return (
+    <section className={classes} aria-labelledby="s0-title">
+      <div className="onboarding-splash__copy">
+        <img
+          alt="满懂"
+          className="onboarding-splash__logo"
+          src={mandongLogo}
+          id="s0-title"
+        />
+        <p className="onboarding-splash__positioning">数据有剧情，复盘不无聊</p>
+      </div>
+    </section>
+  );
 }
 
 export interface ThemeSelectionScreenProps extends ScreenTitleProps {
@@ -246,6 +278,7 @@ export function ExperienceSummaryScreen({
     <section className="onboarding-screen onboarding-summary" aria-labelledby="s3-title">
       <header className="onboarding-heading">
         <p className="onboarding-step">首次引导 · 3 / 3</p>
+        <DemoBadge aria-label="随机体验身份，以下均为示例数据，不是真实持仓" />
         <h1 id="s3-title" ref={titleRef} tabIndex={-1}>
           确认随机体验身份
         </h1>
@@ -254,7 +287,7 @@ export function ExperienceSummaryScreen({
 
       <div className="onboarding-summary__identity" key={identity.identity_id}>
         <p className="onboarding-seed" role="status">
-          可复现体验编号：<code>{identity.seed}</code>
+          可复现体验编号：<code>{identity.seed}</code> · {identity.source_label}
         </p>
         <div className="onboarding-summary__grid">
           <section aria-labelledby="holdings-title">
@@ -332,61 +365,13 @@ export function ExperienceSummaryScreen({
                   <dt>{CONSTRAINT_LABELS[key]}</dt>
                   <dd>{formatConstraint(identity.constraints[key])}</dd>
                 </div>
-                <dl>
-                  <div>
-                    <dt>持仓规模依据</dt>
-                    <dd>{holding.size_basis}</dd>
-                  </div>
-                  <div>
-                    <dt>观察值</dt>
-                    <dd>
-                      {String(holding.observed_value)}
-                      {holding.observed_unit ? ` ${holding.observed_unit}` : ""}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>市场观察时间</dt>
-                    <dd>{holding.observed_at}</dd>
-                  </div>
-                  <div>
-                    <dt>系统获取时间</dt>
-                    <dd>{holding.fetched_at}</dd>
-                  </div>
-                  <div>
-                    <dt>证据来源</dt>
-                    <dd>{holding.source_name}</dd>
-                  </div>
-                  <div>
-                    <dt>来源状态</dt>
-                    <dd>{holding.evidence_status}</dd>
-                  </div>
-                  <div>
-                    <dt>证据定位</dt>
-                    <dd>{holding.source_locator}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section aria-labelledby="constraints-title">
-          <div className="onboarding-section-heading">
-            <h2 id="constraints-title">四项体验约束</h2>
-            <span>体验生成值</span>
-          </div>
-          <dl className="onboarding-constraints">
-            {(Object.keys(CONSTRAINT_LABELS) as (keyof PersonalConstraints)[]).map((key) => (
-              <div key={key}>
-                <dt>{CONSTRAINT_LABELS[key]}</dt>
-                <dd>{formatConstraint(identity.constraints[key])}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="onboarding-constraints-note">
-            「未知／尚未决定」是有效输入，会缩小相关判断，不会由系统补成默认答案。
-          </p>
-        </section>
+              ))}
+            </dl>
+            <p className="onboarding-constraints-note">
+              「未知／尚未决定」是有效输入，会缩小相关判断，不会由系统补成默认答案。
+            </p>
+          </section>
+        </div>
       </div>
 
       <div className="onboarding-sticky-spacer" aria-hidden="true" />

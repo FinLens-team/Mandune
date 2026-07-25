@@ -15,13 +15,18 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    allowedHosts: ["dev.wuxie233.com"],
+    hmr: {
+      host: "dev.wuxie233.com",
+      protocol: "wss",
+    },
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8787",
+        target: "http://127.0.0.1:8788",
         changeOrigin: true,
       },
       "/health": {
-        target: "http://127.0.0.1:8787",
+        target: "http://127.0.0.1:8788",
         changeOrigin: true,
       },
     },

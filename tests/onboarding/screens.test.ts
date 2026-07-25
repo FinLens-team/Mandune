@@ -10,6 +10,7 @@ import {
 import type { DemoExperienceIdentity } from "../../src/demo-experience/index.js";
 
 interface OnboardingModule {
+  SplashScreen: ComponentType<{ returning?: boolean; leaving?: boolean }>;
   ThemeSelectionScreen: ComponentType<{
     selected: boolean;
     previewMessage: string | null;
@@ -62,7 +63,24 @@ class MemoryStorage implements OnboardingStorage {
   }
 }
 
-describe("S1-S3 onboarding screens", () => {
+describe("S0-S3 onboarding screens", () => {
+  it("renders the flat brand splash without skip, buttons, or fake progress", async () => {
+    const { SplashScreen } = await loadOnboarding();
+    const html = renderToStaticMarkup(createElement(SplashScreen, {}));
+
+    expect(html).toContain("满懂");
+    expect(html).toContain("数据有剧情，复盘不无聊");
+    expect(html).not.toContain("<button");
+    expect(html).not.toContain("跳过");
+    expect(html).not.toContain("progress");
+
+    const returning = renderToStaticMarkup(createElement(SplashScreen, {
+      returning: true,
+    }));
+    expect(returning).toContain("满懂");
+    expect(returning).not.toContain("数据有剧情，复盘不无聊");
+  });
+
   it("exposes one selectable theme and three focusable locked previews", async () => {
     const { ThemeSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
@@ -139,13 +157,14 @@ describe("S1-S3 onboarding screens", () => {
       onReroll: noop,
     }));
 
-    expect(html).not.toContain("随机体验身份 · 示例数据");
-    expect(html).not.toContain("随机体验身份 · 测试 fixture · 非实时行情");
-    expect(html).not.toContain("测试 fixture · 非实时行情");
+    expect(html).toContain("随机体验身份 · 示例数据");
+    expect(html).toContain("测试 fixture · 非实时行情");
+    expect(html).toContain("观察日期");
     expect(html).toContain("市场观察时间");
     expect(html).toContain("系统获取时间");
     expect(html).toContain("证据来源");
-    expect(html).toContain("<dd>available</dd>");
+    expect(html).toContain("数据边界");
+    expect(html).toContain(">available<");
     expect(html).toContain("observed");
     expect(html).toContain("投资期限");
     expect(html).toContain("近期流动性需求");
@@ -171,10 +190,11 @@ describe("S1-S3 onboarding screens", () => {
       workspaceId: "ws-new",
     }));
 
-    expect(returning).toBe("");
-    expect(firstRun).toContain("选择复盘主题");
-    expect(firstRun).not.toContain("只给方向，不替你下单");
-    expect(firstRun).not.toContain("跳过");
+    expect(returning).toContain('data-visit="returning"');
+    expect(returning).toContain("满懂");
+    expect(returning).not.toContain("数据有剧情，复盘不无聊");
+    expect(firstRun).toContain('data-visit="first"');
+    expect(firstRun).toContain("数据有剧情，复盘不无聊");
   });
 });
 

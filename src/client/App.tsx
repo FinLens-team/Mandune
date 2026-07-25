@@ -10,7 +10,8 @@ import {
   type JourneyGateway,
   type JourneyPersistence,
 } from "../app/client/index.js";
-import { Button, GeneratedMarkdown } from "./ui/index.js";
+import { Button, DemoBadge } from "./ui/index.js";
+import { AnalysisProgress } from "../features/analysis-progress/index.js";
 import { HistoryAboutView } from "../features/history-view/index.js";
 import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
@@ -77,7 +78,8 @@ function JourneyStatePage({
 }) {
   return (
     <main className="journey-state" id="main" role="status">
-      <h1>{heading}</h1>
+      <DemoBadge />
+      <h1 tabIndex={-1}>{heading}</h1>
       <p>{message}</p>
       <Button onClick={action} variant="primary">{actionLabel}</Button>
     </main>
@@ -123,23 +125,18 @@ export function App(props: AppProps = {}) {
     return () => window.cancelAnimationFrame(frame);
   }, [state.phase]);
 
+  // While booting, render nothing (bootstrap is near-instant).
   if (state.phase === "booting") {
-    return (
-      <main aria-live="polite" className="journey-state" id="main" role="status">
-        <span className="journey-state__pulse" aria-hidden="true" />
-        <h1 tabIndex={-1}>正在准备匿名私密工作区</h1>
-        <p>只读取 HttpOnly Cookie 授权的当前工作区，不把定位信息放入页面或 URL。</p>
-      </main>
-    );
+    return null;
   }
 
   if (state.phase === "workspace_error") {
     return (
       <JourneyStatePage
-        action={() => state.workspace ? controller.resetOnboarding() : void controller.bootstrap()}
-        actionLabel={state.workspace ? "重新完成体验身份" : "重新连接工作区"}
-        heading="当前无法进入私密工作区"
-        message={state.message ?? "工作区读取失败。"}
+        action={() => void controller.bootstrap()}
+        actionLabel="重试"
+        heading="后端服务出现异常"
+        message="请联系开发者"
       />
     );
   }
@@ -261,6 +258,11 @@ export function App(props: AppProps = {}) {
   if (state.phase === "home" && state.workspace && state.draft) {
     return (
       <div className="journey-workspace">
+        <p className="journey-source-banner" role="note">
+          <DemoBadge source={state.experienceSource} />
+          <span>{state.draft.source_label ?? "随机体验身份 · 示例数据（非实时）"}</span>
+          {state.draftSaving ? <span>正在保存草稿…</span> : <span>草稿已绑定当前私密工作区</span>}
+        </p>
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <WorkspaceShell
           activeAnalysis={state.activeAnalysis && !state.activeAnalysis.terminal
