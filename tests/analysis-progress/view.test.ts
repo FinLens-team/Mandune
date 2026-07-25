@@ -16,6 +16,7 @@ interface ProgressModule {
     onOpenResult?: () => void;
     onRetry?: () => void;
     reduceMotion?: boolean;
+    streamText?: string;
     terminal?: AnalysisProgressTerminal;
   }>;
 }
@@ -58,7 +59,7 @@ describe("S8 analysis progress view (simple version)", () => {
     expect(markup).not.toContain("<video");
   });
 
-  it("shows at most the last 3 event messages, newest at the bottom", async () => {
+  it("shows up to 8 generation messages, newest at the bottom", async () => {
     const { AnalysisProgress } = await loadProgress();
     const markup = renderToStaticMarkup(
       createElement(AnalysisProgress, {
@@ -73,13 +74,40 @@ describe("S8 analysis progress view (simple version)", () => {
       }),
     );
 
-    expect(markup).not.toContain("第一条工作信息");
+    expect(markup).toContain("第一条工作信息");
     expect(markup).toContain("第二条工作信息");
     expect(markup).toContain("第三条工作信息");
     expect(markup).toContain("第四条工作信息");
     expect(markup.indexOf("第三条工作信息")).toBeGreaterThan(markup.indexOf("第二条工作信息"));
     expect(markup.indexOf("第四条工作信息")).toBeGreaterThan(markup.indexOf("第三条工作信息"));
-    expect(markup.match(/analysis-progress__log-line/g)).toHaveLength(3);
+    expect(markup.match(/analysis-progress__log-line/g)).toHaveLength(4);
+  });
+
+  it("keeps API connection, thinking, and upstream headings in generation history", async () => {
+    const { AnalysisProgress } = await loadProgress();
+    const markup = renderToStaticMarkup(
+      createElement(AnalysisProgress, {
+        analysisId: "analysis-31",
+        connection: "connected",
+        events: [
+          stageEvent(1, "连通API尝试中"),
+          stageEvent(2, "API连通成功"),
+          stageEvent(3, "正在思考..."),
+        ],
+        streamText: "# 市场概览\n# 风险边界\n",
+      }),
+    );
+
+    expect(markup).toContain("连通API尝试中");
+    expect(markup).toContain("API连通成功");
+    expect(markup).toContain("正在思考...");
+    expect(markup).toContain("正在生成 市场概览");
+    expect(markup).toContain("正在生成 风险边界");
+    expect(markup.indexOf("API连通成功")).toBeGreaterThan(markup.indexOf("连通API尝试中"));
+    expect(markup.indexOf("正在思考...")).toBeGreaterThan(markup.indexOf("API连通成功"));
+    expect(markup.indexOf("正在生成 市场概览")).toBeGreaterThan(markup.indexOf("正在思考..."));
+    expect(markup.indexOf("正在生成 风险边界")).toBeGreaterThan(markup.indexOf("正在生成 市场概览"));
+    expect(markup.match(/analysis-progress__log-line/g)).toHaveLength(5);
   });
 
   it("offers the result button only for displayable terminal results", async () => {

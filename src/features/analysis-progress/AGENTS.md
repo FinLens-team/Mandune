@@ -3,7 +3,7 @@
 ## Architecture
 
 - `projection.ts` 是 S8 的纯投影边界：只接受指定 `analysisId` 的 `TaskEvent`、显式连接状态和显式终态结果。
-- `AnalysisProgress.tsx` 同时渲染奶龙主题向导、事件驱动气泡与完整文字阶段列表；`styles.css` 只负责表现和可停止动效。
+- `AnalysisProgress.tsx` 同时渲染主题向导、事件驱动气泡与滚动任务记录；模型连接、首包、思考和流式 Markdown 标题都进入“生成并校验”历史，并可从已持久化任务事件恢复。
 
 ## Conventions
 

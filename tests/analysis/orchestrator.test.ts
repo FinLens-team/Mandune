@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ModelGateway, ModelGatewayRequest, ModelGatewayResult } from "../../src/model/index.js";
 import { createAnalysisOrchestrator, type RationalModelOutput, type ThemeModelOutput } from "../../src/analysis/index.js";
 import { CUTOFF_AT, marketEvidence, snapshot, STARTED_AT, TRADING_DAY } from "./fixtures.js";
+import { resultTitleForTheme } from "../../src/theme/index.js";
 
 function successfulGateway(overrides: Partial<RationalModelOutput> = {}): ModelGateway {
   return {
@@ -38,7 +39,7 @@ function successfulGateway(overrides: Partial<RationalModelOutput> = {}): ModelG
           schema_version: "theme-narrative.v1",
           rational_analysis_id: "analysis-1",
           theme_id: "eastern_observation",
-          headline: "今日观象",
+          headline: resultTitleForTheme("eastern_observation"),
           body_paragraphs: ["已核验行情支持对当前组合保持观察。"],
           mascot_mood: "calm",
           guidance_summary: "维持观察并等待后续完整交易日证据。",
@@ -509,7 +510,7 @@ describe("single-agent analysis orchestrator", () => {
             schema_version: "theme-narrative.v1",
             rational_analysis_id: "analysis-1",
             theme_id: "eastern_observation",
-            headline: "今日观象",
+            headline: resultTitleForTheme("eastern_observation"),
             body_paragraphs: ["当前不宜继续观察。"],
             mascot_mood: "calm",
             guidance_summary: "维持观察并等待后续完整交易日证据。",

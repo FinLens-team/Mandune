@@ -2,8 +2,8 @@ import { RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisResultStatus, TaskEvent } from "../../contracts/index.js";
 import { AnalysisStatus, BrandBanner, Button } from "../../client/ui/index.js";
-import nailongPop from "../../client/assets/mascot/nailong-pop.webp";
-import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
+import { themeForId, type ThemeId } from "../../theme/index.js";
+import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
 import {
   projectAnalysisProgress,
   streamHeadingMessages,
@@ -12,8 +12,6 @@ import {
 } from "./projection.js";
 import "./styles.css";
 
-/** 83 frames at 24fps (~3.5s) plus a small buffer before swapping to the rest pose. */
-const MASCOT_POP_DURATION_MS = 3650;
 const MASCOT_POP_STORAGE_PREFIX = "mandong.analysis-mascot-pop.";
 
 function hasPlayedMascotPop(analysisId: string): boolean {
@@ -45,6 +43,7 @@ export interface AnalysisProgressProps {
   reduceMotion?: boolean;
   streamText?: string;
   terminal?: AnalysisProgressTerminal;
+  themeId?: ThemeId;
 }
 
 function formatElapsed(seconds: number): string {
@@ -82,10 +81,13 @@ export function AnalysisProgress({
   reduceMotion = false,
   streamText,
   terminal,
+  themeId = "eastern_observation",
 }: AnalysisProgressProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const model = projectAnalysisProgress({ analysisId, connection, events, terminal });
   const [showPop, setShowPop] = useState(false);
+  const theme = themeForId(themeId);
+  const assets = themeClientAssets(themeId);
   // Terminal state at mount time only: a result arriving mid-playback
   // must not re-run the effect and cut the animation short.
   const terminalAtMountRef = useRef(model.isTerminal);
@@ -115,12 +117,24 @@ export function AnalysisProgress({
       : "结论与证据边界已冻结存档，可随时查看报告。"
     : "满懂正在核对市场数据与可核验证据，进度只随真实任务事件更新。";
   const mascotIdle = !showPop && !model.isTerminal && !reduceMotion;
-  const visibleLogLines = [
-    ...model.logLines.map((line) => ({ id: line.id, text: line.text })),
-    ...streamHeadingMessages(streamText).map((text) => ({ id: `stream:${text}`, text })),
+  const streamedHeadings = streamHeadingMessages(streamText);
+  const generationMessages = [
+    ...ownEvents
+    .filter((event) =>
+      event.stage === "form_conclusions_and_advice" && event.message !== undefined
+    )
+    .map((event) => event.message!),
+    ...streamedHeadings,
   ]
-    .filter((line, index, lines) => lines.findIndex((candidate) => candidate.text === line.text) === index)
-    .slice(-3);
+    .filter((text, index, lines) => lines.indexOf(text) === index);
+  const visibleLogLines = generationMessages.length > 0
+    ? generationMessages.slice(-8).map((text) => ({
+        id: `generation:${text}`,
+        kind: "generation" as const,
+        text,
+      }))
+    : model.logLines.map((line) => ({ id: line.id, kind: "event" as const, text: line.text }))
+        .slice(-8);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -129,10 +143,17 @@ export function AnalysisProgress({
   // Play the pop-in action once per analysis, only after the animation
   // asset has fully decoded; any failure keeps the static rest pose.
   useEffect(() => {
-    if (reduceMotion || terminalAtMountRef.current || hasPlayedMascotPop(analysisId)) {
+    const animation = assets.progressAnimation;
+    if (!animation || reduceMotion || terminalAtMountRef.current || hasPlayedMascotPop(analysisId)) {
       setShowPop(false);
       return;
     }
+
+    if (animation.kind === "video") {
+      setShowPop(true);
+      return () => setShowPop(false);
+    }
+    const imageAnimation = animation;
 
     let cancelled = false;
     let started = false;
@@ -148,13 +169,13 @@ export function AnalysisProgress({
       timer = window.setTimeout(() => {
         markMascotPopPlayed(analysisId);
         setShowPop(false);
-      }, MASCOT_POP_DURATION_MS);
+      }, imageAnimation.durationMs);
     }
 
     image.decoding = "async";
     image.onload = startPop;
     image.onerror = () => setShowPop(false);
-    image.src = nailongPop;
+    image.src = imageAnimation.src;
     if (image.complete && image.naturalWidth > 0) startPop();
 
     return () => {
@@ -163,13 +184,15 @@ export function AnalysisProgress({
       image.onerror = null;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [analysisId, reduceMotion]);
+  }, [analysisId, assets.progressAnimation, reduceMotion]);
 
   return (
     <div
       className="analysis-progress"
+      data-theme={theme.id}
       data-phase={model.phase}
       data-reduce-motion={reduceMotion || undefined}
+      style={themeCssVariables(theme.id)}
     >
       <BrandBanner />
       <main aria-labelledby="analysis-progress-heading" className="analysis-progress__main">
@@ -205,15 +228,35 @@ export function AnalysisProgress({
           </div>
 
           <div className="analysis-progress__stage" data-idle={mascotIdle || undefined}>
-            <img
-              alt=""
-              className="analysis-progress__mascot"
-              decoding="async"
-              height="512"
-              onError={() => setShowPop(false)}
-              src={showPop ? nailongPop : nailongRest}
-              width="512"
-            />
+            {showPop && assets.progressAnimation?.kind === "video" ? (
+              <video
+                autoPlay
+                className="analysis-progress__mascot"
+                height="720"
+                muted
+                onEnded={() => {
+                  markMascotPopPlayed(analysisId);
+                  setShowPop(false);
+                }}
+                onError={() => setShowPop(false)}
+                playsInline
+                poster={assets.rest.src}
+                src={assets.progressAnimation.src}
+                width="720"
+              />
+            ) : (
+              <img
+                alt=""
+                className="analysis-progress__mascot"
+                decoding="async"
+                height={assets.rest.height}
+                onError={() => setShowPop(false)}
+                src={showPop && assets.progressAnimation?.kind === "image"
+                  ? assets.progressAnimation.src
+                  : assets.rest.src}
+                width={assets.rest.width}
+              />
+            )}
           </div>
 
           <ol aria-live="polite" className="analysis-progress__log" role="log">
@@ -225,6 +268,7 @@ export function AnalysisProgress({
               visibleLogLines.map((line, index) => (
                 <li
                   className="analysis-progress__log-line"
+                  data-kind={line.kind}
                   data-latest={index === visibleLogLines.length - 1 || undefined}
                   key={line.id}
                 >

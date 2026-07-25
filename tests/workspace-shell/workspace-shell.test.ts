@@ -9,7 +9,7 @@ import type { snapshotCurrentDraft } from "../../src/features/review/model.js";
 interface WorkspaceShellModule {
   WorkspaceDrawer: ComponentType<{
     open: boolean;
-    currentPage: "home" | "portfolio" | "history" | "atlas" | "about";
+    currentPage: "home" | "portfolio" | "history" | "atlas" | "theme" | "about";
     reduceMotion: boolean;
     returnFocus: null;
     onClose: () => void;
@@ -17,6 +17,7 @@ interface WorkspaceShellModule {
     onNavigatePortfolio: () => void;
     onNavigateHistory: () => void;
     onNavigateAtlas?: () => void;
+    onNavigateTheme: () => void;
     onNavigateAbout: () => void;
   }>;
   WorkspaceShell: ComponentType<{
@@ -30,6 +31,7 @@ interface WorkspaceShellModule {
     workspace: WorkspacePublicStatus | null;
     onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
     onNavigateHistory: () => void;
+    onNavigateTheme: () => void;
     onNavigateAbout: () => void;
   }>;
   countUnknownConstraints: (snapshot: PortfolioSnapshot) => number;
@@ -66,6 +68,7 @@ describe("S4-S7 workspace shell", () => {
         onStartAnalysis: vi.fn(),
         onNavigateHistory: vi.fn(),
         onNavigateAbout: vi.fn(),
+        onNavigateTheme: vi.fn(),
       }),
     );
 
@@ -103,6 +106,7 @@ describe("S4-S7 workspace shell", () => {
         onStartAnalysis: vi.fn(),
         onNavigateHistory: vi.fn(),
         onNavigateAbout: vi.fn(),
+        onNavigateTheme: vi.fn(),
       }),
     );
 
@@ -121,6 +125,7 @@ describe("S4-S7 workspace shell", () => {
         onStartAnalysis: vi.fn(),
         onNavigateHistory: vi.fn(),
         onNavigateAbout: vi.fn(),
+        onNavigateTheme: vi.fn(),
       }),
     );
 
@@ -142,6 +147,7 @@ describe("S4-S7 workspace shell", () => {
         onNavigatePortfolio: vi.fn(),
         onNavigateHistory: vi.fn(),
         onNavigateAtlas: vi.fn(),
+        onNavigateTheme: vi.fn(),
         onNavigateAbout: vi.fn(),
       }),
     );
@@ -154,6 +160,7 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain("数据管理");
     expect(markup).toContain("历史记录");
     expect(markup).toContain("满懂图鉴");
+    expect(markup).toContain("主题切换");
     expect(markup).toContain("关于项目");
     expect(markup).not.toContain("最后活动");
     expect(markup).not.toContain("预计删除");

@@ -81,6 +81,8 @@
 }
 
 .mandong-long-card__front {
+  border-color: var(--theme-border);
+  background: color-mix(in srgb, var(--theme-surface) 15%, var(--color-bg-letter));
   transform: rotateY(0deg);
 }
 
@@ -146,7 +148,7 @@
 
 .mandong-long-card__theme {
   margin-bottom: var(--space-1) !important;
-  color: var(--color-observed) !important;
+  color: var(--theme-accent) !important;
   font-weight: 700;
 }
 

@@ -29,13 +29,9 @@ import {
 import {
   AnalysisStatus,
   GeneratedMarkdown,
-  LockBadge,
 } from "../../client/ui/index.js";
-import { LOCKED_THEME_PREVIEWS, OBSERVATION_THEME } from "../../theme/observation.js";
-import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
-import previewOne from "../../client/assets/theme-previews/theme-preview-1.png";
-import previewTwo from "../../client/assets/theme-previews/theme-preview-2.png";
-import previewThree from "../../client/assets/theme-previews/theme-preview-3.png";
+import { themeForId } from "../../theme/index.js";
+import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
 import "./LongCard.css";
 
 const FLIP_THRESHOLD_PX = 64;
@@ -78,8 +74,6 @@ interface PendingScrollRestore {
 
 type GestureIntent = "horizontal" | "vertical" | null;
 
-const PREVIEW_ASSETS = [previewOne, previewTwo, previewThree] as const;
-
 export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRuntimeInput {
   const { analysis } = fixture;
   const narrative: ThemeModelOutput | undefined = analysis.status === "unavailable"
@@ -88,7 +82,7 @@ export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRu
         schema_version: THEME_NARRATIVE_SCHEMA_VERSION,
         rational_analysis_id: analysis.analysis_id,
         theme_id: analysis.theme_id,
-        headline: "今日观象",
+        headline: themeForId(analysis.theme_id).copy.resultTitle,
         body_paragraphs: analysis.conclusions.map((item) => item.statement),
         mascot_mood: "calm",
         guidance_summary: analysis.advice.map((item) => item.statement).join("；"),
@@ -203,13 +197,15 @@ function evidenceStatusLabel(status: EvidenceRecord["status"]): string {
   return labels[status];
 }
 
-function ThemeMascot() {
+function ThemeMascot({ themeId }: { themeId: string }) {
+  const theme = themeForId(themeId);
+  const assets = themeClientAssets(themeId);
   return (
     <figure className="mandong-doudou">
-      <img alt={OBSERVATION_THEME.mascot.alt} height="192" src={nailongRest} width="192" />
+      <img alt={theme.mascot.alt} height={assets.rest.height} src={assets.rest.src} width={assets.rest.width} />
       <figcaption>
-        <strong>{OBSERVATION_THEME.mascot.name}</strong>
-        <span>陪你观察，也承认未知</span>
+        <strong>{theme.mascot.name}</strong>
+        <span>{theme.mascot.caption}</span>
       </figcaption>
     </figure>
   );
@@ -259,6 +255,7 @@ export function NarrativeFront({
   narrative,
 }: NarrativeFaceProps) {
   const { analysis } = input;
+  const theme = themeForId(analysis.theme_id);
   return (
     <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -269,13 +266,13 @@ export function NarrativeFront({
         </div>
         <div className="mandong-long-card__masthead">
           <div>
-            <p className="mandong-long-card__theme">{OBSERVATION_THEME.label}</p>
+            <p className="mandong-long-card__theme">{theme.label}</p>
             <h2 id={headingId} ref={headingRef} tabIndex={-1}>{narrative.headline}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
         </div>
         <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
-          <ThemeMascot />
+          <ThemeMascot themeId={analysis.theme_id} />
         </div>
       </header>
 
@@ -339,6 +336,7 @@ export function AiNarrativeFront({
   aiText,
 }: AiNarrativeFaceProps) {
   const { analysis } = input;
+  const theme = themeForId(analysis.theme_id);
   return (
     <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -349,13 +347,13 @@ export function AiNarrativeFront({
         </div>
         <div className="mandong-long-card__masthead">
           <div>
-            <p className="mandong-long-card__theme">{OBSERVATION_THEME.label}</p>
-            <h2 id={headingId} ref={headingRef} tabIndex={-1}>今日观象</h2>
+            <p className="mandong-long-card__theme">{theme.label}</p>
+            <h2 id={headingId} ref={headingRef} tabIndex={-1}>{theme.copy.resultTitle}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
         </div>
         <div className="mandong-long-card__guide" data-mascot-mood="calm">
-          <ThemeMascot />
+          <ThemeMascot themeId={analysis.theme_id} />
         </div>
       </header>
 
@@ -691,13 +689,16 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   // Relaxed Demo mode: the back is the formal rational report, the front is the
   // theme rendition of the same report.
   const relaxedMode = Boolean(aiText && !narrative);
-  const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : OBSERVATION_THEME.label;
+  const theme = themeForId(analysis.theme_id);
+  const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : theme.label;
   const stageStyle = { "--long-card-drag-x": `${dragOffset}px` } as CSSProperties;
   return (
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
+      data-theme={theme.id}
       data-reduced-motion={reducedMotion || undefined}
       aria-label="每日复盘报告"
+      style={themeCssVariables(theme.id)}
     >
       <div
         aria-describedby={gestureHintId}
@@ -734,27 +735,22 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
 }
 
 export function ThemePreview() {
+  const theme = themeForId("eastern_observation");
+  const assets = themeClientAssets(theme.id);
   return (
     <section className="mandong-theme-preview" aria-labelledby="theme-preview-heading">
       <div className="mandong-theme-preview__heading">
         <div>
           <p>复盘主题</p>
-          <h2 id="theme-preview-heading">{OBSERVATION_THEME.label}</h2>
+          <h2 id="theme-preview-heading">{theme.label}</h2>
         </div>
         <p>主题只改变表达，不改变证据、风险与建议。</p>
       </div>
       <div className="mandong-theme-preview__options" aria-label="主题展示">
         <div className="mandong-theme-preview__option mandong-theme-preview__option--current">
-          <img alt={OBSERVATION_THEME.mascot.alt} decoding="async" height="128" loading="lazy" src={nailongRest} width="128" />
-          <div><strong>{OBSERVATION_THEME.label}</strong><span>奶龙 · 当前主题</span></div>
+          <img alt={theme.mascot.alt} decoding="async" height="128" loading="lazy" src={assets.rest.src} width="128" />
+          <div><strong>{theme.label}</strong><span>{theme.mascot.name} · 当前主题</span></div>
         </div>
-        {LOCKED_THEME_PREVIEWS.map((preview, index) => (
-          <div className="mandong-theme-preview__option" key={preview.id}>
-            <img alt={`${preview.label}的中性占位角色`} decoding="async" height="128" loading="lazy" src={PREVIEW_ASSETS[index]} width="128" />
-            <div><strong>{preview.label}</strong><span>{preview.description}</span></div>
-            <LockBadge />
-          </div>
-        ))}
       </div>
     </section>
   );

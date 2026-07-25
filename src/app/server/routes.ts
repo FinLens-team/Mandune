@@ -12,6 +12,7 @@ import {
 import type { WorkspaceService } from "../../workspace/index.js";
 import { WORKSPACE_COOKIE } from "../../workspace/index.js";
 import { JourneyAnalysisService, JourneyInputError } from "./service.js";
+import { DEFAULT_THEME_ID, isThemeId } from "../../theme/index.js";
 
 const UNAUTHORIZED = { error: "unauthorized" } as const;
 const IDENTIFIER = /^[A-Za-z0-9_-]{1,160}$/;
@@ -83,22 +84,25 @@ export function createJourneyRoutes(input: {
   app.post("/analyses", async (c) => {
     const id = await workspaceId(c, input.workspaces);
     if (!id) return c.json(UNAUTHORIZED, 401);
-    let body: { experience_source?: unknown };
+    let body: { experience_source?: unknown; theme_id?: unknown };
     try {
-      body = await c.req.json() as { experience_source?: unknown };
+      body = await c.req.json() as { experience_source?: unknown; theme_id?: unknown };
     } catch {
       return c.json({ error: "invalid_experience_source" }, 400);
     }
     if (!isHistoryExperienceSource(body.experience_source)) {
       return c.json({ error: "invalid_experience_source" }, 400);
     }
+    const themeId = body.theme_id ?? DEFAULT_THEME_ID;
+    if (!isThemeId(themeId)) return c.json({ error: "invalid_theme" }, 400);
     try {
-      const result = await input.journey.start(id, body.experience_source);
+      const result = await input.journey.start(id, body.experience_source, themeId);
       return c.json({
         analysis_id: result.run.analysis_id,
         experience_source: result.run.experience_source,
         state: result.run.state,
         reused_active: !result.created,
+        theme_id: result.run.snapshot.theme_id,
       }, 202);
     } catch (error) {
       if (error instanceof JourneyInputError) return c.json({ error: error.code }, 400);
@@ -118,6 +122,7 @@ export function createJourneyRoutes(input: {
       state: run.state,
       created_at: run.created_at,
       updated_at: run.updated_at,
+      theme_id: run.snapshot.theme_id,
       ...(run.state === "terminal" ? {
         terminal_reason: run.terminal_reason,
         retryable: run.retryable,

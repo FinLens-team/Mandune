@@ -14,6 +14,7 @@ import {
   updateConstraints,
   updateLine,
 } from "../../portfolio/index.js";
+import type { ThemeId } from "../../theme/index.js";
 
 export interface NewHoldingInput {
   asset_class: DraftLine["asset_class"];
@@ -111,10 +112,10 @@ export function editConstraints(
   return updateConstraints(draft, constraints);
 }
 
-export function snapshotCurrentDraft(draft: PortfolioDraft):
+export function snapshotCurrentDraft(draft: PortfolioDraft, themeId?: ThemeId):
   | { ok: true; snapshot: PortfolioSnapshot; skippedCount: number }
   | { ok: false; message: string } {
-  const result = createSnapshotFromDraft(draft);
+  const result = createSnapshotFromDraft(draft, themeId ? { theme_id: themeId } : undefined);
   if (!result.ok) {
     return { ok: false, message: result.message };
   }

@@ -24,6 +24,7 @@ import {
   markDraftExperienceSource,
   type JourneyExperienceSource,
 } from "./source.js";
+import { DEFAULT_THEME_ID, type ThemeId } from "../../theme/index.js";
 
 export interface JourneyControllerOptions {
   dispatch: (action: JourneyAction) => void;
@@ -36,6 +37,7 @@ export interface JourneyControllerOptions {
 export interface JourneyOnboardingExit {
   identity: DemoExperienceIdentity | null;
   returning: boolean;
+  themeId?: ThemeId;
 }
 
 function workspaceFailureMessage(error: unknown): string {
@@ -150,6 +152,7 @@ export class JourneyController {
             resumeAnalysisId,
           )
         : null;
+      const currentThemeId = this.options.persistence.getTheme(workspace.workspace_id) ?? DEFAULT_THEME_ID;
       if (resumeAnalysisId && resumeAnalysisSource) {
         this.analysisSources.set(resumeAnalysisId, resumeAnalysisSource);
       }
@@ -158,6 +161,7 @@ export class JourneyController {
         workspace,
         draft,
         experienceSource,
+        currentThemeId,
         reducedMotion,
         reviewCoachmarkVisible:
           !this.options.persistence.getReviewCoachmarkDismissed(workspace.workspace_id),
@@ -172,6 +176,8 @@ export class JourneyController {
   async enterApp(exit: JourneyOnboardingExit): Promise<void> {
     const state = this.options.getState();
     if (!state.workspace) return;
+    const themeId = exit.themeId ?? state.currentThemeId;
+    this.options.persistence.setTheme(state.workspace.workspace_id, themeId);
     let draft = state.draft;
     if (exit.identity) {
       draft = identityToPortfolioDraft(exit.identity);
@@ -192,6 +198,9 @@ export class JourneyController {
       type: "ENTER_APP",
       draft,
       resumeAnalysisId: state.resumeAnalysisId,
+      themeId: state.resumeAnalysisId
+        ? this.options.persistence.getAnalysisTheme(state.workspace.workspace_id, state.resumeAnalysisId) ?? themeId
+        : themeId,
     });
   }
 
@@ -254,6 +263,14 @@ export class JourneyController {
     }
   }
 
+  setTheme(themeId: ThemeId): void {
+    const state = this.options.getState();
+    if (state.workspace) this.options.persistence.setTheme(state.workspace.workspace_id, themeId);
+    if (state.currentThemeId !== themeId) {
+      this.options.dispatch({ type: "THEME_CHANGED", themeId });
+    }
+  }
+
   dismissReviewCoachmark(): void {
     const state = this.options.getState();
     if (state.workspace) {
@@ -264,7 +281,7 @@ export class JourneyController {
     }
   }
 
-  navigate(phase: Extract<JourneyPhase, "home" | "history" | "atlas" | "about">): void {
+  navigate(phase: Extract<JourneyPhase, "home" | "history" | "atlas" | "theme" | "about">): void {
     const state = this.options.getState();
     if (phase === "home" && state.activeAnalysis?.terminal && state.workspace) {
       this.options.persistence.clearActiveAnalysis(state.workspace.workspace_id);
@@ -277,6 +294,7 @@ export class JourneyController {
   async startAnalysis(
     draft: PortfolioDraft,
     experienceSource: JourneyExperienceSource = this.options.getState().experienceSource,
+    themeId: ThemeId = this.options.getState().currentThemeId,
   ): Promise<void> {
     const state = this.options.getState();
     if (!state.workspace) return;
@@ -287,7 +305,7 @@ export class JourneyController {
     );
     if (!saved) return;
     try {
-      const started = await this.options.gateway.startAnalysis(experienceSource);
+      const started = await this.options.gateway.startAnalysis(experienceSource, themeId);
       const frozenSource = started.experience_source;
       this.options.persistence.setActiveAnalysis(state.workspace.workspace_id, started.analysis_id);
       this.options.persistence.setAnalysisExperienceSource(
@@ -295,11 +313,18 @@ export class JourneyController {
         started.analysis_id,
         frozenSource,
       );
+      const frozenThemeId = started.theme_id ?? themeId;
+      this.options.persistence.setAnalysisTheme(
+        state.workspace.workspace_id,
+        started.analysis_id,
+        frozenThemeId,
+      );
       this.analysisSources.set(started.analysis_id, frozenSource);
       this.options.dispatch({
         type: "ANALYSIS_STARTED",
         analysisId: started.analysis_id,
         experienceSource: frozenSource,
+        themeId: frozenThemeId,
       });
       await this.refreshAnalysis(started.analysis_id);
     } catch {
@@ -366,7 +391,10 @@ export class JourneyController {
           analysisId,
         ) ?? "random"
       : "random";
-    this.options.dispatch({ type: "ANALYSIS_RESUMED", analysisId, experienceSource });
+    const themeId = state.workspace
+      ? this.options.persistence.getAnalysisTheme(state.workspace.workspace_id, analysisId) ?? state.currentThemeId
+      : state.currentThemeId;
+    this.options.dispatch({ type: "ANALYSIS_RESUMED", analysisId, experienceSource, themeId });
     await this.refreshAnalysis(analysisId);
   }
 
@@ -379,6 +407,17 @@ export class JourneyController {
         this.options.gateway.getAnalysisEvents(analysisId),
       ]);
       const current = this.options.getState().activeAnalysis;
+      const workspaceId = this.options.getState().workspace?.workspace_id;
+      const frozenThemeId = status.theme_id ?? current?.themeId ?? this.options.getState().currentThemeId;
+      if (workspaceId) this.options.persistence.setAnalysisTheme(workspaceId, analysisId, frozenThemeId);
+      if (current?.themeId !== frozenThemeId) {
+        this.options.dispatch({
+          type: "ANALYSIS_RESUMED",
+          analysisId,
+          experienceSource: current?.experienceSource ?? "random",
+          themeId: frozenThemeId,
+        });
+      }
       const connection = current?.connection === "disconnected" || current?.connection === "reconnecting"
         ? "recovered"
         : "connected";

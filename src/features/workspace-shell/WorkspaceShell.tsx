@@ -4,9 +4,9 @@ import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
 import mandongLogo from "../../client/assets/mandong-logo.webp";
-import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
-import nailongLaugh from "../../client/assets/mascot/nailong-laugh.webp";
 import { createExampleDraft } from "../../portfolio/index.js";
+import { themeForId, type ThemeId } from "../../theme/index.js";
+import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
 import { snapshotCurrentDraft } from "../review/model.js";
 import { AnalysisConfirmDialog } from "./AnalysisConfirmDialog.js";
@@ -29,17 +29,19 @@ export interface WorkspaceShellProps {
   onNavigateAbout: () => void;
   onNavigateAtlas?: () => void;
   onNavigateHistory: () => void;
+  onNavigateTheme: () => void;
   onReducedMotionChange?: (enabled: boolean) => void;
   onResumeAnalysis?: (analysisId: string) => void;
   onReviewCoachmarkDismiss?: () => void;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   reducedMotion?: boolean;
   reviewCoachmarkVisible?: boolean;
+  themeId?: ThemeId;
   workspace: WorkspacePublicStatus | null;
 }
 
-export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
-  return snapshotCurrentDraft(draft);
+export function prepareAnalysisSnapshot(draft: PortfolioDraft, themeId?: ThemeId) {
+  return snapshotCurrentDraft(draft, themeId);
 }
 
 export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
@@ -52,14 +54,6 @@ export function formatConstraintValue(value: string): string {
   return value === "unknown" || value === "not_decided" ? "未知／尚未决定" : value;
 }
 
-/** 主题弹幕库：后续拓展主题文案时只需在此追加一条。 */
-export const THEME_DANMAKU = [
-  "我是奶龙！哈哈哈哈哈",
-  "看懂一点，安心一点",
-  "笑一笑，再稳稳看",
-  "先核对，再判断",
-] as const;
-
 /** 弹幕泳道（距海报顶部的百分比）：只走顶部天空带与底部低空带，避开居中的吉祥物。 */
 const DANMAKU_LANES = [6, 12, 18, 78, 84] as const;
 
@@ -68,7 +62,7 @@ const DANMAKU_MAX_CONCURRENT = 8;
 
 interface HomeDanmaku {
   id: number;
-  text: (typeof THEME_DANMAKU)[number];
+  text: string;
   lane: number;
   duration: number;
 }
@@ -88,11 +82,13 @@ export function WorkspaceShell({
   onNavigateAbout,
   onNavigateAtlas,
   onNavigateHistory,
+  onNavigateTheme,
   onResumeAnalysis,
   onReviewCoachmarkDismiss,
   onStartAnalysis,
   reducedMotion: controlledReducedMotion,
   reviewCoachmarkVisible = false,
+  themeId = "eastern_observation",
 }: WorkspaceShellProps) {
   const [uncontrolledDraft, setUncontrolledDraft] = useState(
     () => initialDraft ?? createExampleDraft(),
@@ -110,10 +106,11 @@ export function WorkspaceShell({
   const [danmaku, setDanmaku] = useState<HomeDanmaku[]>([]);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
-  const introPreloadRef = useRef<HTMLImageElement | null>(null);
   const draft = controlledDraft ?? uncontrolledDraft;
   const reduceMotion = controlledReducedMotion ?? uncontrolledReducedMotion;
-  const homeCtaLabel = activeAnalysis ? "复盘进行中" : "进行今日复盘";
+  const theme = themeForId(themeId);
+  const themeAssets = themeClientAssets(themeId);
+  const homeCtaLabel = activeAnalysis ? theme.copy.resumeAction : theme.copy.homeAction;
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -136,15 +133,6 @@ export function WorkspaceShell({
   }, []);
 
   useEffect(() => {
-    if (view !== "home" || introPreloadRef.current) return;
-    const image = new Image();
-    image.decoding = "async";
-    image.fetchPriority = "low";
-    image.src = nailongIntro;
-    introPreloadRef.current = image;
-  }, [view]);
-
-  useEffect(() => {
     if (reduceMotion || !pageVisible || view !== "home") {
       setDanmaku([]);
       return;
@@ -157,14 +145,14 @@ export function WorkspaceShell({
 
     function spawn() {
       // 同一句文案未飞出屏幕前不重复生成
-      const pool = THEME_DANMAKU.filter((text) => !activeTexts.has(text));
+      const pool = theme.copy.danmaku.filter((text) => !activeTexts.has(text));
       if (pool.length === 0) {
         spawnTimer = window.setTimeout(spawn, randomBetween(1200, 2000));
         return;
       }
       const item: HomeDanmaku = {
         id: danmakuId,
-        text: pool[Math.floor(Math.random() * pool.length)] ?? THEME_DANMAKU[0],
+        text: pool[Math.floor(Math.random() * pool.length)] ?? theme.copy.danmaku[0] ?? "先核对，再判断",
         lane: DANMAKU_LANES[Math.floor(Math.random() * DANMAKU_LANES.length)] ?? DANMAKU_LANES[0],
         duration: randomBetween(8, 12),
       };
@@ -185,7 +173,7 @@ export function WorkspaceShell({
       if (spawnTimer !== undefined) window.clearTimeout(spawnTimer);
       for (const timer of expireTimers) window.clearTimeout(timer);
     };
-  }, [pageVisible, reduceMotion, view]);
+  }, [pageVisible, reduceMotion, theme.copy.danmaku, view]);
 
   function activateMascot(trigger: HTMLElement) {
     setReviewTrigger(trigger);
@@ -196,7 +184,7 @@ export function WorkspaceShell({
       return;
     }
 
-    const result = prepareAnalysisSnapshot(draft);
+    const result = prepareAnalysisSnapshot(draft, theme.id);
     if (!result.ok) {
       setMessage(result.message);
       setView("portfolio");
@@ -229,8 +217,10 @@ export function WorkspaceShell({
       {view === "portfolio" ? <BrandBanner /> : null}
       <div
         className="workspace-shell"
+        data-theme={theme.id}
         data-reduce-motion={reduceMotion || undefined}
         data-view={view}
+        style={themeCssVariables(theme.id)}
       >
         <a className="skip-link" href="#workspace-main">
           跳到主要内容
@@ -300,8 +290,8 @@ export function WorkspaceShell({
                 >
                   <button
                     aria-label={activeAnalysis
-                      ? "点击奶龙，继续查看正在运行的复盘"
-                      : "点击奶龙，确认发起今日复盘"}
+                      ? `点击${theme.mascot.name}，继续查看正在运行的复盘`
+                      : `点击${theme.mascot.name}，确认发起今日复盘`}
                     className="workspace-home__hero"
                     onClick={(event) => activateMascot(event.currentTarget)}
                     type="button"
@@ -311,9 +301,9 @@ export function WorkspaceShell({
                       className="workspace-home__mascot"
                       decoding="async"
                       fetchPriority="high"
-                      height="838"
-                      src={nailongLaugh}
-                      width="658"
+                      height={themeAssets.home.height}
+                      src={themeAssets.home.src}
+                      width={themeAssets.home.width}
                     />
                     <span className="workspace-home__hint">{homeCtaLabel}</span>
                   </button>
@@ -364,6 +354,7 @@ export function WorkspaceShell({
           onNavigateAbout={onNavigateAbout}
           onNavigateAtlas={onNavigateAtlas}
           onNavigateHistory={onNavigateHistory}
+          onNavigateTheme={onNavigateTheme}
           onNavigateHome={() => navigate("home")}
           onNavigatePortfolio={() => navigate("portfolio")}
           open={drawerOpen}

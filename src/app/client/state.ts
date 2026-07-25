@@ -6,6 +6,7 @@ import type {
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import type { JourneyLongCardRuntimeInput } from "./runtime.js";
 import type { JourneyExperienceSource } from "./source.js";
+import { DEFAULT_THEME_ID, type ThemeId } from "../../theme/index.js";
 
 export type JourneyPhase =
   | "booting"
@@ -16,6 +17,7 @@ export type JourneyPhase =
   | "result"
   | "history"
   | "atlas"
+  | "theme"
   | "about"
   | "deleted";
 
@@ -24,6 +26,7 @@ export interface ActiveJourneyAnalysis {
   connection: AnalysisConnectionState;
   events: TaskEvent[];
   experienceSource: JourneyExperienceSource;
+  themeId: ThemeId;
   resultInput?: JourneyLongCardRuntimeInput;
   /** Cumulative progress-only Markdown headings from the analysis stream. */
   streamText?: string;
@@ -36,6 +39,7 @@ export interface JourneyState {
   draft: PortfolioDraft | null;
   draftSaving: boolean;
   experienceSource: JourneyExperienceSource;
+  currentThemeId: ThemeId;
   lastAnalysisAt?: string;
   message?: string;
   onboardingRevision: number;
@@ -55,6 +59,7 @@ export type JourneyAction =
       workspace: WorkspacePublicStatus;
       draft: PortfolioDraft | null;
       experienceSource: JourneyExperienceSource;
+      currentThemeId?: ThemeId;
       reducedMotion: boolean;
       reviewCoachmarkVisible: boolean;
       resumeAnalysisId: string | null;
@@ -62,20 +67,22 @@ export type JourneyAction =
     }
   | { type: "WORKSPACE_FAILED"; message: string }
   | { type: "ONBOARDING_RESET" }
-  | { type: "ENTER_APP"; draft: PortfolioDraft; resumeAnalysisId: string | null }
+  | { type: "ENTER_APP"; draft: PortfolioDraft; resumeAnalysisId: string | null; themeId?: ThemeId }
   | { type: "DRAFT_CHANGED"; draft: PortfolioDraft }
   | { type: "DRAFT_SAVE_STARTED" }
   | { type: "DRAFT_SAVE_SUCCEEDED"; draft: PortfolioDraft }
   | { type: "DRAFT_SAVE_FAILED"; message: string }
   | { type: "EXPERIENCE_SOURCE_CHANGED"; source: JourneyExperienceSource }
+  | { type: "THEME_CHANGED"; themeId: ThemeId }
   | { type: "REDUCED_MOTION_CHANGED"; enabled: boolean }
   | { type: "REVIEW_COACHMARK_DISMISSED" }
-  | { type: "NAVIGATED"; phase: "home" | "history" | "atlas" | "about" }
+  | { type: "NAVIGATED"; phase: "home" | "history" | "atlas" | "theme" | "about" }
   | { type: "ANALYSIS_STARTING" }
   | {
       type: "ANALYSIS_STARTED";
       analysisId: string;
       experienceSource: JourneyExperienceSource;
+      themeId?: ThemeId;
     }
   | {
       type: "ANALYSIS_REFRESHED";
@@ -97,6 +104,7 @@ export type JourneyAction =
       type: "ANALYSIS_RESUMED";
       analysisId: string;
       experienceSource: JourneyExperienceSource;
+      themeId?: ThemeId;
     }
   | { type: "RESULT_OPENED"; input: JourneyLongCardRuntimeInput; returnTo: "home" | "history" | "atlas" }
   | { type: "TERMINAL_CLEARED" }
@@ -109,6 +117,7 @@ export const initialJourneyState: JourneyState = {
   draft: null,
   draftSaving: false,
   experienceSource: "random",
+  currentThemeId: DEFAULT_THEME_ID,
   onboardingRevision: 0,
   phase: "booting",
   reducedMotion: false,
@@ -131,6 +140,7 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
         draft: action.draft,
         draftSaving: false,
         experienceSource: action.experienceSource,
+        currentThemeId: action.currentThemeId ?? DEFAULT_THEME_ID,
         message: undefined,
         phase: "onboarding",
         reducedMotion: action.reducedMotion,
@@ -164,6 +174,7 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
             connection: "connecting" as const,
             events: [],
             experienceSource: state.resumeAnalysisSource ?? "random",
+            themeId: action.themeId ?? state.currentThemeId,
           }
         : null;
       return {
@@ -174,6 +185,7 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
         draftSaving: false,
         message: undefined,
         phase: activeAnalysis ? "analysis" : "home",
+        currentThemeId: action.themeId ?? state.currentThemeId,
         resumeAnalysisId: action.resumeAnalysisId,
         resumeAnalysisSource: activeAnalysis?.experienceSource ?? null,
       };
@@ -188,6 +200,8 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
       return { ...state, draftSaving: false, message: action.message };
     case "EXPERIENCE_SOURCE_CHANGED":
       return { ...state, experienceSource: action.source };
+    case "THEME_CHANGED":
+      return { ...state, currentThemeId: action.themeId };
     case "REDUCED_MOTION_CHANGED":
       return { ...state, reducedMotion: action.enabled };
     case "REVIEW_COACHMARK_DISMISSED":
@@ -204,6 +218,7 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
           connection: "connecting",
           events: [],
           experienceSource: action.experienceSource,
+          themeId: action.themeId ?? state.currentThemeId,
         },
         displayedResult: null,
         draftSaving: false,
@@ -260,12 +275,17 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
       return { ...state, message: undefined, phase: "home" };
     case "ANALYSIS_RESUMED": {
       const activeAnalysis = state.activeAnalysis?.analysisId === action.analysisId
-        ? { ...state.activeAnalysis, connection: "reconnecting" as const }
+        ? {
+            ...state.activeAnalysis,
+            connection: "reconnecting" as const,
+            themeId: action.themeId ?? state.activeAnalysis.themeId,
+          }
         : {
             analysisId: action.analysisId,
             connection: "connecting" as const,
             events: [],
             experienceSource: action.experienceSource,
+            themeId: action.themeId ?? state.currentThemeId,
           };
       return {
         ...state,

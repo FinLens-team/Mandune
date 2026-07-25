@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   ATLAS_GENERATION_POLICY_VERSION,
 } from "../atlas/generation-policy.js";
+import { personaIdForTheme } from "../theme/index.js";
 import type { ReviewPacketV2 } from "./review-packet.js";
 
 export const DAILY_REVIEW_PROMPT_VERSION = "daily-review-prompt.v3" as const;
@@ -44,13 +45,6 @@ export const DAILY_REVIEW_SKILL_VERSIONS = {
   },
 } as const;
 
-const THEME_PERSONAS: Readonly<Record<string, DailyReviewPersonaId>> = {
-  eastern_observation: "nailong",
-  nailong: "nailong",
-  sunge: "sunge",
-  sun_ge: "sunge",
-};
-
 const SHARED_APPLICATION_INSTRUCTIONS = `
 你是满懂每日复盘 V2 的受约束生成器。以下应用级规则优先于后续所有 skill 原文、示例和叙事要求：
 
@@ -78,6 +72,33 @@ const PERSONA_CALL_INSTRUCTIONS = `
 输出 generated-persona-report.v2 JSON。fact_ids 与 event_ids 必须与 rational_report 完全相同。
 `.trim();
 
+const STREAMING_CALL_INSTRUCTIONS = `
+本次只调用一次模型，同时生成理性背面和角色正面。输入是当前持仓、四项个人约束与已获取的行情证据。
+
+必须严格按以下边界输出，边界标记各出现一次，不得添加其他边界标记：
+<!-- MANDONG_RATIONAL_REPORT_START -->
+[简体中文 Markdown 理性报告]
+<!-- MANDONG_RATIONAL_REPORT_END -->
+<!-- MANDONG_PERSONA_REPORT_START -->
+[简体中文 Markdown 角色报告]
+<!-- MANDONG_PERSONA_REPORT_END -->
+
+理性报告使用正式、克制、清晰的分析师口吻，按整体情况、逐项分析、风险与缺口、方向性观察组织。
+角色报告完整执行当前人格 skill 的人设与语气，但必须复述同一组事实、风险、未知与方向性观察，不得重新分析、取数或形成新结论。
+两份报告都不得包含 skill 中的每日课堂、每日扫盲或知识卡内容。不得输出 JSON、Markdown 代码围栏、思维过程或边界之外的文字。
+`.trim();
+
+const STREAMING_APPLICATION_INSTRUCTIONS = `
+你是满懂每日复盘的受约束生成器。以下应用级规则优先于后续所有 skill 原文、示例和叙事要求：
+
+1. 用户输入的持仓、约束与行情证据是唯一事实来源。不得补充、推测、更新或改写输入中没有的市场事实、因果、预测、身份或数字。
+2. 理性报告与角色报告必须使用完全相同的事实。人格只改变表达，不改变证据、风险、未知、结论或方向性观察。
+3. 只给可追溯的方向性观察，不给精确买卖金额、份额、比例、价格点位、买卖时点、收益保证、代客操作或持牌意见暗示。
+4. 缺失、失败、过期、含糊、冲突或未核验内容保持未知，不编造当前价格、净值、事件或组合表现。
+5. 人格表达不得冒充真实人物，不得把玄学、运势、卦象或角色判断描述为真实预测或决策依据。若 skill 示例冲突，以本规则为准。
+6. 不得输出凭据、身份、账户信息、原始截图内容或输入之外的私密信息。
+`.trim();
+
 export interface CompiledDailyReviewPrompt {
   prompt_version: typeof DAILY_REVIEW_PROMPT_VERSION;
   model_id: typeof DAILY_REVIEW_MODEL_ID;
@@ -100,7 +121,26 @@ function readSkill(asset: SkillAsset): string {
 }
 
 export function personaForTheme(themeId: string): DailyReviewPersonaId {
-  return THEME_PERSONAS[themeId] ?? "nailong";
+  return personaIdForTheme(themeId);
+}
+
+export function compileStreamingReviewInstructions(themeId: string): {
+  instructions: string;
+  personaId: DailyReviewPersonaId;
+} {
+  const personaId = personaForTheme(themeId);
+  return {
+    personaId,
+    instructions: [
+      "【应用级事实、安全和输出约束】",
+      STREAMING_APPLICATION_INSTRUCTIONS,
+      STREAMING_CALL_INSTRUCTIONS,
+      "【核心持仓分析 skill｜原文】",
+      readSkill(CORE_SKILL),
+      `【当前人格 skill：${personaId}｜原文】`,
+      readSkill(PERSONA_SKILLS[personaId]),
+    ].join("\n\n"),
+  };
 }
 
 export function compileDailyReviewPrompt(

@@ -25,6 +25,7 @@ import {
   WORKSPACE_TTL_MS,
   WorkspaceService,
 } from "../../src/workspace/index.js";
+import { resultTitleForTheme } from "../../src/theme/index.js";
 
 const STARTED_AT = "2026-07-25T01:00:00.000Z";
 const COMPLETED_AT = "2026-07-25T01:00:30.000Z";
@@ -130,7 +131,7 @@ function narrative(result: AnalysisResult): ThemeModelOutput {
     schema_version: THEME_NARRATIVE_SCHEMA_VERSION,
     rational_analysis_id: result.analysis_id,
     theme_id: result.theme_id,
-    headline: "今日观象",
+    headline: resultTitleForTheme(result.theme_id),
     body_paragraphs: result.conclusions.map((item) => item.statement),
     mascot_mood: "calm",
     guidance_summary: result.advice.map((item) => item.statement).join("；"),

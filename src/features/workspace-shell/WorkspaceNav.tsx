@@ -11,6 +11,7 @@ export interface WorkspaceNavProps {
   onNavigatePortfolio: () => void;
   onNavigateHistory: () => void;
   onNavigateAtlas?: () => void;
+  onNavigateTheme: () => void;
   onNavigateAbout: () => void;
 }
 
@@ -26,6 +27,7 @@ export function WorkspaceNav({
   onNavigatePortfolio,
   onNavigateHistory,
   onNavigateAtlas,
+  onNavigateTheme,
   onNavigateAbout,
 }: WorkspaceNavProps) {
   const [open, setOpen] = useState(false);
@@ -50,6 +52,7 @@ export function WorkspaceNav({
         onNavigateAbout={onNavigateAbout}
         onNavigateAtlas={onNavigateAtlas}
         onNavigateHistory={onNavigateHistory}
+        onNavigateTheme={onNavigateTheme}
         onNavigateHome={onNavigateHome}
         onNavigatePortfolio={onNavigatePortfolio}
         open={open}

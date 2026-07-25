@@ -6,7 +6,19 @@ import { getFixture } from "../../src/fixtures/index.js";
 import type { ModelGateway, ModelGatewayResult, ModelStreamRequest } from "../../src/model/index.js";
 
 const NOW = new Date("2026-07-25T09:00:00.000Z");
-const SAFE_RATIONAL = "# 今日分析\n\n当前证据支持继续观察组合变化。\n\n## 对比分析\n\n部分持仓证据仍有缺口，应等待数据确认，并保留最终判断权。";
+const SAFE_RATIONAL = "#市场概览\n\n当前证据支持继续观察组合变化。\n\n##风险边界\n\n部分持仓证据仍有缺口，应等待数据确认，并保留最终判断权。";
+const SAFE_PERSONA = "我用当前角色口吻讲清同一组事实、风险和未知。";
+
+function modelReports(rational: string, persona = SAFE_PERSONA): string {
+  return [
+    "<!-- MANDONG_RATIONAL_REPORT_START -->",
+    rational,
+    "<!-- MANDONG_RATIONAL_REPORT_END -->",
+    "<!-- MANDONG_PERSONA_REPORT_START -->",
+    persona,
+    "<!-- MANDONG_PERSONA_REPORT_END -->",
+  ].join("\n");
+}
 
 function marketEvidence(request: Parameters<MarketEvidenceSource["collectMarketEvidence"]>[0]): EvidenceRecord[] {
   return [{
@@ -51,6 +63,7 @@ async function execute(input: {
   marketEvidenceSource?: MarketEvidenceSource;
   hardDeadlineMs?: number;
   onText?: (text: string) => void;
+  themeId?: "eastern_observation" | "jixing_doudou" | "sunge";
 }) {
   const events: Array<Pick<TaskEvent, "stage" | "state"> & { message?: string }> = [];
   const executor = new StreamingAnalysisExecutor({
@@ -64,7 +77,10 @@ async function execute(input: {
   const result = await executor.execute({
     workspaceId: "workspace-stream-safety",
     analysisId: "analysis-stream-safety",
-    snapshot: structuredClone(getFixture("supported_full").snapshot),
+    snapshot: {
+      ...structuredClone(getFixture("supported_full").snapshot),
+      ...(input.themeId ? { theme_id: input.themeId } : {}),
+    },
     emit: (stage, state, extra) => events.push({
       stage,
       state,
@@ -80,13 +96,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("StreamingAnalysisExecutor production safety", () => {
+describe("StreamingAnalysisExecutor", () => {
   it("validates one model report while streaming only heading progress", async () => {
     const clientText = vi.fn();
     const requests: ModelStreamRequest[] = [];
     const modelGateway = gateway(async (request) => {
       requests.push(request);
-      const text = SAFE_RATIONAL;
+      const text = modelReports(SAFE_RATIONAL);
       for (const delta of [text.slice(0, 8), text.slice(8)]) request.onText(delta);
       return { ok: true, text };
     });
@@ -94,22 +110,33 @@ describe("StreamingAnalysisExecutor production safety", () => {
     const { result, events } = await execute({ modelGateway, onText: clientText });
 
     expect(requests).toHaveLength(1);
-    expect(clientText).toHaveBeenNthCalledWith(1, "# 今日分析\n");
-    expect(clientText).toHaveBeenNthCalledWith(2, "# 对比分析\n");
+    expect(clientText).toHaveBeenNthCalledWith(1, "# 市场概览\n");
+    expect(clientText).toHaveBeenNthCalledWith(2, "# 风险边界\n");
     expect(result).toMatchObject({
       ai_text: SAFE_RATIONAL,
+      ai_theme_text: SAFE_PERSONA,
       source: { kind: "live", is_live: true },
     });
-    expect(result.ai_theme_text).toContain(`<!-- MANDONG_RATIONAL_REPORT_START -->\n${SAFE_RATIONAL}\n<!-- MANDONG_RATIONAL_REPORT_END -->`);
+    expect(events
+      .filter((event) => event.stage === "form_conclusions_and_advice" && event.state === "running")
+      .map((event) => event.message)
+    ).toEqual([
+      "连通API尝试中",
+      "API连通成功",
+      "正在思考...",
+      "正在生成 市场概览",
+      "正在生成 风险边界",
+      "正在生成 角色复盘",
+    ]);
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "running",
-      message: "正在生成 今日分析",
+      message: "正在生成 市场概览",
     }));
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "running",
-      message: "正在生成 对比分析",
+      message: "正在生成 风险边界",
     }));
     expect(events).toContainEqual(expect.objectContaining({
       stage: "discover_and_verify_events",
@@ -123,9 +150,9 @@ describe("StreamingAnalysisExecutor production safety", () => {
     "建议在目标价三千点执行交易。",
     "建议明天卖出。",
     "这样可以保证收益。",
-  ])("rejects forbidden generated content without exposing it: %s", async (unsafeText) => {
+  ])("does not block page progression based on generated wording: %s", async (text) => {
     const clientText = vi.fn();
-    const streamGenerate = vi.fn(successfulStream(unsafeText));
+    const streamGenerate = vi.fn(successfulStream(modelReports(text)));
 
     const { result, events } = await execute({
       modelGateway: gateway(streamGenerate),
@@ -133,14 +160,86 @@ describe("StreamingAnalysisExecutor production safety", () => {
     });
 
     expect(streamGenerate).toHaveBeenCalledTimes(1);
-    expect(clientText).not.toHaveBeenCalled();
+    expect(result.ai_text).toBe(text);
+    expect(result.ai_theme_text).toBe(SAFE_PERSONA);
+    expect(result.analysis.status).not.toBe("unavailable");
+    expect(result.source.kind).toBe("live");
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "form_conclusions_and_advice",
+      state: "succeeded",
+    }));
+  });
+
+  it("uses an unbounded upstream Markdown response instead of rejecting it", async () => {
+    const { result, events } = await execute({
+      modelGateway: gateway(successfulStream(SAFE_RATIONAL)),
+    });
+
+    expect(result.ai_text).toBe(SAFE_RATIONAL);
+    expect(result.ai_theme_text).toBe(SAFE_RATIONAL);
+    expect(result.analysis.status).not.toBe("unavailable");
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "form_conclusions_and_advice",
+      state: "succeeded",
+    }));
+  });
+
+  it("fails only when the model returns no report text", async () => {
+    const { result, events } = await execute({
+      modelGateway: gateway(successfulStream("  \n")),
+    });
+
     expect(result.ai_text).toBeUndefined();
-    expect(result.ai_theme_text).toBeUndefined();
     expect(result.analysis.status).toBe("unavailable");
-    expect(result.source.kind).toBe("unavailable");
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "failed",
+      message: "模型没有返回可展示的分析正文。",
+    }));
+  });
+
+  it("keeps progressing when bounded report sections are incomplete", async () => {
+    const incomplete = [
+      "<!-- MANDONG_RATIONAL_REPORT_START -->",
+      SAFE_RATIONAL,
+      "<!-- MANDONG_RATIONAL_REPORT_END -->",
+    ].join("\n");
+    const { result, events } = await execute({
+      modelGateway: gateway(successfulStream(incomplete)),
+    });
+
+    expect(result.ai_text).toBe(incomplete);
+    expect(result.ai_theme_text).toBe(incomplete);
+    expect(result.analysis.status).not.toBe("unavailable");
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "form_conclusions_and_advice",
+      state: "succeeded",
+    }));
+  });
+
+  it.each([
+    ["eastern_observation", "奶龙", "你是**奶龙**", "我是龙"],
+    ["jixing_doudou", "兜兜", "自称统一用「贫道」", "吉星高照"],
+    ["sunge", "孙哥", "兄弟们", "孙哥"],
+  ] as const)("loads the %s persona skill in the same model call", async (themeId, label, skillPhrase, themeLabel) => {
+    const requests: ModelStreamRequest[] = [];
+    const modelGateway = gateway(async (request) => {
+      requests.push(request);
+      const text = modelReports(SAFE_RATIONAL, `# ${label}复盘\n\n角色正文。`);
+      request.onText(text);
+      return { ok: true, text };
+    });
+
+    const { result, events } = await execute({ modelGateway, themeId });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.instructions).toContain(skillPhrase);
+    expect(result.ai_text).toBe(SAFE_RATIONAL);
+    expect(result.ai_theme_text).toContain(`${label}复盘`);
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "render_theme_and_validate_output",
+      state: "running",
+      message: `校验“${themeLabel}”主题表达。`,
     }));
   });
 
@@ -151,7 +250,7 @@ describe("StreamingAnalysisExecutor production safety", () => {
     "当前不建议立即加仓。",
   ])("allows ordinary analysis wording without rejecting the report: %s", async (text) => {
     const { result } = await execute({
-      modelGateway: gateway(successfulStream(text)),
+      modelGateway: gateway(successfulStream(modelReports(text))),
     });
 
     expect(result.ai_text).toBe(text);
@@ -161,7 +260,7 @@ describe("StreamingAnalysisExecutor production safety", () => {
   it("redacts holding names and symbols from streamed and persisted heading progress", async () => {
     const clientText = vi.fn();
     const holding = getFixture("supported_full").snapshot.lines[0]!;
-    const text = `# ${holding.name} ${holding.symbol} 对比\n\n继续观察。`;
+    const text = modelReports(`# ${holding.name} ${holding.symbol} 对比\n\n继续观察。`);
     const { events } = await execute({
       modelGateway: gateway(successfulStream(text)),
       onText: clientText,
@@ -180,7 +279,7 @@ describe("StreamingAnalysisExecutor production safety", () => {
       marketSignal = request.signal;
       return new Promise(() => undefined);
     });
-    const streamGenerate = vi.fn(successfulStream(SAFE_RATIONAL));
+    const streamGenerate = vi.fn(successfulStream(modelReports(SAFE_RATIONAL)));
 
     const pending = execute({
       modelGateway: gateway(streamGenerate),
@@ -207,8 +306,9 @@ describe("StreamingAnalysisExecutor production safety", () => {
       signals.push(request.signal);
       return new Promise<Awaited<ReturnType<NonNullable<ModelGateway["streamGenerate"]>>>>((resolve) => {
         setTimeout(() => {
-          request.onText(SAFE_RATIONAL);
-          resolve({ ok: true, text: SAFE_RATIONAL });
+          const text = modelReports(SAFE_RATIONAL);
+          request.onText(text);
+          resolve({ ok: true, text });
         }, 100);
       });
     });

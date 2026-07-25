@@ -6,6 +6,7 @@
 - `gateway.ts` is the same-origin, Cookie-authorized HTTP boundary. The browser never receives or stores the workspace locator.
 - `runtime.ts` is the final display gate for `LongCard`: snapshot, analysis, constraints, theme, narrative IDs, and guidance must remain version-consistent.
 - Browser storage is optional and workspace-scoped. It stores onboarding completion, reduced-motion preference, the first-S4 coachmark dismissal, the active analysis ID, current experience source, and an `analysis_id`-keyed recovery hint; durable drafts, tasks, results, and history remain server-owned.
+- The current theme is a workspace-scoped browser preference. The theme switcher updates it only after explicit confirmation; analysis creation freezes that value into the server-owned snapshot, so changing the current theme never rewrites an active or historical report.
 
 ## Conventions
 

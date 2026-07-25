@@ -14,16 +14,6 @@
    ═══════════════════════════════════════════════════════════ */
 
 .workspace-shell {
-  --poster-bg: #46403b;
-  --poster-bg-deep: #38332f;
-  --poster-surface: #474139;
-  --poster-ink: #f7f2e9;
-  --poster-ink-soft: rgb(247 242 233 / 82%);
-  --poster-gold: #f2c14e;
-  --poster-pill-bg: rgb(255 254 250 / 96%);
-  --poster-pill-ink: #3b3530;
-  --poster-focus: #ffd97a;
-  --poster-line: rgb(247 242 233 / 14%);
   --poster-risk: #e89a90;
 
   min-height: 100vh;
@@ -235,6 +225,17 @@
   pointer-events: none;
   user-select: none;
   transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.workspace-shell[data-theme="jixing_doudou"] .workspace-home__hero,
+.workspace-shell[data-theme="sunge"] .workspace-home__hero {
+  width: min(68vw, 24rem);
+}
+
+.workspace-shell[data-theme="jixing_doudou"] .workspace-home__mascot,
+.workspace-shell[data-theme="sunge"] .workspace-home__mascot {
+  aspect-ratio: 1;
+  object-fit: contain;
 }
 
 /* Natural action hint under the mascot — plain text, not a button */
@@ -527,6 +528,7 @@
 .workspace-drawer__nav > button:nth-child(3) { animation-delay: 180ms; }
 .workspace-drawer__nav > button:nth-child(4) { animation-delay: 230ms; }
 .workspace-drawer__nav > button:nth-child(5) { animation-delay: 280ms; }
+.workspace-drawer__nav > button:nth-child(6) { animation-delay: 330ms; }
 
 @keyframes drawer-item-in {
   from { opacity: 0; transform: translate3d(-12px, 0, 0); }

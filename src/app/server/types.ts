@@ -23,9 +23,9 @@ export interface AnalysisSourceLabel {
 export interface AnalysisExecution {
   analysis: AnalysisResult;
   narrative?: ThemeModelOutput;
-  /** Relaxed Demo mode: free-form rational report streamed to the client. */
+  /** Relaxed Demo mode: validated free-form rational report. */
   ai_text?: string;
-  /** Relaxed Demo mode: observation-theme rewrite of the same report. */
+  /** Relaxed Demo mode: persona-skill rendering of the same report facts. */
   ai_theme_text?: string;
   review_packet?: ReviewPacketV2;
   generated_review?: ValidatedGeneratedDailyReviewV2;

@@ -24,6 +24,8 @@ describe("daily review prompt compiler", () => {
     expect(personaForTheme("eastern_observation")).toBe("nailong");
     expect(personaForTheme("nailong")).toBe("nailong");
     expect(personaForTheme("sun_ge")).toBe("sunge");
+    expect(personaForTheme("jixing_doudou")).toBe("doudou");
+    expect(personaForTheme("sunge")).toBe("sunge");
   });
 
   it("keeps every FINAL skill byte-identical to the reviewed intake", () => {

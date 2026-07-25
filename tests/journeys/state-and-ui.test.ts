@@ -12,6 +12,7 @@ import {
   initialJourneyState,
   journeyReducer,
 } from "../../src/app/client/index.js";
+import type { ThemeId } from "../../src/theme/index.js";
 
 interface OnboardingScreensModule {
   SourceSelectionScreen: ComponentType<{
@@ -23,10 +24,8 @@ interface OnboardingScreensModule {
   }>;
   ThemeSelectionScreen: ComponentType<{
     onContinue: () => void;
-    onPreview: (index: number) => void;
-    onSelect: () => void;
-    previewMessage: string | null;
-    selected: boolean;
+    onSelect: (themeId: ThemeId) => void;
+    selectedThemeId: ThemeId;
     titleRef: RefObject<HTMLHeadingElement | null>;
   }>;
 }
@@ -78,6 +77,7 @@ describe("journey identity and pure state", () => {
       },
       draft: null,
       experienceSource: "edited",
+      currentThemeId: "jixing_doudou",
       reducedMotion: true,
       reviewCoachmarkVisible: false,
       resumeAnalysisId: "analysis_resume",
@@ -90,6 +90,7 @@ describe("journey identity and pure state", () => {
       type: "ENTER_APP",
       draft: identityToPortfolioDraft(identity),
       resumeAnalysisId: "analysis_resume",
+      themeId: "jixing_doudou",
     });
     expect(state).toMatchObject({
       phase: "analysis",
@@ -104,6 +105,7 @@ describe("journey identity and pure state", () => {
       type: "ANALYSIS_RESUMED",
       analysisId: "analysis_resume",
       experienceSource: "random",
+      themeId: "jixing_doudou",
     });
     expect(state).toMatchObject({ phase: "analysis", activeAnalysis: { connection: "reconnecting" } });
 
@@ -139,6 +141,8 @@ describe("journey local preferences", () => {
     persistence.setExperienceSource("workspace_a", "edited");
     persistence.setAnalysisExperienceSource("workspace_a", "analysis_safe", "random");
     persistence.setReviewCoachmarkDismissed("workspace_a");
+    persistence.setTheme("workspace_a", "sunge");
+    persistence.setAnalysisTheme("workspace_a", "analysis_safe", "jixing_doudou");
     persistence.setActiveAnalysis("workspace_b", "analysis_other");
     expect(persistence.getReducedMotion("workspace_a")).toBe(true);
     expect(persistence.getActiveAnalysis("workspace_a")).toBe("analysis_safe");
@@ -146,6 +150,8 @@ describe("journey local preferences", () => {
     expect(persistence.getExperienceSource("workspace_a")).toBe("edited");
     expect(persistence.getAnalysisExperienceSource("workspace_a", "analysis_safe")).toBe("random");
     expect(persistence.getReviewCoachmarkDismissed("workspace_a")).toBe(true);
+    expect(persistence.getTheme("workspace_a")).toBe("sunge");
+    expect(persistence.getAnalysisTheme("workspace_a", "analysis_safe")).toBe("jixing_doudou");
     expect(JSON.stringify([...data.entries()])).not.toContain("510300.SH");
 
     persistence.clearWorkspace("workspace_a");
@@ -154,6 +160,8 @@ describe("journey local preferences", () => {
     expect(persistence.getExperienceSource("workspace_a")).toBeNull();
     expect(persistence.getAnalysisExperienceSource("workspace_a", "analysis_safe")).toBeNull();
     expect(persistence.getReviewCoachmarkDismissed("workspace_a")).toBe(false);
+    expect(persistence.getTheme("workspace_a")).toBeNull();
+    expect(persistence.getAnalysisTheme("workspace_a", "analysis_safe")).toBeNull();
     expect(persistence.getActiveAnalysis("workspace_b")).toBe("analysis_other");
   });
 
@@ -167,15 +175,13 @@ describe("journey local preferences", () => {
   });
 });
 
-describe("ordinary-entry locked placeholders", () => {
-  it("keeps three theme previews locked and manual/screenshot sources disabled", async () => {
+describe("ordinary-entry theme selection", () => {
+  it("offers three themes while manual and screenshot sources stay disabled", async () => {
     const { SourceSelectionScreen, ThemeSelectionScreen } = await loadOnboardingScreens();
     const theme = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
       onContinue: vi.fn(),
-      onPreview: vi.fn(),
       onSelect: vi.fn(),
-      previewMessage: null,
-      selected: true,
+      selectedThemeId: "eastern_observation",
       titleRef: { current: null },
     }));
     const source = renderToStaticMarkup(createElement(SourceSelectionScreen, {
@@ -186,8 +192,10 @@ describe("ordinary-entry locked placeholders", () => {
       titleRef: { current: null },
     }));
 
-    expect(theme.match(/暂未开放/g)).toHaveLength(3);
+    expect(theme.match(/暂未开放/g)).toHaveLength(1);
     expect(theme).toContain("我是龙");
+    expect(theme).toContain("吉星高照");
+    expect(theme).toContain("孙哥");
     expect(source).toContain("手动填写持仓");
     expect(source).toContain("截图识别持仓");
     expect(source.match(/即将开放/g)).toHaveLength(2);

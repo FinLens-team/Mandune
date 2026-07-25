@@ -32,11 +32,11 @@ function event(
 describe("analysis progress projection", () => {
   it("derives unique progress messages from streamed Markdown headings", () => {
     expect(streamHeadingMessages(
-      "# 今日分析\n正文\n## **对比分析**\n## 对比分析\n### [风险说明](#risk)",
+      "#市场概览\n正文\n## **风险边界**\n##风险边界\n###[数据缺口](#gaps)",
     )).toEqual([
-      "正在生成 今日分析",
-      "正在生成 对比分析",
-      "正在生成 风险说明",
+      "正在生成 市场概览",
+      "正在生成 风险边界",
+      "正在生成 数据缺口",
     ]);
     expect(streamHeadingMessages("# 尚未换行")).toEqual(["正在生成 尚未换行"]);
   });

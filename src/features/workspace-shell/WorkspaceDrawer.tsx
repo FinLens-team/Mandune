@@ -5,6 +5,7 @@ import {
   History,
   Home,
   LibraryBig,
+  SwatchBook,
 } from "lucide-react";
 import { BrandLockup } from "../../client/ui/index.js";
 import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
@@ -12,7 +13,7 @@ import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./foc
 export type WorkspaceView = "home" | "portfolio";
 
 /** All destinations reachable from the persistent workspace drawer. */
-export type WorkspacePage = "home" | "portfolio" | "history" | "atlas" | "about";
+export type WorkspacePage = "home" | "portfolio" | "history" | "atlas" | "theme" | "about";
 
 export interface WorkspaceDrawerProps {
   open: boolean;
@@ -24,6 +25,7 @@ export interface WorkspaceDrawerProps {
   onNavigatePortfolio: () => void;
   onNavigateHistory: () => void;
   onNavigateAtlas?: () => void;
+  onNavigateTheme: () => void;
   onNavigateAbout: () => void;
 }
 
@@ -66,6 +68,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
     { action: props.onNavigatePortfolio, icon: BriefcaseBusiness, label: "数据管理", page: "portfolio" },
     { action: props.onNavigateHistory, icon: History, label: "历史记录", page: "history" },
     { action: props.onNavigateAtlas, icon: LibraryBig, label: "满懂图鉴", page: "atlas" },
+    { action: props.onNavigateTheme, icon: SwatchBook, label: "主题切换", page: "theme" },
     { action: props.onNavigateAbout, icon: CircleHelp, label: "关于项目", page: "about" },
   ];
 

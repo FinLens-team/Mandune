@@ -88,7 +88,7 @@ export function streamHeadingMessages(text: string | undefined): string[] {
   const seen = new Set<string>();
   const messages: string[] = [];
   for (const line of text.split(/\r?\n/u)) {
-    const match = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
+    const match = /^\s{0,3}#{1,6}[\t ]*(.+?)\s*#*\s*$/u.exec(line);
     const title = match?.[1]
       ?.replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
       .replace(/[*_`~#]/gu, "")

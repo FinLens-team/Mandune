@@ -13,6 +13,7 @@ import {
   type HistoryExperienceSource,
 } from "../../history/index.js";
 import { createSnapshotFromDraft } from "../../portfolio/index.js";
+import { DEFAULT_THEME_ID, type ThemeId } from "../../theme/index.js";
 import { FixtureAnalysisExecutor } from "./fixture-executor.js";
 import type {
   AnalysisExecutor,
@@ -71,11 +72,12 @@ export class JourneyAnalysisService {
   async start(
     workspaceId: string,
     experienceSource: HistoryExperienceSource,
+    themeId: ThemeId = DEFAULT_THEME_ID,
   ): Promise<{ created: boolean; run: StoredAnalysisRun }> {
     if (!isHistoryExperienceSource(experienceSource)) throw new JourneyInputError("invalid_draft");
     const draft = await this.getDraft(workspaceId);
     if (!draft) throw new JourneyInputError("no_current_draft");
-    const snapshotResult = createSnapshotFromDraft(draft);
+    const snapshotResult = createSnapshotFromDraft(draft, { theme_id: themeId });
     if (!snapshotResult.ok) throw new JourneyInputError("no_usable_lines");
     const snapshot = structuredClone(snapshotResult.snapshot);
     if (!validatePortfolioSnapshot(snapshot).ok) throw new JourneyInputError("invalid_draft");

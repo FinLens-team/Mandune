@@ -18,9 +18,11 @@ import {
   ThemeSelectionScreen,
 } from "./Screens.js";
 import type { OnboardingExit, OnboardingStep } from "./types.js";
+import { DEFAULT_THEME_ID, type ThemeId } from "../../theme/index.js";
 import "./styles.css";
 
 export interface OnboardingFlowProps {
+  initialThemeId?: ThemeId;
   workspaceId: string;
   onEnterApp: (exit: OnboardingExit) => void;
   storage?: OnboardingStorage | null;
@@ -30,6 +32,7 @@ export interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({
+  initialThemeId = DEFAULT_THEME_ID,
   workspaceId,
   onEnterApp,
   storage = getBrowserOnboardingStorage(),
@@ -41,9 +44,7 @@ export function OnboardingFlow({
   const [step, setStep] = useState<OnboardingStep>("s0");
   const [splashLeaving, setSplashLeaving] = useState(false);
   const [splashReady, setSplashReady] = useState(false);
-  const [themeSelected, setThemeSelected] = useState(true);
-  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(2);
+  const [selectedThemeId, setSelectedThemeId] = useState<ThemeId>(initialThemeId);
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
   const [identity, setIdentity] = useState<DemoExperienceIdentity | null>(null);
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
@@ -102,11 +103,11 @@ export function OnboardingFlow({
     if (returningVisit.current) {
       notifiedReturningVisit.current = true;
       setStep("complete");
-      onEnterApp({ identity: null, returning: true });
+      onEnterApp({ identity: null, returning: true, themeId: selectedThemeId });
     } else {
       setStep("s1");
     }
-  }, [splashLeaving, onEnterApp]);
+  }, [selectedThemeId, splashLeaving, onEnterApp]);
 
   useEffect(() => {
     if (step === "s1" || step === "s2" || step === "s3") {
@@ -133,7 +134,7 @@ export function OnboardingFlow({
     markOnboardingCompleted(storage, workspaceId, now().toISOString());
     notifiedReturningVisit.current = true;
     setStep("complete");
-    onEnterApp({ identity, returning: false });
+    onEnterApp({ identity, returning: false, themeId: selectedThemeId });
   }
 
   return (
@@ -162,23 +163,10 @@ export function OnboardingFlow({
           <div className={`onboarding-page onboarding-page--${motionDirection}`}>
             <ThemeSelectionScreen
               onContinue={() => {
-                if (themeSelected) goToStep("s2", "forward");
+                goToStep("s2", "forward");
               }}
-              onPreview={(index) => {
-                setThemeSelected(false);
-                setPreviewIndex(index);
-                setPreviewMessage(null);
-              }}
-              onSelect={() => {
-                // 奶龙主题默认选中；再次点击可取消（点锁定预览卡同样会取消）
-                const next = !themeSelected;
-                setThemeSelected(next);
-                setPreviewIndex(next ? 2 : null);
-                setPreviewMessage(null);
-              }}
-              previewIndex={previewIndex}
-              previewMessage={previewMessage}
-              selected={themeSelected}
+              onSelect={setSelectedThemeId}
+              selectedThemeId={selectedThemeId}
               titleRef={titleRef}
             />
           </div>

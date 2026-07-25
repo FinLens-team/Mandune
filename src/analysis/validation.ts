@@ -13,6 +13,7 @@ import {
   type ValidationIssue,
 } from "../contracts/index.js";
 import { hasPrivatePayload, type JsonSchema } from "../model/index.js";
+import { resultTitleForTheme } from "../theme/index.js";
 
 export const RATIONAL_ANALYSIS_SCHEMA_VERSION = "rational-analysis.v1";
 export const THEME_NARRATIVE_SCHEMA_VERSION = "theme-narrative.v1";
@@ -145,9 +146,6 @@ const FORBIDDEN_GENERATED_CONTENT = /(保证收益|稳赚|必涨|必跌|胜率\s
 const FORBIDDEN_THEME_TRADE = /(买入|卖出|建仓|清仓|加仓|减仓)[^。；]{0,16}\d|目标价\s*\d|仓位[^。；]{0,8}\d+(\.\d+)?\s*%/;
 const FORBIDDEN_TRADE_COMMAND = /(买入|卖出|建仓|清仓|加仓|减仓)/;
 const FORBIDDEN_PREDICTION_OR_CAUSAL_CERTAINTY = /(明日|下个交易日|未来).{0,12}(上涨|下跌|涨|跌)|一定会|必然(导致|带来)|确保.{0,8}(收益|回报)/;
-const SAFE_THEME_HEADLINES: Record<string, string> = {
-  eastern_observation: "今日观象",
-};
 const SAFE_MASCOT_MOODS = new Set(["calm", "attentive", "reflective"]);
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -285,7 +283,7 @@ export function validateThemeModelOutput(
     !strings(value.conclusion_ids) ||
     !strings(value.advice_ids)
   ) return false;
-  if (SAFE_THEME_HEADLINES[value.theme_id] !== value.headline || !SAFE_MASCOT_MOODS.has(value.mascot_mood)) return false;
+  if (resultTitleForTheme(value.theme_id) !== value.headline || !SAFE_MASCOT_MOODS.has(value.mascot_mood)) return false;
   const expectedGuidance = rational.advice.map((item) => item.statement).join("；");
   if (value.guidance_summary !== expectedGuidance || !generatedTextIsAllowed(value.guidance_summary)) return false;
   if (![value.headline, ...value.body_paragraphs, value.mascot_mood].every(generatedTextIsAllowed)) return false;

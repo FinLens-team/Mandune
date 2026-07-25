@@ -143,6 +143,7 @@ describe("journey HTTP gateway privacy and isolation", () => {
         analysis_id: "analysis_source",
         experience_source: "edited",
         reused_active: false,
+        theme_id: "eastern_observation",
       }, 202);
     });
 
@@ -150,6 +151,7 @@ describe("journey HTTP gateway privacy and isolation", () => {
       analysis_id: "analysis_source",
       experience_source: "edited",
       reused_active: false,
+      theme_id: "eastern_observation",
     });
     expect(requestBody).toEqual({ experience_source: "edited" });
   });

@@ -16,6 +16,7 @@ import themeCardOne from "../../client/assets/themes/theme-card-1.webp";
 import themeCardTwo from "../../client/assets/themes/theme-card-2.webp";
 import themeCardThree from "../../client/assets/themes/theme-card-3.webp";
 import themeCardFour from "../../client/assets/themes/theme-card-4.webp";
+import type { ThemeId } from "../../theme/index.js";
 
 interface ScreenTitleProps {
   titleRef?: Ref<HTMLHeadingElement>;
@@ -53,11 +54,8 @@ export function SplashScreen({ returning = false, leaving = false }: SplashScree
 }
 
 export interface ThemeSelectionScreenProps extends ScreenTitleProps {
-  selected: boolean;
-  previewMessage: string | null;
-  previewIndex?: number | null;
-  onSelect: () => void;
-  onPreview: (index: number) => void;
+  selectedThemeId: ThemeId;
+  onSelect: (themeId: ThemeId) => void;
   onContinue: () => void;
 }
 
@@ -78,24 +76,27 @@ const THEME_CARDS = [
     image: themeCardTwo,
     index: 2,
     name: "我是龙",
+    themeId: "eastern_observation",
     width: 366,
   },
   {
-    available: false,
+    available: true,
     description: "吉星高照，和AI一起寻找值得留意的信号",
     height: 622,
     image: themeCardThree,
     index: 3,
     name: "吉星高照",
+    themeId: "jixing_doudou",
     width: 364,
   },
   {
-    available: false,
+    available: true,
     description: "能和AI聊天就不要和人类聊天",
     height: 1244,
     image: themeCardFour,
     index: 4,
     name: "孙哥",
+    themeId: "sunge",
     width: 730,
   },
 ] as const;
@@ -139,14 +140,14 @@ function themeCardMotion(index: number, focusedIndex: number | null): CSSPropert
 }
 
 export function ThemeSelectionScreen({
-  selected,
-  previewIndex = null,
+  selectedThemeId,
   titleRef,
   onSelect,
-  onPreview,
   onContinue,
 }: ThemeSelectionScreenProps) {
-  const focusedIndex = selected ? 2 : previewIndex;
+  const focusedIndex = THEME_CARDS.find((theme) =>
+    theme.available && theme.themeId === selectedThemeId
+  )?.index ?? 2;
   const focusedTheme = THEME_CARDS.find((theme) => theme.index === focusedIndex) ?? null;
 
   return (
@@ -163,11 +164,11 @@ export function ThemeSelectionScreen({
           {THEME_CARDS.map((theme) => (
             <button
               aria-label={theme.available ? `选择${theme.name}主题` : `查看${theme.name}主题预览，暂未开放`}
-              aria-pressed={theme.available ? selected : undefined}
+              aria-pressed={theme.available ? theme.themeId === selectedThemeId : undefined}
               className={`onboarding-theme-card ${theme.available ? "onboarding-theme-card--available" : "onboarding-theme-card--locked"}${focusedIndex === theme.index ? " is-focused" : ""}`}
               data-theme-index={theme.index}
               key={theme.index}
-              onClick={theme.available ? onSelect : () => onPreview(theme.index)}
+              onClick={theme.available ? () => onSelect(theme.themeId) : undefined}
               style={themeCardMotion(theme.index, focusedIndex)}
               type="button"
             >
@@ -190,17 +191,17 @@ export function ThemeSelectionScreen({
         {focusedTheme ? (
           <>
             <div>
-              <span>{focusedTheme.available ? "当前可用" : "主题预览"}</span>
+              <span>{focusedTheme.available ? "当前主题" : "主题预览"}</span>
               <strong>{focusedTheme.name}</strong>
             </div>
             <p>{focusedTheme.description}</p>
-            {!focusedTheme.available ? <span className="onboarding-theme-detail__lock"><LockKeyhole aria-hidden="true" size={14} />暂未开放</span> : null}
+            {!focusedTheme.available ? <span className="onboarding-theme-detail__lock">暂未开放</span> : null}
           </>
         ) : <p>点击一张卡片查看主题介绍</p>}
       </div>
 
       <footer className="onboarding-theme-footer">
-        <Button disabled={!selected} onClick={onContinue} variant="primary">
+        <Button onClick={onContinue} variant="primary">
           下一步 <ArrowRight aria-hidden="true" size={18} />
         </Button>
       </footer>

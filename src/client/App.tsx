@@ -17,6 +17,7 @@ import { HistoryView } from "../features/history-view/index.js";
 import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
+import { ThemeSwitcher } from "../features/theme-switcher/index.js";
 import { WorkspaceNav, WorkspaceShell } from "../features/workspace-shell/index.js";
 import "../app/client/styles.css";
 
@@ -104,13 +105,14 @@ export function App(props: AppProps = {}) {
     controller.navigate("home");
   }
 
-  function workspaceNav(currentPage: "history" | "atlas" | "about") {
+  function workspaceNav(currentPage: "history" | "atlas" | "theme" | "about") {
     return (
       <WorkspaceNav
         currentPage={currentPage}
         onNavigateAbout={() => controller.navigate("about")}
         onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
         onNavigateHistory={() => controller.navigate("history")}
+        onNavigateTheme={() => controller.navigate("theme")}
         onNavigateHome={() => goHome("home")}
         onNavigatePortfolio={() => goHome("portfolio")}
         reduceMotion={state.reducedMotion}
@@ -152,9 +154,11 @@ export function App(props: AppProps = {}) {
             ? "#workspace-home-heading"
             : state.phase === "history"
               ? "#history-list-heading, #history-empty-heading"
-              : state.phase === "about"
-                ? "#about-heading"
-                : ".journey-state h1";
+               : state.phase === "about"
+                 ? "#about-heading"
+                : state.phase === "theme"
+                  ? "#theme-switcher-heading"
+                 : ".journey-state h1";
       document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
@@ -190,6 +194,7 @@ export function App(props: AppProps = {}) {
   if (state.phase === "onboarding" && state.workspace) {
     return (
       <OnboardingFlow
+        initialThemeId={state.currentThemeId}
         key={`${state.workspace.workspace_id}:${state.onboardingRevision}`}
         onEnterApp={(exit) => void controller.enterApp(exit)}
         reducedMotion={state.reducedMotion}
@@ -212,6 +217,7 @@ export function App(props: AppProps = {}) {
           reduceMotion={state.reducedMotion}
           streamText={state.activeAnalysis.streamText}
           terminal={state.activeAnalysis.terminal}
+          themeId={state.activeAnalysis.themeId}
         />
       </div>
     );
@@ -305,6 +311,25 @@ export function App(props: AppProps = {}) {
     );
   }
 
+  if (state.phase === "theme" && state.workspace) {
+    return (
+      <div className="journey-secondary">
+        <BrandBanner />
+        <main className="journey-secondary__page" id="main">
+          <ThemeSwitcher
+            currentThemeId={state.currentThemeId}
+            onConfirm={(themeId) => {
+              controller.setTheme(themeId);
+              goHome("home");
+            }}
+            reducedMotion={state.reducedMotion}
+          />
+        </main>
+        {workspaceNav("theme")}
+      </div>
+    );
+  }
+
   if (state.phase === "home" && state.workspace && state.draft) {
     return (
       <div className="journey-workspace">
@@ -314,6 +339,7 @@ export function App(props: AppProps = {}) {
             ? { analysisId: state.activeAnalysis.analysisId }
             : undefined}
           draft={state.draft}
+          themeId={state.currentThemeId}
           experienceSource={state.experienceSource}
           lastAnalysisAt={state.lastAnalysisAt}
           initialView={homeEntryView}
@@ -322,6 +348,7 @@ export function App(props: AppProps = {}) {
           onExperienceSourceChange={(source) => controller.setExperienceSource(source)}
           onNavigateAbout={() => controller.navigate("about")}
           onNavigateHistory={() => controller.navigate("history")}
+          onNavigateTheme={() => controller.navigate("theme")}
           onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
           onReducedMotionChange={(enabled) => controller.setReducedMotion(enabled)}
           onReviewCoachmarkDismiss={() => controller.dismissReviewCoachmark()}

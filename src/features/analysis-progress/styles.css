@@ -14,8 +14,8 @@
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--color-bg-base);
-  color: var(--color-text-primary);
+  background: var(--theme-bg);
+  color: var(--theme-ink);
 }
 
 .analysis-progress__main {
@@ -44,7 +44,7 @@
 
 .analysis-progress__step {
   margin: 0;
-  color: var(--color-observed);
+  color: var(--theme-accent);
   font-size: var(--font-size-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -65,7 +65,7 @@
 .analysis-progress__lede {
   max-width: 65ch;
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--theme-ink-soft);
   text-wrap: pretty;
 }
 
@@ -73,12 +73,12 @@
 
 .analysis-progress__panel {
   padding: var(--space-8) var(--space-6);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--theme-border);
   border-radius: var(--radius-md);
   display: grid;
   justify-items: center;
   gap: var(--space-6);
-  background: var(--color-bg-surface);
+  background: var(--theme-surface);
   box-shadow: var(--shadow-paper);
   animation: analysis-block-in 420ms 90ms var(--ease-enter) both;
 }
@@ -93,16 +93,16 @@
   width: 26px;
   height: 4px;
   border-radius: var(--radius-full);
-  background: var(--color-border-subtle);
+  background: var(--theme-border);
   transition: background-color var(--duration-base) var(--ease-enter);
 }
 
 .analysis-progress__steps span[data-state="done"] {
-  background: var(--color-observed);
+  background: var(--theme-accent);
 }
 
 .analysis-progress__steps span[data-state="current"] {
-  background: var(--color-observed);
+  background: var(--theme-accent);
   animation: analysis-step-pulse 1.1s ease-in-out infinite alternate;
 }
 
@@ -132,8 +132,8 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    rgb(242 193 78 / 22%),
-    rgb(242 193 78 / 8%) 55%,
+    color-mix(in srgb, var(--theme-accent) 22%, transparent),
+    color-mix(in srgb, var(--theme-accent) 8%, transparent) 55%,
     transparent 72%
   );
 }
@@ -149,6 +149,11 @@
   user-select: none;
 }
 
+.analysis-progress[data-theme="sunge"] video.analysis-progress__mascot {
+  border-radius: 50%;
+  background: #000;
+}
+
 /* Idle breathing while the analysis runs (home cadence: subtle). */
 .analysis-progress__stage[data-idle="true"] .analysis-progress__mascot {
   animation: mascot-breathe 3.6s ease-in-out infinite;
@@ -159,14 +164,15 @@
   50% { transform: translate3d(0, -4px, 0) scale(1.006); }
 }
 
-/* ─── Rolling work log: three lines, newest bottom ─── */
+/* ─── Rolling generation history: up to eight lines, newest bottom ─── */
 
 .analysis-progress__log {
   width: 100%;
-  /* Reserve three lines so appended lines never shift the mascot. */
-  min-height: calc(3 * 22px + 2 * var(--space-2));
+  min-height: calc(4 * 22px + 3 * var(--space-2));
+  max-height: calc(8 * 22px + 7 * var(--space-2));
   margin: 0;
   padding: 0;
+  overflow-y: auto;
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -176,7 +182,7 @@
 
 .analysis-progress__log-line {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--theme-ink-soft);
   font-size: var(--font-size-sm);
   line-height: 22px;
   text-align: center;
@@ -200,11 +206,11 @@ opacity (an animation fill would pin them back to full strength). */
 }
 
 .analysis-progress__log-line[data-placeholder="true"] {
-  color: var(--color-text-tertiary);
+  color: var(--theme-ink-soft);
 }
 
 .analysis-progress__log-line[data-latest="true"] {
-  color: var(--color-text-primary);
+  color: var(--theme-ink);
   font-weight: 700;
 }
 
@@ -217,7 +223,7 @@ opacity (an animation fill would pin them back to full strength). */
   margin-right: var(--space-2);
   border-radius: 50%;
   vertical-align: 2px;
-  background: var(--color-observed);
+  background: var(--theme-accent);
   animation: log-dot 1.2s ease-in-out infinite alternate;
 }
 
@@ -263,7 +269,7 @@ opacity (an animation fill would pin them back to full strength). */
 
 .analysis-progress__leave-note {
   margin: 0;
-  color: var(--color-text-tertiary);
+  color: var(--theme-ink-soft);
   font-size: var(--font-size-sm);
 }
 

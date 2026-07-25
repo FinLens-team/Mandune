@@ -20,6 +20,7 @@ import type {
   HistorySummary,
 } from "../../history/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
+import { isThemeId, type ThemeId } from "../../theme/index.js";
 import {
   validateAtlasCard,
   validateAtlasDetail,
@@ -51,6 +52,7 @@ export interface AnalysisStatusResponse {
   result_status?: AnalysisResult["status"];
   retryable?: boolean;
   terminal_reason?: string;
+  theme_id?: ThemeId;
 }
 
 export interface AnalysisSourceResponse {
@@ -89,10 +91,11 @@ export interface JourneyGateway {
   list(workspaceId: string): Promise<HistorySummary[]>;
   replayHistory(recordId: string): Promise<HistoryReplayResult>;
   saveCurrentDraft(draft: PortfolioDraft): Promise<PortfolioDraft>;
-  startAnalysis(experienceSource: HistoryExperienceSource): Promise<{
+  startAnalysis(experienceSource: HistoryExperienceSource, themeId?: ThemeId): Promise<{
     analysis_id: string;
     experience_source: HistoryExperienceSource;
     reused_active: boolean;
+    theme_id?: ThemeId;
   }>;
   subscribeAnalysisStream?(
     analysisId: string,
@@ -276,14 +279,15 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
     return checked.value;
   }
 
-  async startAnalysis(experienceSource: HistoryExperienceSource): Promise<{
+  async startAnalysis(experienceSource: HistoryExperienceSource, themeId?: ThemeId): Promise<{
     analysis_id: string;
     experience_source: HistoryExperienceSource;
     reused_active: boolean;
+    theme_id: ThemeId;
   }> {
     const response = await this.response("/api/analyses", {
       method: "POST",
-      body: JSON.stringify({ experience_source: experienceSource }),
+      body: JSON.stringify({ experience_source: experienceSource, ...(themeId ? { theme_id: themeId } : {}) }),
     });
     if (!response.ok) this.failure(response);
     const body = await this.json(response);
@@ -292,6 +296,7 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
       !identifier(body.analysis_id) ||
       (body.experience_source !== "random" && body.experience_source !== "edited") ||
       typeof body.reused_active !== "boolean"
+      || !isThemeId(body.theme_id)
     ) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }
@@ -299,6 +304,7 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
       analysis_id: body.analysis_id,
       experience_source: body.experience_source,
       reused_active: body.reused_active,
+      theme_id: body.theme_id,
     };
   }
 
@@ -313,6 +319,7 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
       !["queued", "running", "terminal"].includes(String(analysis.state)) ||
       !iso(analysis.created_at) ||
       !iso(analysis.updated_at)
+      || !isThemeId(analysis.theme_id)
     ) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }

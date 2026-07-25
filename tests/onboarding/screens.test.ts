@@ -8,14 +8,12 @@ import {
   type OnboardingStorage,
 } from "../../src/features/onboarding/storage.js";
 import type { DemoExperienceIdentity } from "../../src/demo-experience/index.js";
+import type { ThemeId } from "../../src/theme/index.js";
 
 interface OnboardingModule {
   ThemeSelectionScreen: ComponentType<{
-    selected: boolean;
-    previewMessage: string | null;
-    previewIndex?: number | null;
-    onSelect: () => void;
-    onPreview: (index: number) => void;
+    selectedThemeId: ThemeId;
+    onSelect: (themeId: ThemeId) => void;
     onContinue: () => void;
   }>;
   SourceSelectionScreen: ComponentType<{
@@ -63,41 +61,37 @@ class MemoryStorage implements OnboardingStorage {
 }
 
 describe("S0-S3 onboarding screens", () => {
-  it("exposes one selectable theme and three focusable locked previews", async () => {
+  it("exposes three selectable themes and keeps the unused red panda card locked", async () => {
     const { ThemeSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
       onContinue: noop,
-      onPreview: noop,
       onSelect: noop,
-      previewMessage: null,
-      selected: false,
+      selectedThemeId: "eastern_observation",
     }));
 
     expect(html.match(/onboarding-theme-card/g)?.length).toBeGreaterThanOrEqual(4);
     expect(html.match(/<img/g)).toHaveLength(4);
     expect(html).toContain("我是龙");
     expect(html).toContain("选择我是龙主题");
-    expect(html.match(/暂未开放/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(html).toContain("选择吉星高照主题");
+    expect(html).toContain("选择孙哥主题");
+    expect(html.match(/暂未开放/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html).toContain("theme-card-2.webp");
     expect(html).toContain('fetchPriority="high"');
-    expect(html).toContain("disabled=\"\"");
+    expect(html).toContain('aria-pressed="true"');
   });
 
-  it("keeps locked theme details focusable without turning them into a selection", async () => {
+  it("focuses the selected doudou theme details", async () => {
     const { ThemeSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
       onContinue: noop,
-      onPreview: noop,
       onSelect: noop,
-      previewIndex: 1,
-      previewMessage: null,
-      selected: false,
+      selectedThemeId: "jixing_doudou",
     }));
 
-    expect(html).toContain('data-focused="1"');
-    expect(html).toContain("主题预览");
-    expect(html).toContain("鸿运当头");
-    expect(html).toContain("暂未开放");
+    expect(html).toContain('data-focused="3"');
+    expect(html).toContain("当前主题");
+    expect(html).toContain("吉星高照");
   });
 
   it("keeps manual and screenshot sources as honest inline placeholders", async () => {

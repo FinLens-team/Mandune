@@ -26,6 +26,7 @@ import {
   type HistorySummary,
 } from "../../src/history/index.js";
 import type { WorkspacePublicStatus } from "../../src/workspace/index.js";
+import { resultTitleForTheme, type ThemeId } from "../../src/theme/index.js";
 
 const workspace: WorkspacePublicStatus = {
   workspace_id: "workspace_controller",
@@ -53,7 +54,7 @@ function runtimeRecord(scenarioId: FixtureScenarioId, analysisId: string): Histo
     schema_version: "theme-narrative.v1" as const,
     rational_analysis_id: analysisId,
     theme_id: analysis.theme_id,
-    headline: "今日观象",
+    headline: resultTitleForTheme(analysis.theme_id),
     body_paragraphs: analysis.conclusions.map((item) => item.statement),
     mascot_mood: "calm",
     guidance_summary: analysis.advice.map((item) => item.statement).join("；"),
@@ -121,6 +122,7 @@ class FakeGateway implements JourneyGateway {
       state: options.running ? "running" : "terminal",
       created_at: "2026-07-25T08:00:00.000Z",
       updated_at: "2026-07-25T08:00:05.000Z",
+      theme_id: this.record.analysis.theme_id as ThemeId,
       ...(options.running ? {} : {
         result_status: this.record.analysis.status,
         retryable: this.record.analysis.status === "unavailable",
@@ -164,13 +166,14 @@ class FakeGateway implements JourneyGateway {
     return structuredClone(draft);
   }
 
-  async startAnalysis(experienceSource: "random" | "edited") {
+  async startAnalysis(experienceSource: "random" | "edited", themeId: ThemeId = "eastern_observation") {
     this.calls.push("startAnalysis");
     this.record.experience_source = experienceSource;
     return {
       analysis_id: this.status.analysis_id,
       experience_source: experienceSource,
       reused_active: false,
+      theme_id: themeId,
     };
   }
 

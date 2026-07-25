@@ -14,6 +14,7 @@ import {
   type PortfolioSnapshot,
 } from "../../contracts/index.js";
 import { getFixture, type FixtureScenarioId } from "../../fixtures/index.js";
+import { resultTitleForTheme } from "../../theme/index.js";
 import {
   FIXTURE_NON_LIVE_LABEL,
   type AnalysisExecution,
@@ -113,7 +114,7 @@ function narrativeFor(analysis: AnalysisResult): ThemeModelOutput | undefined {
     schema_version: THEME_NARRATIVE_SCHEMA_VERSION,
     rational_analysis_id: analysis.analysis_id,
     theme_id: analysis.theme_id,
-    headline: "今日观象",
+    headline: resultTitleForTheme(analysis.theme_id),
     body_paragraphs: analysis.conclusions.map((item) => item.statement),
     mascot_mood: "attentive",
     guidance_summary: analysis.advice.map((item) => item.statement).join("；"),

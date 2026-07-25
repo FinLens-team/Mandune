@@ -1,0 +1,33 @@
+{
+  "source_archive": {
+    "file": "20260726-051240-6b95d255-zip",
+    "sha256": "92b0d83677a414dece0f32c45eef8270ea229daddbe168866d13ab9ccd6e4e7b"
+  },
+  "themes": {
+    "jixing_doudou": {
+      "source": "满懂/兜兜.svg",
+      "source_sha256": "7893d27219c50f8dc74ad34a68eb027723d1ad01cb6feb07d5119756e37d1da5",
+      "rest": {
+        "file": "doudou/rest.webp",
+        "sha256": "cee751b616e77e21366850c9277909376b7e5e46d1ae85470b0264a81b79b918",
+        "codec": "Lossy WebP q92, 512px, alpha preserved"
+      }
+    },
+    "sunge": {
+      "static_source": "满懂/孙割吉祥物.svg",
+      "static_source_sha256": "a745d8cfd16da8bb36620bd23e2ca3faaddaab73b20ccf75cbf0fba3a91cf39b",
+      "animation_source": "满懂/孙割动画.mp4",
+      "animation_source_sha256": "58fa6683630f6b7c92a64d011a9447f9cce7df19842e064e9e855b8f124166fa",
+      "rest": {
+        "file": "sunge/rest.webp",
+        "sha256": "da20e6df9abe541a80b3fe1c3acc21d8e8e3ac3e18bac87eec47a37fc91fb939",
+        "codec": "Lossy WebP q92, 512px, alpha preserved"
+      },
+      "animation": {
+        "file": "sunge/intro.mp4",
+        "sha256": "89f856307ed26786e83a0a83d9bda53161413bc1063ae5a1bac2f94c2611e49c",
+        "codec": "H.264 yuv420p, 720px, 30fps, 4.13s, audio removed"
+      }
+    }
+  }
+}
