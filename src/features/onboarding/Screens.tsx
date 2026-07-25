@@ -17,35 +17,6 @@ interface ScreenTitleProps {
   titleRef?: Ref<HTMLHeadingElement>;
 }
 
-export interface SplashScreenProps {
-  onSkip: () => void;
-  returning?: boolean;
-}
-
-export function SplashScreen({ onSkip, returning = false }: SplashScreenProps) {
-  return (
-    <section
-      className={`onboarding-screen onboarding-splash${returning ? " onboarding-splash--returning" : ""}`}
-      aria-labelledby="s0-title"
-    >
-      <div className="onboarding-splash__copy">
-        <div className="onboarding-splash__wordmark">
-          <span aria-hidden="true" className="onboarding-splash__mark" />
-          <h1 id="s0-title">满懂</h1>
-        </div>
-        {returning ? null : (
-          <p className="onboarding-splash__positioning">
-            看得懂的每日持仓复盘 · 只给方向，不替你下单
-          </p>
-        )}
-      </div>
-      <Button autoFocus className="onboarding-skip" onClick={onSkip}>
-        跳过
-      </Button>
-    </section>
-  );
-}
-
 export interface ThemeSelectionScreenProps extends ScreenTitleProps {
   selected: boolean;
   previewMessage: string | null;

@@ -10,7 +10,6 @@ import {
 import type { DemoExperienceIdentity } from "../../src/demo-experience/index.js";
 
 interface OnboardingModule {
-  SplashScreen: ComponentType<{ onSkip: () => void; returning?: boolean }>;
   ThemeSelectionScreen: ComponentType<{
     selected: boolean;
     previewMessage: string | null;
@@ -63,26 +62,7 @@ class MemoryStorage implements OnboardingStorage {
   }
 }
 
-describe("S0-S3 onboarding screens", () => {
-  it("renders the concise S0 positioning and an immediately focusable skip control", async () => {
-    const { SplashScreen } = await loadOnboarding();
-    const html = renderToStaticMarkup(createElement(SplashScreen, { onSkip: noop }));
-
-    expect(html).toContain("满懂");
-    expect(html).toContain("只给方向，不替你下单");
-    expect(html).toContain("<button");
-    expect(html).toContain("autofocus");
-    expect(html).toContain("跳过");
-    expect(html).not.toContain("progress");
-
-    const returning = renderToStaticMarkup(createElement(SplashScreen, {
-      onSkip: noop,
-      returning: true,
-    }));
-    expect(returning).toContain("满懂");
-    expect(returning).not.toContain("只给方向，不替你下单");
-  });
-
+describe("S1-S3 onboarding screens", () => {
   it("exposes one selectable theme and three focusable locked previews", async () => {
     const { ThemeSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
@@ -192,11 +172,11 @@ describe("S0-S3 onboarding screens", () => {
       workspaceId: "ws-new",
     }));
 
-    expect(returning).toContain('data-visit="returning"');
-    expect(returning).toContain("满懂");
-    expect(returning).not.toContain("只给方向，不替你下单");
+    expect(returning).toBe("");
+    expect(firstRun).toContain("选择复盘主题");
     expect(firstRun).toContain('data-visit="first"');
-    expect(firstRun).toContain("只给方向，不替你下单");
+    expect(firstRun).not.toContain("只给方向，不替你下单");
+    expect(firstRun).not.toContain("跳过");
   });
 });
 

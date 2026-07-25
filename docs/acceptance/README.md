@@ -8,7 +8,7 @@
 
 - desktop Chromium（1280x800）；
 - 375x812 触控视口，并启用浏览器 `prefers-reduced-motion: reduce`；
-- S0-S10 随机体验主路径、未开放入口、工作区状态、90/180 秒提示、真实任务事件、观象/证据正反面、刷新恢复、历史重放和回访跳过引导；
+- S1-S10 随机体验主路径（S0 不渲染）、未开放入口、工作区状态、90/180 秒提示、真实任务事件、观象/证据正反面、刷新恢复、历史重放和回访跳过引导；
 - 每个关键屏的横向溢出检查；
 - `console.error`、page error、请求失败和意外 HTTP 4xx/5xx 检查；
 - URL、DOM、Web Storage、请求载荷、Cookie 属性、`/health`、敏感路径、客户端 secret 形态和 sourcemap 暴露检查。

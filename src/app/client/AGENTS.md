@@ -2,7 +2,7 @@
 
 ## Architecture
 
-- `state.ts` owns the pure S0-S10 journey reducer; `controller.ts` owns transport, persistence, recovery, and navigation effects.
+- `state.ts` owns the pure S1-S10 journey reducer (S0 is intentionally not rendered); `controller.ts` owns transport, persistence, recovery, and navigation effects.
 - `gateway.ts` is the same-origin, Cookie-authorized HTTP boundary. The browser never receives or stores the workspace locator.
 - `runtime.ts` is the final display gate for `LongCard`: snapshot, analysis, constraints, theme, narrative IDs, and guidance must remain version-consistent.
 - Browser storage is optional and workspace-scoped. It stores onboarding completion, reduced-motion preference, the first-S4 coachmark dismissal, the active analysis ID, current experience source, and an `analysis_id`-keyed recovery hint; durable drafts, tasks, results, and history remain server-owned.

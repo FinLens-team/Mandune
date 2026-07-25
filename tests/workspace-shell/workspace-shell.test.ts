@@ -88,6 +88,7 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).not.toMatch(/>发起今日复盘</);
     expect(markup).not.toContain("查看持仓与约束");
     expect(markup).not.toContain("实时行情");
+    expect(markup).not.toContain("已保存输入快照");
     expect(markup).not.toContain("登录");
   });
 

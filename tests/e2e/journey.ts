@@ -14,11 +14,9 @@ async function checkpoint(page: Page, label: string): Promise<void> {
 
 export async function completeOnboarding(page: Page): Promise<string> {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "满懂" })).toBeVisible();
-  await checkpoint(page, "S0 splash");
-  await page.getByRole("button", { name: "跳过" }).click();
-
   await expect(page.getByRole("heading", { level: 1, name: "选择复盘主题" })).toBeVisible();
+  await expect(page.getByText("看得懂的每日持仓复盘 · 只给方向，不替你下单")).toHaveCount(0);
+  await checkpoint(page, "S1 theme selection");
   const lockedThemes = page.getByRole("button", { name: /主题预览 \d/ });
   await expect(lockedThemes).toHaveCount(3);
   for (let index = 0; index < 3; index += 1) {
@@ -27,7 +25,6 @@ export async function completeOnboarding(page: Page): Promise<string> {
   }
   await page.getByRole("button", { name: "选择东方观象" }).click();
   await page.getByRole("button", { name: "下一步" }).click();
-  await checkpoint(page, "S1 theme selection");
 
   await expect(page.getByRole("heading", { level: 1, name: "从哪里开始" })).toBeVisible();
   await expect(page.getByRole("button", { name: /截图识别/ })).toHaveAttribute("aria-disabled", "true");
@@ -132,7 +129,8 @@ export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<Journey
   expect(snapshotId).not.toBe("");
   expect(cutoff).not.toBe("");
 
-  await card.getByRole("button", { name: "查看证据" }).click();
+  await card.locator(".mandong-long-card__stage").focus();
+  await page.keyboard.press("ArrowRight");
   await expect(card.getByRole("heading", { level: 2, name: "逐项核对这份分析" })).toBeVisible();
   await expect(card.getByText(/fixture.*非实时/i).first()).toBeVisible();
   await expect(card.getByText("与正面同一版本")).toBeVisible();
@@ -141,7 +139,7 @@ export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<Journey
   await expect(evidenceFace.getByText(snapshotId, { exact: true })).toBeVisible();
   await expect(evidenceFace.getByText(cutoff, { exact: true }).first()).toBeVisible();
   await checkpoint(page, "S9 rational evidence back");
-  await card.getByRole("button", { name: "返回观象" }).click();
+  await page.keyboard.press("ArrowLeft");
 
   return { analysisId, cutoff, snapshotId };
 }

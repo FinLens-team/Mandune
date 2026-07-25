@@ -108,7 +108,6 @@ export function WorkspaceShell({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTrigger, setConfirmTrigger] = useState<HTMLElement | null>(null);
   const [pendingSnapshot, setPendingSnapshot] = useState<PortfolioSnapshot | null>(null);
-  const [savedSnapshotId, setSavedSnapshotId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
@@ -166,7 +165,6 @@ export function WorkspaceShell({
   function changeDraft(nextDraft: PortfolioDraft) {
     if (controlledDraft === undefined) setUncontrolledDraft(nextDraft);
     onDraftChange?.(nextDraft);
-    setSavedSnapshotId(null);
   }
 
   function changeExperienceSource(source: DemoBadgeSource) {
@@ -204,7 +202,6 @@ export function WorkspaceShell({
                 缺失或失败会保持未知，不会补写成当前值。
               </p>
               {lastAnalysisAt ? <p>最近一次复盘：{lastAnalysisAt}</p> : null}
-              {savedSnapshotId ? <p>已保存输入快照：{savedSnapshotId}</p> : null}
               {activeAnalysis ? <p>已有复盘仍在进行，可返回同一任务继续查看。</p> : null}
             </div>
 
@@ -255,10 +252,7 @@ export function WorkspaceShell({
             onCancel={() => navigate("home")}
             onChange={changeDraft}
             onExperienceSourceChange={changeExperienceSource}
-            onSave={(snapshot) => {
-              setSavedSnapshotId(snapshot.snapshot_id);
-              navigate("home");
-            }}
+            onSave={() => navigate("home")}
             experienceSource={experienceSource}
           />
         )}

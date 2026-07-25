@@ -21,53 +21,6 @@
   gap: var(--space-8);
 }
 
-.onboarding-splash {
-  width: min(100%, 30rem);
-  grid-template-rows: 1fr auto;
-  align-content: stretch;
-  text-align: center;
-}
-
-.onboarding-splash__copy {
-  align-self: center;
-  display: grid;
-  justify-items: center;
-  gap: var(--space-4);
-}
-
-.onboarding-splash__wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  animation: onboarding-splash-brand var(--duration-base) var(--ease-enter) both;
-}
-
-.onboarding-splash__mark {
-  width: var(--space-3);
-  height: var(--space-8);
-  border-radius: var(--radius-sm);
-  background: var(--color-observed);
-}
-
-.onboarding-splash h1 {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
-.onboarding-splash__positioning {
-  max-width: 25rem;
-  margin: 0;
-  color: var(--color-text-secondary);
-  text-wrap: pretty;
-  animation: onboarding-splash-copy var(--duration-base) var(--ease-enter) 70ms both;
-}
-
-.onboarding-skip {
-  justify-self: end;
-}
-
 .onboarding-heading {
   display: grid;
   gap: var(--space-3);
@@ -510,26 +463,6 @@
   order: -1;
 }
 
-@keyframes onboarding-splash-brand {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes onboarding-splash-copy {
-  from {
-    opacity: 0;
-    transform: translateY(var(--space-2));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes onboarding-summary-crossfade {
   from {
     opacity: 0;
@@ -672,10 +605,6 @@
     gap: var(--space-6);
   }
 
-  .onboarding-splash {
-    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
-  }
-
   .onboarding-theme-grid {
     max-width: 42rem;
     min-height: 0;
@@ -732,8 +661,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .onboarding-splash__wordmark,
-  .onboarding-splash__positioning,
   .onboarding-summary__identity {
     animation: none;
   }
@@ -764,8 +691,6 @@
   }
 }
 
-.onboarding--reduced-motion .onboarding-splash__wordmark,
-.onboarding--reduced-motion .onboarding-splash__positioning,
 .onboarding--reduced-motion .onboarding-summary__identity {
   animation: none;
 }

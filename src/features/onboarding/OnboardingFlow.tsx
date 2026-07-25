@@ -13,7 +13,6 @@ import {
 import {
   ExperienceSummaryScreen,
   SourceSelectionScreen,
-  SplashScreen,
   ThemeSelectionScreen,
 } from "./Screens.js";
 import type { OnboardingExit, OnboardingStep } from "./types.js";
@@ -26,7 +25,6 @@ export interface OnboardingFlowProps {
   random?: () => number;
   now?: () => Date;
   reducedMotion?: boolean;
-  splashDurationMs?: number;
 }
 
 export function OnboardingFlow({
@@ -36,10 +34,11 @@ export function OnboardingFlow({
   random = Math.random,
   now = () => new Date(),
   reducedMotion = false,
-  splashDurationMs,
 }: OnboardingFlowProps) {
   const returningVisit = useRef(hasCompletedOnboarding(storage, workspaceId));
-  const [step, setStep] = useState<OnboardingStep>("s0");
+  const [step, setStep] = useState<OnboardingStep>(() =>
+    returningVisit.current ? "complete" : "s1",
+  );
   const [themeSelected, setThemeSelected] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -69,18 +68,6 @@ export function OnboardingFlow({
     notifiedReturningVisit.current = true;
     onEnterApp({ identity: null, returning: true });
   }, [onEnterApp, step]);
-
-  useEffect(() => {
-    if (step !== "s0") return;
-    const delay = splashDurationMs ?? (
-      returningVisit.current
-        ? effectiveReducedMotion ? 0 : 400
-        : effectiveReducedMotion ? 400 : 2_300
-    );
-    const nextStep: OnboardingStep = returningVisit.current ? "complete" : "s1";
-    const timer = window.setTimeout(() => setStep(nextStep), delay);
-    return () => window.clearTimeout(timer);
-  }, [effectiveReducedMotion, splashDurationMs, step]);
 
   useEffect(() => {
     if (step === "s1" || step === "s2" || step === "s3") {
@@ -120,12 +107,6 @@ export function OnboardingFlow({
         跳到主要内容
       </a>
       <main id="onboarding-main">
-        {step === "s0" ? (
-          <SplashScreen
-            onSkip={() => setStep(returningVisit.current ? "complete" : "s1")}
-            returning={returningVisit.current}
-          />
-        ) : null}
         {step === "s1" ? (
           <ThemeSelectionScreen
             onContinue={() => {

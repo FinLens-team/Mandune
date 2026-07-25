@@ -42,7 +42,7 @@ async function enableReducedMotion(page: Parameters<typeof completeOnboarding>[0
   await drawer.getByRole("button", { name: "关闭导航菜单" }).click();
 }
 
-test("ordinary public URL completes S0-S10 and preserves immutable history", async ({ page }, testInfo) => {
+test("ordinary public URL completes S1-S10 and preserves immutable history", async ({ page }, testInfo) => {
   const seed = await completeOnboarding(page);
   await verifyDrawerAndEmptySecondaryViews(page, testInfo);
   const result = await runAnalysisAndOpenResult(page);
@@ -102,9 +102,7 @@ test("ordinary UI reaches a limited result when one constraint stays unknown", a
   await runAnalysisAndOpenResult(page);
 
   const card = page.getByRole("region", { name: "每日复盘报告" });
-  await expect(
-    card.locator(".mandong-long-card__front").getByText("有限分析", { exact: true }),
-  ).toBeVisible();
+  await expect(card.getByRole("heading", { level: 3, name: "未知与限制" })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
 

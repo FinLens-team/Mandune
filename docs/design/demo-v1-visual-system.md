@@ -1,6 +1,6 @@
 # 满懂 Demo V1 视觉与动效规格
 
-状态：`Accepted for implementation`（MD-022 修订）。本文件是 S0-S10 的视觉与交互实现基准；逐屏重塑契约见 [`../specs/demo-v1-frontend-redesign.md`](../specs/demo-v1-frontend-redesign.md)，产品行为以 [`../../PRODUCT.md`](../../PRODUCT.md) 和 [`../specs/demo-v1.md`](../specs/demo-v1.md) 为准，分析状态以 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 为准。
+状态：`Accepted for implementation`（MD-022 修订）。本文件是 S1-S10 的视觉与交互实现基准，S0 已移除；逐屏重塑契约见 [`../specs/demo-v1-frontend-redesign.md`](../specs/demo-v1-frontend-redesign.md)，产品行为以 [`../../PRODUCT.md`](../../PRODUCT.md) 和 [`../specs/demo-v1.md`](../specs/demo-v1.md) 为准，分析状态以 [`../specs/analysis-contract.md`](../specs/analysis-contract.md) 为准。
 
 ## 1. 方案取舍
 
@@ -209,16 +209,10 @@
 
 ## 5. 逐屏规格
 
-### S0 首屏渐入
+### S0 已移除
 
-- **目标**：快速建立「每日持仓复盘」定位，不做营销落地页。
-- **375**：左右 24px；品牌与副文案位于视觉中心；右下或底部放「跳过」。
-- **768/1280**：内容宽度不超过 480px，保持居中和开放留白。
-- **动效**：品牌 220ms 淡入，副文案延迟不超过 80ms；2-3 秒后进入下一屏。无进度条和假加载。
-- **回访**：已完成引导的用户只显示约 0.4 秒品牌短闪，然后直接进入 S4。
-- **减少动态**：取消位移；首次路径短暂静态呈现，回访可立即切换；跳过始终立即可用。
-- **文案**：`满懂`；`看得懂的每日持仓复盘 · 只给方向，不替你下单`。
-- **无障碍**：初始焦点在「跳过」；不把整个开屏设为 assertive live region。
+- 不渲染独立品牌开屏、定时过渡或「跳过」按钮。
+- 匿名工作区准备完成后，首次访问直接显示 S1；回访直接显示 S4。
 
 ### S1 主题选择
 
@@ -330,7 +324,7 @@
 
 | ID | 用途 | 最终要求 | 无素材降级 |
 |---|---|---|---|
-| `brand-mark` | S0、顶栏、抽屉 | 单色 SVG 或高分辨率透明图 | 纯文字「满懂」 |
+| `brand-mark` | 顶栏、抽屉 | 单色 SVG 或高分辨率透明图 | 纯文字「满懂」 |
 | `theme-eastern-observation` | S1 | 东方观象主题卡主视觉 | 稳定色块、名称与兜兜缩略图 |
 | `theme-preview-1..3` | S1 | 三张锁定主题预览，不冻结正式名称 | 中性剪影与 LockBadge |
 | `mascot-doudou` | S1、S4、S8、S9 | 熊猫兜兜，多状态但职责一致 | 静态品牌占位图，不手绘劣质 SVG |
@@ -342,7 +336,7 @@
 ## 8. 实现与验收清单
 
 - [ ] 使用本文件 token，不在每屏散落未命名 hex、间距或动效时长。
-- [ ] S0-S10 在 375/768/1280px 无重叠、截断和横向溢出。
+- [ ] S1-S10 在 375/768/1280px 无重叠、截断和横向溢出；S0 不渲染。
 - [ ] S1 具备扇形与纵向单列等价布局。
 - [ ] S1/S4/S8 统一使用现有许可兜兜与主题预览素材，不保留 CSS/通用角色占位。
 - [ ] S2 未开放入口不触发真实表单或上传。

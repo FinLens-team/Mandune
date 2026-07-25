@@ -2,11 +2,9 @@ export { OnboardingFlow, type OnboardingFlowProps } from "./OnboardingFlow.js";
 export {
   ExperienceSummaryScreen,
   SourceSelectionScreen,
-  SplashScreen,
   ThemeSelectionScreen,
   type ExperienceSummaryScreenProps,
   type SourceSelectionScreenProps,
-  type SplashScreenProps,
   type ThemeSelectionScreenProps,
 } from "./Screens.js";
 export {
