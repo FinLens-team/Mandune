@@ -7,6 +7,7 @@ import {
 } from "../../src/demo-experience/index.js";
 import {
   createJourneyPersistence,
+  experienceSourceFromDraft,
   identityToPortfolioDraft,
   initialJourneyState,
   journeyReducer,
@@ -76,8 +77,11 @@ describe("journey identity and pure state", () => {
         ttl_days: 30,
       },
       draft: null,
+      experienceSource: "edited",
       reducedMotion: true,
+      reviewCoachmarkVisible: false,
       resumeAnalysisId: "analysis_resume",
+      resumeAnalysisSource: "random",
     });
     expect(state).toMatchObject({ phase: "onboarding", reducedMotion: true });
 
@@ -90,12 +94,17 @@ describe("journey identity and pure state", () => {
     expect(state).toMatchObject({
       phase: "analysis",
       activeAnalysis: { analysisId: "analysis_resume", events: [] },
+      experienceSource: "edited",
     });
 
     state = journeyReducer(state, { type: "ANALYSIS_LEFT" });
     expect(state.phase).toBe("home");
     expect(state.activeAnalysis?.analysisId).toBe("analysis_resume");
-    state = journeyReducer(state, { type: "ANALYSIS_RESUMED", analysisId: "analysis_resume" });
+    state = journeyReducer(state, {
+      type: "ANALYSIS_RESUMED",
+      analysisId: "analysis_resume",
+      experienceSource: "random",
+    });
     expect(state).toMatchObject({ phase: "analysis", activeAnalysis: { connection: "reconnecting" } });
 
     state = journeyReducer(state, {
@@ -127,16 +136,34 @@ describe("journey local preferences", () => {
 
     persistence.setReducedMotion("workspace_a", true);
     persistence.setActiveAnalysis("workspace_a", "analysis_safe");
+    persistence.setExperienceSource("workspace_a", "edited");
+    persistence.setAnalysisExperienceSource("workspace_a", "analysis_safe", "random");
+    persistence.setReviewCoachmarkDismissed("workspace_a");
     persistence.setActiveAnalysis("workspace_b", "analysis_other");
     expect(persistence.getReducedMotion("workspace_a")).toBe(true);
     expect(persistence.getActiveAnalysis("workspace_a")).toBe("analysis_safe");
     expect(persistence.getActiveAnalysis("workspace_b")).toBe("analysis_other");
+    expect(persistence.getExperienceSource("workspace_a")).toBe("edited");
+    expect(persistence.getAnalysisExperienceSource("workspace_a", "analysis_safe")).toBe("random");
+    expect(persistence.getReviewCoachmarkDismissed("workspace_a")).toBe(true);
     expect(JSON.stringify([...data.entries()])).not.toContain("510300.SH");
 
     persistence.clearWorkspace("workspace_a");
     expect(persistence.getReducedMotion("workspace_a")).toBeNull();
     expect(persistence.getActiveAnalysis("workspace_a")).toBeNull();
+    expect(persistence.getExperienceSource("workspace_a")).toBeNull();
+    expect(persistence.getAnalysisExperienceSource("workspace_a", "analysis_safe")).toBeNull();
+    expect(persistence.getReviewCoachmarkDismissed("workspace_a")).toBe(false);
     expect(persistence.getActiveAnalysis("workspace_b")).toBe("analysis_other");
+  });
+
+  it("derives only the current draft source from its durable source label", () => {
+    const randomDraft = identityToPortfolioDraft(createDemoExperienceFromSeed(9));
+    expect(experienceSourceFromDraft(randomDraft)).toBe("random");
+    expect(experienceSourceFromDraft({
+      ...randomDraft,
+      source_label: "体验持仓 · 已编辑 · fixture 证据（非实时）",
+    })).toBe("edited");
   });
 });
 

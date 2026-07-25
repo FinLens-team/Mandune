@@ -1,8 +1,13 @@
 import { useRef, useState, type KeyboardEvent } from "react";
+import type { DemoBadgeSource } from "../../client/ui/index.js";
 import type { HistoryRecordV1 } from "../../history/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { AboutView } from "../about/index.js";
-import { HistoryView, type HistoryAvailability } from "./HistoryView.js";
+import {
+  HistoryView,
+  type HistoryAvailability,
+  type HistoryRecordSourceResolver,
+} from "./HistoryView.js";
 import type { HistoryReader } from "./model.js";
 
 export type HistoryAboutTab = "history" | "about";
@@ -27,6 +32,7 @@ export function nextHistoryAboutTab(
 
 export interface HistoryAboutViewProps {
   availability?: HistoryAvailability;
+  experienceSource?: DemoBadgeSource;
   initialTab?: HistoryAboutTab;
   onNavigateHome: () => void;
   onOpenRecord: (record: HistoryRecordV1) => void;
@@ -34,12 +40,14 @@ export interface HistoryAboutViewProps {
   onTabChange?: (tab: HistoryAboutTab) => void;
   reader: HistoryReader;
   reduceMotion?: boolean;
+  resolveRecordSource?: HistoryRecordSourceResolver;
   workspace: WorkspacePublicStatus | null;
   workspaceId: string;
 }
 
 export function HistoryAboutView({
   availability = "active",
+  experienceSource,
   initialTab = "history",
   onNavigateHome,
   onOpenRecord,
@@ -47,6 +55,7 @@ export function HistoryAboutView({
   onTabChange,
   reader,
   reduceMotion = false,
+  resolveRecordSource,
   workspace,
   workspaceId,
 }: HistoryAboutViewProps) {
@@ -76,7 +85,6 @@ export function HistoryAboutView({
       data-reduce-motion={reduceMotion || undefined}
     >
       <header className="history-about__header">
-        <p className="history-eyebrow">满懂工作区</p>
         <h1 id="history-about-title">历史与关于</h1>
         <p>核对过去复盘的原始边界，或了解匿名工作区与产品责任范围。</p>
       </header>
@@ -123,11 +131,13 @@ export function HistoryAboutView({
             onOpenRecord={onOpenRecord}
             reader={reader}
             reduceMotion={reduceMotion}
+            resolveRecordSource={resolveRecordSource}
             workspaceId={workspaceId}
           />
         ) : (
           <AboutView
             availability={availability}
+            experienceSource={experienceSource}
             onNavigateHome={onNavigateHome}
             onRequestDeleteWorkspace={onRequestDeleteWorkspace}
             workspace={workspace}

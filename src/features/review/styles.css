@@ -26,6 +26,10 @@
   font-size: var(--font-size-sm);
 }
 
+.portfolio-editor__source {
+  max-width: 70ch;
+}
+
 .portfolio-editor__tabs {
   display: flex;
   margin-top: var(--space-6);
@@ -84,8 +88,10 @@
 }
 
 .portfolio-line--unresolved {
-  border-left: 3px solid var(--color-risk);
-  padding-left: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-risk);
+  border-radius: var(--radius-md);
   background: var(--color-risk-bg);
 }
 
@@ -99,6 +105,63 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+.portfolio-line__summary,
+.portfolio-line__provenance {
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0 0;
+}
+
+.portfolio-line__summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portfolio-line__summary > div,
+.portfolio-line__provenance > div {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.portfolio-line__summary dt,
+.portfolio-line__provenance dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.portfolio-line__summary dd,
+.portfolio-line__provenance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.portfolio-line__summary dd {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.portfolio-line__details {
+  margin-top: var(--space-3);
+}
+
+.portfolio-line__details > summary {
+  min-height: var(--icon-control-size);
+  display: flex;
+  align-items: center;
+  color: var(--color-observed);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portfolio-line__provenance {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  font-size: var(--font-size-sm);
 }
 
 .portfolio-line__unknown,
@@ -197,11 +260,20 @@
   .portfolio-editor__constraints {
     display: block;
   }
+
 }
 
 @media (max-width: 30rem) {
   .portfolio-line__fields {
     grid-template-columns: 1fr;
+  }
+
+  .portfolio-line__summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  }
+
+  .portfolio-line__summary > div:last-child {
+    grid-column: 1 / -1;
   }
 
   .portfolio-editor__actions .ui-button {

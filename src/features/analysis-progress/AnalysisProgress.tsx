@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisResultStatus, TaskEvent } from "../../contracts/index.js";
+import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
 import { AnalysisStatus, Button, DemoBadge } from "../../client/ui/index.js";
 import {
   projectAnalysisProgress,
@@ -147,9 +148,15 @@ export function AnalysisProgress({
           当前状态
         </h2>
         <div className="analysis-progress__scene">
-          <div aria-hidden="true" className="analysis-progress__guide">
-            <span>兜兜</span>
-          </div>
+          <img
+            alt=""
+            className="analysis-progress__mascot"
+            decoding="async"
+            draggable={false}
+            height={512}
+            src={doudouObserver}
+            width={512}
+          />
           <p
             aria-atomic="true"
             aria-live="polite"

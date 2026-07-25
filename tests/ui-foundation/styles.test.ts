@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const stylesheet = [
-  readFileSync("src/client/styles.css", "utf8"),
-  readFileSync("src/client/ui/styles.css", "utf8"),
-].join("\n");
+const globalStylesheet = readFileSync("src/client/styles.css", "utf8");
+const uiStylesheet = readFileSync("src/client/ui/styles.css", "utf8");
+const stylesheet = [globalStylesheet, uiStylesheet].join("\n");
 
 const REQUIRED_TOKENS: Record<string, string> = {
   "--color-bg-base": "#f3f5f2",
@@ -85,13 +84,13 @@ const PRESERVED_HOOKS = [
   ".long-card",
   ".analysis-status",
   ".theme-preview",
-  ".doudou",
 ];
 
 describe("visual foundation stylesheet", () => {
   it("declares the accepted token values exactly", () => {
     for (const [token, value] of Object.entries(REQUIRED_TOKENS)) {
       expect(stylesheet).toContain(`${token}: ${value};`);
+      expect(stylesheet.match(new RegExp(`${token}:`, "g"))).toHaveLength(1);
     }
     expect(stylesheet).toContain("--font-sans:");
     expect(stylesheet).toContain("--font-serif:");
@@ -109,6 +108,8 @@ describe("visual foundation stylesheet", () => {
     expect(stylesheet).toContain("box-shadow: var(--focus-ring);");
     expect(stylesheet).toContain("width: var(--icon-control-size);");
     expect(stylesheet).toContain("min-height: var(--control-height);");
+    expect(stylesheet).toContain('.ui-icon-button[aria-disabled="true"]');
+    expect(stylesheet).toContain(':not(:disabled, [aria-disabled="true"]):active');
   });
 
   it("keeps loading width stable and supports touch, reduced motion, and core viewports", () => {
@@ -117,17 +118,27 @@ describe("visual foundation stylesheet", () => {
     expect(stylesheet).toContain("touch-action: manipulation;");
     expect(stylesheet).toContain("touch-action: pan-y;");
     expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(stylesheet).toContain('.ui-icon-button:not(:disabled, [aria-disabled="true"]):active');
+    expect(stylesheet).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.ui-icon-button[^}]*?transform: none;/,
+    );
     expect(stylesheet).toContain("@media (max-width: 23.4375rem)");
     expect(stylesheet).toContain("@media (min-width: 48rem)");
     expect(stylesheet).toContain("@media (min-width: 80rem)");
   });
 
   it("removes the superseded global visual patterns", () => {
+    const stylesOutsideTokens = globalStylesheet.replace(/:root\s*\{[\s\S]*?\n\}/, "");
+
     expect(stylesheet).not.toMatch(/(?:linear|radial|conic)-gradient/);
     expect(stylesheet).not.toContain("clamp(");
+    expect(stylesheet).not.toContain("transition: all");
     expect(stylesheet).not.toMatch(/font-size\s*:[^;]*(?:vw|vh|vmin|vmax)/);
     expect(stylesheet).not.toContain("border-radius: 1rem");
     expect(stylesheet).not.toContain("border-radius: 0.75rem");
     expect(stylesheet).not.toContain("border-radius: 0.85rem");
+    expect(stylesheet).not.toContain("--doudou-");
+    expect(stylesheet).not.toMatch(/\.doudou(?:[\s.{:-])/);
+    expect(stylesOutsideTokens).not.toMatch(/#[\da-f]{3,8}\b/i);
   });
 });

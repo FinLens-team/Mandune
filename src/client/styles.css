@@ -429,86 +429,6 @@ body {
   border-bottom: 1px solid var(--color-border-strong);
 }
 
-.doudou {
-  --doudou-coat-color: #d5a64a;
-  --doudou-face-color: #f8faf7;
-  --doudou-ink-color: #26312d;
-
-  position: relative;
-  width: 5.25rem;
-  height: 5.75rem;
-  flex: 0 0 auto;
-}
-
-.doudou-ear,
-.doudou-face,
-.doudou-eye,
-.doudou-nose,
-.doudou-coat {
-  position: absolute;
-  display: block;
-}
-
-.doudou-ear {
-  top: 0.25rem;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 50%;
-  background: var(--doudou-ink-color);
-}
-
-.doudou-ear-left { left: 0.25rem; }
-.doudou-ear-right { right: 0.25rem; }
-
-.doudou-face {
-  inset: 0.8rem 0.35rem auto;
-  height: 3.7rem;
-  border: 0.3rem solid var(--doudou-ink-color);
-  border-radius: 46% 46% 42% 42%;
-  background: var(--doudou-face-color);
-}
-
-.doudou-eye {
-  top: 1rem;
-  width: 1.05rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  background: var(--doudou-ink-color);
-}
-
-.doudou-eye::after {
-  content: "";
-  position: absolute;
-  top: 0.35rem;
-  left: 0.35rem;
-  width: 0.3rem;
-  height: 0.3rem;
-  border-radius: 50%;
-  background: var(--doudou-face-color);
-}
-
-.doudou-eye-left { left: 0.7rem; transform: rotate(18deg); }
-.doudou-eye-right { right: 0.7rem; transform: rotate(-18deg); }
-
-.doudou-nose {
-  top: 2.3rem;
-  left: calc(50% - 0.22rem);
-  width: 0.45rem;
-  height: 0.35rem;
-  border-radius: 50%;
-  background: var(--doudou-ink-color);
-}
-
-.doudou-coat {
-  right: 0.65rem;
-  bottom: 0;
-  left: 0.65rem;
-  height: 1.85rem;
-  border: 0.3rem solid var(--doudou-ink-color);
-  border-radius: 0.9rem 0.9rem 0.35rem 0.35rem;
-  background: var(--doudou-coat-color);
-}
-
 .long-card-coverage {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -708,7 +628,6 @@ body {
     background-color var(--duration-fast) var(--ease-enter),
     border-color var(--duration-fast) var(--ease-enter),
     color var(--duration-fast) var(--ease-enter),
-    box-shadow var(--duration-fast) var(--ease-enter),
     opacity var(--duration-fast) var(--ease-enter),
     transform var(--duration-fast) var(--ease-enter);
 }
@@ -854,5 +773,11 @@ body {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: var(--duration-instant) !important;
+  }
+
+  .btn:not(:disabled, [aria-disabled="true"]):active,
+  .scenario-tabs button:active,
+  .ui-icon-button:not(:disabled, [aria-disabled="true"]):active {
+    transform: none;
   }
 }

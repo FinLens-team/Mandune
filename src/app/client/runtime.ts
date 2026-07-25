@@ -9,10 +9,12 @@ import {
   validateThemeModelOutput,
   type ThemeModelOutput,
 } from "../../analysis/index.js";
+import type { JourneyExperienceSource } from "./source.js";
 
 export interface JourneyLongCardRuntimeInput {
   analysis: AnalysisResult;
   exampleLabel?: string;
+  experienceSource?: JourneyExperienceSource;
   isExample: boolean;
   narrative?: ThemeModelOutput;
   aiText?: string;

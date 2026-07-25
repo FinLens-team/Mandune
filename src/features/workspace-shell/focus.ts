@@ -1,4 +1,4 @@
-import { useEffect, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useState, type KeyboardEvent, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -10,6 +10,39 @@ const FOCUSABLE_SELECTOR = [
 ].join(",");
 
 export type OverlayKeyAction = "close" | number | null;
+export type OverlayPhase = "closed" | "opening" | "open" | "closing";
+
+export function useOverlayPresence(open: boolean, exitDuration: number): {
+  phase: OverlayPhase;
+  present: boolean;
+} {
+  const [present, setPresent] = useState(open);
+  const [phase, setPhase] = useState<OverlayPhase>(open ? "opening" : "closed");
+
+  useEffect(() => {
+    let frame: number | undefined;
+    let timer: number | undefined;
+
+    if (open) {
+      setPresent(true);
+      setPhase("opening");
+      frame = window.requestAnimationFrame(() => setPhase("open"));
+    } else if (present) {
+      setPhase("closing");
+      timer = window.setTimeout(() => {
+        setPresent(false);
+        setPhase("closed");
+      }, exitDuration);
+    }
+
+    return () => {
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [exitDuration, open, present]);
+
+  return { phase, present };
+}
 
 export function resolveReturnFocus<T>(explicit: T | null, fallback: T | null): T | null {
   return explicit ?? fallback;
@@ -74,10 +107,13 @@ export function useOverlayFocus(input: {
   useEffect(() => {
     if (!open) return;
     const fallback = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     focusScopeRef.current
       ?.querySelector<HTMLElement>('[data-initial-focus="true"]')
-      ?.focus();
+      ?.focus({ preventScroll: true });
     return () => {
+      document.body.style.overflow = previousOverflow;
       resolveReturnFocus(returnFocus, fallback)?.focus();
     };
   }, [focusScopeRef, open, returnFocus]);

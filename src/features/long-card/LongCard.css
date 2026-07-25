@@ -37,45 +37,24 @@
 }
 
 .mandong-long-card__stage {
-  --long-card-drag-x: 0px;
   perspective: 72rem;
   touch-action: pan-y;
 }
 
 .mandong-long-card__motion {
-  transform: translateX(var(--long-card-drag-x));
+  position: relative;
+  display: grid;
   transform-style: preserve-3d;
-  transition: transform var(--duration-fast) var(--ease-enter);
+  transition: transform var(--duration-flip) var(--ease-standard);
 }
 
 .mandong-long-card__stage[data-dragging="true"] .mandong-long-card__motion {
   transition: none;
-}
-
-.mandong-long-card__motion[data-transition="forward"] .mandong-long-card__face {
-  animation: mandong-long-card-turn-forward var(--duration-flip) var(--ease-standard) both;
-}
-
-.mandong-long-card__motion[data-transition="backward"] .mandong-long-card__face {
-  animation: mandong-long-card-turn-backward var(--duration-flip) var(--ease-standard) both;
-}
-
-@keyframes mandong-long-card-turn-forward {
-  from { opacity: 0.2; transform: rotateY(-88deg); }
-  to { opacity: 1; transform: rotateY(0deg); }
-}
-
-@keyframes mandong-long-card-turn-backward {
-  from { opacity: 0.2; transform: rotateY(88deg); }
-  to { opacity: 1; transform: rotateY(0deg); }
-}
-
-@keyframes mandong-long-card-crossfade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  will-change: transform;
 }
 
 .mandong-long-card__face {
+  grid-area: 1 / 1;
   min-width: 0;
   padding: var(--space-6);
   border: 1px solid var(--color-border-subtle);
@@ -84,6 +63,27 @@
   box-shadow: var(--shadow-paper);
   backface-visibility: hidden;
   overflow-wrap: anywhere;
+  transform-style: preserve-3d;
+}
+
+.mandong-long-card__front {
+  transform: rotateY(0deg);
+}
+
+.mandong-long-card__back {
+  transform: rotateY(180deg);
+}
+
+.mandong-long-card__face[aria-hidden="true"] {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.mandong-long-card__motion:not([data-transitioning="true"]) .mandong-long-card__face[aria-hidden="true"] {
+  visibility: hidden;
 }
 
 .mandong-long-card__face h2,
@@ -144,14 +144,9 @@
   color: var(--color-observed);
 }
 
-.mandong-long-card__guide {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .mandong-doudou {
   display: grid;
-  grid-template-columns: 5rem minmax(0, 8rem);
+  grid-template-columns: 4rem;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
@@ -159,22 +154,21 @@
 
 .mandong-doudou img {
   display: block;
-  width: 5rem;
-  height: 5rem;
+  width: 4rem;
+  height: 4rem;
   object-fit: contain;
 }
 
 .mandong-doudou figcaption {
-  display: grid;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-  line-height: 1.5;
-}
-
-.mandong-doudou figcaption strong {
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .mandong-long-card__identity,
@@ -513,46 +507,62 @@
     padding: var(--space-4);
   }
 
-  .mandong-long-card__masthead {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+  .mandong-long-card__intro {
+    gap: var(--space-3);
+    padding-bottom: var(--space-4);
   }
 
-  .mandong-doudou {
-    grid-template-columns: 4.5rem;
+  .mandong-long-card__section {
+    gap: var(--space-3);
+    padding-block: var(--space-6);
+  }
+
+  .mandong-long-card__masthead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3.5rem;
+    gap: var(--space-2);
   }
 
   .mandong-doudou img {
-    width: 4.5rem;
-    height: 4.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
   }
 
-  .mandong-doudou figcaption {
-    display: none;
+  .mandong-long-card__identity {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .mandong-long-card__identity,
   .mandong-long-card__constraints,
   .mandong-long-card__evidence-list dl {
     grid-template-columns: 1fr;
   }
 
   .mandong-long-card__coverage {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .mandong-long-card__identity > div,
   .mandong-long-card__constraints > div,
-  .mandong-long-card__evidence-list dl > div,
-  .mandong-long-card__coverage > div {
+  .mandong-long-card__evidence-list dl > div {
     border-bottom: 1px solid var(--color-border-subtle);
   }
 
-  .mandong-long-card__identity > div:last-child,
   .mandong-long-card__constraints > div:last-child,
-  .mandong-long-card__evidence-list dl > div:last-child,
-  .mandong-long-card__coverage > div:last-child {
+  .mandong-long-card__evidence-list dl > div:last-child {
     border-bottom: 0;
+  }
+
+  .mandong-long-card__identity > div,
+  .mandong-long-card__coverage > div {
+    padding: var(--space-2);
+  }
+
+  .mandong-long-card__identity > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .mandong-long-card__risk {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
   }
 
   .mandong-long-card__refs li {
@@ -567,10 +577,18 @@
   }
 }
 
-.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__motion,
-.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__motion[data-transition] .mandong-long-card__face {
+.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__motion {
+  transform: none !important;
   transition: none;
-  animation: mandong-long-card-crossfade var(--duration-fast) linear both;
+}
+
+.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face {
+  transform: none;
+  transition: none;
+}
+
+.mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face[aria-hidden="true"] {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -578,9 +596,17 @@
     cursor: default;
   }
 
-  .mandong-long-card__motion,
-  .mandong-long-card__motion[data-transition] .mandong-long-card__face {
+  .mandong-long-card__motion {
+    transform: none !important;
     transition: none;
-    animation: mandong-long-card-crossfade var(--duration-fast) linear both;
+  }
+
+  .mandong-long-card__face {
+    transform: none;
+    transition: none;
+  }
+
+  .mandong-long-card__face[aria-hidden="true"] {
+    opacity: 0;
   }
 }

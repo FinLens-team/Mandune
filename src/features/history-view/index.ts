@@ -3,6 +3,7 @@ export type { HistoryAboutTab, HistoryAboutViewProps } from "./HistoryAboutView.
 export { HistoryDetail, HistoryList, HistoryView } from "./HistoryView.js";
 export type {
   HistoryAvailability,
+  HistoryRecordSourceResolver,
   HistoryViewProps,
 } from "./HistoryView.js";
 export {

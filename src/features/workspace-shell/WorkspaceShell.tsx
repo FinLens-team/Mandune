@@ -1,47 +1,102 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type RefObject } from "react";
 import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import { DemoBadge, IconButton } from "../../client/ui/index.js";
+import {
+  Button,
+  DemoBadge,
+  IconButton,
+  type DemoBadgeSource,
+} from "../../client/ui/index.js";
+import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
 import { createExampleDraft } from "../../portfolio/index.js";
+import { OBSERVATION_THEME } from "../../theme/observation.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
 import { snapshotCurrentDraft } from "../review/model.js";
+import { AnalysisConfirmDialog } from "./AnalysisConfirmDialog.js";
 import { WorkspaceDrawer, type WorkspaceView } from "./WorkspaceDrawer.js";
 import "./styles.css";
 
 export interface WorkspaceShellProps {
   activeAnalysis?: { analysisId: string };
   draft?: PortfolioDraft;
+  experienceSource?: DemoBadgeSource;
+  initialExperienceSource?: DemoBadgeSource;
   initialDraft?: PortfolioDraft;
+  initialReviewCoachmarkVisible?: boolean;
   onDraftChange?: (draft: PortfolioDraft) => void;
+  onExperienceSourceChange?: (source: DemoBadgeSource) => void;
   workspace: WorkspacePublicStatus | null;
+  latestCompleteTradingDay?: string;
+  lastAnalysisAt?: string;
   onReducedMotionChange?: (enabled: boolean) => void;
+  onResumeAnalysis?: (analysisId: string) => void;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   onNavigateHistory: () => void;
   onNavigateAbout: () => void;
   reducedMotion?: boolean;
+  reviewCoachmarkVisible?: boolean;
+  onReviewCoachmarkDismiss?: () => void;
 }
 
 export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
   return snapshotCurrentDraft(draft);
 }
 
-export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
-  return Object.values(snapshot.constraints).filter(
-    (value) => value === "unknown" || value === "not_decided",
-  ).length;
+function useMascotMotionEnabled(reduceMotion: boolean): {
+  active: boolean;
+  ref: RefObject<HTMLButtonElement | null>;
+} {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setActive(false);
+      return;
+    }
+
+    let inViewport = true;
+    const sync = () => setActive(document.visibilityState === "visible" && inViewport);
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(([entry]) => {
+            inViewport = entry?.isIntersecting ?? false;
+            sync();
+          });
+
+    if (ref.current) observer?.observe(ref.current);
+    document.addEventListener("visibilitychange", sync);
+    sync();
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [reduceMotion]);
+
+  return { active, ref };
 }
 
 export function WorkspaceShell({
   activeAnalysis,
   draft: controlledDraft,
+  experienceSource: controlledExperienceSource,
+  initialExperienceSource = "random",
   initialDraft,
+  initialReviewCoachmarkVisible = true,
+  lastAnalysisAt,
+  latestCompleteTradingDay,
   onNavigateAbout,
   onNavigateHistory,
   onDraftChange,
+  onExperienceSourceChange,
+  onReviewCoachmarkDismiss,
   onReducedMotionChange,
+  onResumeAnalysis,
   onStartAnalysis,
   reducedMotion: controlledReducedMotion,
+  reviewCoachmarkVisible: controlledReviewCoachmarkVisible,
   workspace,
 }: WorkspaceShellProps) {
   const [uncontrolledDraft, setUncontrolledDraft] = useState(
@@ -50,12 +105,24 @@ export function WorkspaceShell({
   const [view, setView] = useState<WorkspaceView>("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTrigger, setDrawerTrigger] = useState<HTMLElement | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTrigger, setConfirmTrigger] = useState<HTMLElement | null>(null);
+  const [pendingSnapshot, setPendingSnapshot] = useState<PortfolioSnapshot | null>(null);
   const [savedSnapshotId, setSavedSnapshotId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
+  const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
+    useState<DemoBadgeSource>(initialExperienceSource);
+  const [uncontrolledReviewCoachmarkVisible, setUncontrolledReviewCoachmarkVisible] = useState(
+    initialReviewCoachmarkVisible,
+  );
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
   const draft = controlledDraft ?? uncontrolledDraft;
   const reduceMotion = controlledReducedMotion ?? uncontrolledReducedMotion;
+  const experienceSource = controlledExperienceSource ?? uncontrolledExperienceSource;
+  const reviewCoachmarkVisible =
+    controlledReviewCoachmarkVisible ?? uncontrolledReviewCoachmarkVisible;
+  const mascotMotion = useMascotMotionEnabled(reduceMotion);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -68,14 +135,27 @@ export function WorkspaceShell({
     if (view === "home") homeHeadingRef.current?.focus();
   }, [view]);
 
-  function startToday() {
+  function openConfirmation(event: MouseEvent<HTMLElement>) {
     const result = prepareAnalysisSnapshot(draft);
     if (!result.ok) {
       setMessage(result.message);
       setView("portfolio");
       return;
     }
-    onStartAnalysis(result.snapshot);
+    setPendingSnapshot(result.snapshot);
+    setConfirmTrigger(event.currentTarget);
+    if (reviewCoachmarkVisible) {
+      if (controlledReviewCoachmarkVisible === undefined) {
+        setUncontrolledReviewCoachmarkVisible(false);
+      }
+      onReviewCoachmarkDismiss?.();
+    }
+    setMessage(
+      result.skippedCount > 0
+        ? `${result.skippedCount} 条未决持仓不会进入本次复盘。`
+        : null,
+    );
+    setConfirmOpen(true);
   }
 
   function navigate(nextView: WorkspaceView) {
@@ -87,6 +167,11 @@ export function WorkspaceShell({
     if (controlledDraft === undefined) setUncontrolledDraft(nextDraft);
     onDraftChange?.(nextDraft);
     setSavedSnapshotId(null);
+  }
+
+  function changeExperienceSource(source: DemoBadgeSource) {
+    if (controlledExperienceSource === undefined) setUncontrolledExperienceSource(source);
+    onExperienceSourceChange?.(source);
   }
 
   function changeReducedMotion(enabled: boolean) {
@@ -101,7 +186,7 @@ export function WorkspaceShell({
       </a>
       <header className="workspace-shell__topbar">
         <span className="workspace-shell__brand">满懂</span>
-        <DemoBadge />
+        <DemoBadge source={experienceSource} />
       </header>
 
       <main id="workspace-main">
@@ -112,27 +197,52 @@ export function WorkspaceShell({
               <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
                 和兜兜一起，核对今天能确认的变化
               </h1>
+              <p>
+                {latestCompleteTradingDay
+                  ? `当前证据边界截至最新完整交易日 ${latestCompleteTradingDay}。`
+                  : "证据边界将在开始复盘时按最新完整交易日确定。"}
+                缺失或失败会保持未知，不会补写成当前值。
+              </p>
+              {lastAnalysisAt ? <p>最近一次复盘：{lastAnalysisAt}</p> : null}
               {savedSnapshotId ? <p>已保存输入快照：{savedSnapshotId}</p> : null}
-              {activeAnalysis ? <p>已有复盘仍在进行，点击兜兜继续查看。</p> : null}
+              {activeAnalysis ? <p>已有复盘仍在进行，可返回同一任务继续查看。</p> : null}
             </div>
 
-            <button
-              aria-label="点击兜兜，发起今日复盘"
-              className="workspace-mascot-button"
-              onClick={startToday}
-              type="button"
-            >
-              <span className="workspace-mascot" role="img" aria-label="熊猫兜兜，东方观象向导">
-                <span className="workspace-mascot__ear workspace-mascot__ear--left" />
-                <span className="workspace-mascot__ear workspace-mascot__ear--right" />
-                <span className="workspace-mascot__face">
-                  <span className="workspace-mascot__eye workspace-mascot__eye--left" />
-                  <span className="workspace-mascot__eye workspace-mascot__eye--right" />
-                  <span className="workspace-mascot__nose" />
-                </span>
-                <span className="workspace-mascot__coat" />
-              </span>
-            </button>
+            <div className="workspace-mascot-stage">
+              <button
+                aria-describedby={reviewCoachmarkVisible ? "workspace-review-coachmark" : undefined}
+                aria-label="点击兜兜，确认发起今日复盘"
+                className="workspace-mascot-button"
+                data-breathing={mascotMotion.active || undefined}
+                onClick={openConfirmation}
+                ref={mascotMotion.ref}
+                type="button"
+              >
+                <img
+                  alt={OBSERVATION_THEME.mascot.alt}
+                  className="workspace-mascot"
+                  height="512"
+                  src={doudouObserver}
+                  width="512"
+                />
+              </button>
+              {reviewCoachmarkVisible ? (
+                <p className="workspace-review-coachmark" id="workspace-review-coachmark">
+                  点击兜兜，先确认本次复盘
+                </p>
+              ) : null}
+            </div>
+
+            {activeAnalysis && onResumeAnalysis ? (
+              <div className="workspace-home__actions">
+                <Button
+                  onClick={() => onResumeAnalysis(activeAnalysis.analysisId)}
+                  variant="secondary"
+                >
+                  返回分析进度
+                </Button>
+              </div>
+            ) : null}
             {message ? (
               <p className="workspace-shell__message" role="status">
                 {message}
@@ -144,10 +254,12 @@ export function WorkspaceShell({
             draft={draft}
             onCancel={() => navigate("home")}
             onChange={changeDraft}
+            onExperienceSourceChange={changeExperienceSource}
             onSave={(snapshot) => {
               setSavedSnapshotId(snapshot.snapshot_id);
               navigate("home");
             }}
+            experienceSource={experienceSource}
           />
         )}
       </main>
@@ -166,6 +278,7 @@ export function WorkspaceShell({
 
       <WorkspaceDrawer
         currentView={view}
+        experienceSource={experienceSource}
         onClose={() => setDrawerOpen(false)}
         onNavigate={navigate}
         onNavigateAbout={onNavigateAbout}
@@ -175,6 +288,24 @@ export function WorkspaceShell({
         reduceMotion={reduceMotion}
         returnFocus={drawerTrigger}
         workspace={workspace}
+      />
+
+      <AnalysisConfirmDialog
+        latestCompleteTradingDay={latestCompleteTradingDay}
+        experienceSource={experienceSource}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingSnapshot(null);
+        }}
+        onConfirm={(snapshot) => {
+          setConfirmOpen(false);
+          setPendingSnapshot(null);
+          onStartAnalysis(snapshot);
+        }}
+        open={confirmOpen}
+        reduceMotion={reduceMotion}
+        returnFocus={confirmTrigger}
+        snapshot={pendingSnapshot}
       />
     </div>
   );

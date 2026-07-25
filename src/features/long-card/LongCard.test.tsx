@@ -9,6 +9,7 @@ import {
   RationalEvidenceBack,
   longCardRuntimeFromFixture,
   longCardRuntimeIsDisplayable,
+  longCardDragRotation,
   longCardFlipTarget,
   longCardGestureIntent,
   preserveFaceScrollOffsets,
@@ -26,6 +27,23 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("有限分析");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
     expect(markup).not.toContain("风险与判断边界");
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup).toContain("mandong-long-card__back");
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain("inert");
+  });
+
+  it("keeps edited example provenance explicit without changing existing callers", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const randomMarkup = renderToStaticMarkup(createElement(LongCard, { input }));
+    const editedMarkup = renderToStaticMarkup(createElement(LongCard, {
+      input: { ...input, experienceSource: "edited" },
+    }));
+    expect(randomMarkup).toContain("随机体验身份 · 示例数据");
+    expect(editedMarkup).toContain("体验持仓 · 已编辑");
+    expect(renderToStaticMarkup(createElement(LongCard, {
+      input: { ...input, exampleLabel: "随机体验身份 · 缓存证据（非实时）" },
+    }))).toContain("随机体验身份 · 缓存证据（非实时）");
   });
 
   it("renders an unavailable result without a normal long-card stage", () => {
@@ -44,6 +62,9 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(longCardFlipTarget({ x: 160, y: 20 }, { x: 80, y: 140 })).toBeNull();
     expect(longCardGestureIntent({ x: 120, y: 20 }, { x: 112, y: 160 })).toBe("vertical");
     expect(longCardGestureIntent({ x: 160, y: 20 }, { x: 80, y: 28 })).toBe("horizontal");
+    expect(longCardDragRotation("narrative", -160, 320)).toBe(-90);
+    expect(longCardDragRotation("evidence", 160, 320)).toBe(-90);
+    expect(longCardDragRotation("narrative", -1000, 320)).toBe(-112);
   });
 
   it("keeps separate reading offsets for each face", () => {
@@ -65,6 +86,7 @@ describe("long-card rendering and interaction boundaries", () => {
     const input = longCardRuntimeFromFixture(fixture);
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
+        active: true,
         faceId: "evidence-face",
         input,
         headingId: "evidence-heading",
@@ -83,6 +105,61 @@ describe("long-card rendering and interaction boundaries", () => {
       expect(markup).toContain(advice.statement);
       for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
     }
+    for (const evidence of fixture.analysis.evidence) {
+      expect(markup).toContain(evidence.value === null ? "未知（原始值为空）" : String(evidence.value));
+      expect(markup).toContain(evidence.unit ?? "未提供");
+      expect(markup).toContain(evidence.source.name);
+      expect(markup).toContain(evidence.observation_or_event_time);
+      expect(markup).toContain(evidence.fetched_at);
+    }
+  });
+
+  it("renders unknown and not_decided constraints as equally valid unknown values", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const constraints = {
+      ...input.analysis.constraints,
+      investment_horizon: "unknown" as const,
+      near_term_liquidity: "not_decided" as const,
+    };
+    const markup = renderToStaticMarkup(
+      createElement(RationalEvidenceBack, {
+        active: true,
+        faceId: "evidence-face",
+        input: {
+          ...input,
+          analysis: { ...input.analysis, constraints },
+          snapshot: { ...input.snapshot, constraints },
+        },
+        headingId: "evidence-heading",
+        headingRef: { current: null },
+      }),
+    );
+    expect(markup.match(/未知／尚未决定/g)).toHaveLength(2);
+    expect(markup).not.toContain(">unknown<");
+    expect(markup).not.toContain(">not_decided<");
+  });
+
+  it("does not invent missing derivation relationships", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const firstDerived = input.analysis.derived[0];
+    expect(firstDerived).toBeDefined();
+    if (!firstDerived) return;
+    const derived = input.analysis.derived.map((item) => ({
+      ...item,
+      evidence_refs: [],
+      input_refs: [],
+    }));
+    const markup = renderToStaticMarkup(
+      createElement(RationalEvidenceBack, {
+        active: true,
+        faceId: "evidence-face",
+        input: { ...input, analysis: { ...input.analysis, derived } },
+        headingId: "evidence-heading",
+        headingRef: { current: null },
+      }),
+    );
+    expect(markup).toContain(firstDerived.label);
+    expect(markup).not.toContain("输入 ；证据");
   });
 
   it("renders only a validated matching runtime narrative", () => {
@@ -128,6 +205,7 @@ describe("long-card rendering and interaction boundaries", () => {
   it("renders relaxed model text as Markdown on the long-card front", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
     const markup = renderToStaticMarkup(createElement(AiNarrativeFront, {
+      active: true,
       aiText: "## 核心观察\n\n- **保持观察**",
       faceId: "front",
       headingId: "front-heading",
@@ -143,7 +221,11 @@ describe("long-card rendering and interaction boundaries", () => {
     const stylesheet = readFileSync("src/features/long-card/LongCard.css", "utf8");
     expect(stylesheet).toContain("var(--content-reading)");
     expect(stylesheet).toContain("touch-action: pan-y");
+    expect(stylesheet).toContain("rotateY(180deg)");
+    expect(stylesheet).toContain("pointer-events: none");
+    expect(stylesheet).toContain("transition: none");
     expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
     expect(stylesheet).toContain('data-reduced-motion="true"');
+    expect(stylesheet).not.toContain("overflow-y: auto");
   });
 });

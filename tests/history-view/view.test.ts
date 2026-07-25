@@ -9,15 +9,19 @@ import type {
 } from "../../src/features/history-view/model.js";
 import { record, summary } from "./model.test.js";
 
+type DemoBadgeSource = "random" | "edited";
+
 interface HistoryViewModule {
   HistoryAboutView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
+    experienceSource?: DemoBadgeSource;
     initialTab?: "history" | "about";
     onNavigateHome: () => void;
     onOpenRecord: (record: HistoryRecordV1) => void;
     onRequestDeleteWorkspace?: () => void;
     reader: HistoryReader;
     reduceMotion?: boolean;
+    resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
     workspace: WorkspacePublicStatus | null;
     workspaceId: string;
   }>;
@@ -26,17 +30,20 @@ interface HistoryViewModule {
     onBack: () => void;
     onNavigateHome: () => void;
     onOpenRecord: (record: HistoryRecordV1) => void;
+    resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
   }>;
   HistoryList: ComponentType<{
     entries: HistoryListEntry[];
     onNavigateHome: () => void;
     onSelectRecord: (recordId: string) => void;
+    resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
   }>;
   HistoryView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
     onNavigateHome: () => void;
     onOpenRecord: (record: HistoryRecordV1) => void;
     reader: HistoryReader;
+    resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
     workspaceId: string;
   }>;
   nextHistoryAboutTab(current: "history" | "about", key: string): "history" | "about";
@@ -45,6 +52,7 @@ interface HistoryViewModule {
 interface AboutModule {
   AboutView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
+    experienceSource?: DemoBadgeSource;
     onNavigateHome: () => void;
     onRequestDeleteWorkspace?: () => void;
     workspace: WorkspacePublicStatus | null;
@@ -83,8 +91,34 @@ describe("S10 history list and detail", () => {
     expect(markup).toContain("证据截止");
     expect(markup).toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("fixture 证据 · 非实时");
+    expect(markup).toContain("主题叙事已保存");
+    expect(markup).toContain("analysis-history.v1");
+    expect(markup).toContain("rational-analysis.v1");
     expect(markup).toContain("查看本次记录");
     expect(markup).not.toContain("实时行情");
+  });
+
+  it("uses the immutable record source hook for edited experience history", async () => {
+    const { HistoryDetail, HistoryList } = await loadHistoryView();
+    const resolveRecordSource = vi.fn(() => "edited" as const);
+    const entry = { detail: { status: "found", record: record() } as const, summary };
+    const listMarkup = renderToStaticMarkup(createElement(HistoryList, {
+      entries: [entry],
+      onNavigateHome: vi.fn(),
+      onSelectRecord: vi.fn(),
+      resolveRecordSource,
+    }));
+    const detailMarkup = renderToStaticMarkup(createElement(HistoryDetail, {
+      detail: entry.detail,
+      onBack: vi.fn(),
+      onNavigateHome: vi.fn(),
+      onOpenRecord: vi.fn(),
+      resolveRecordSource,
+    }));
+
+    expect(listMarkup).toContain("体验持仓 · 已编辑");
+    expect(detailMarkup).toContain("体验持仓 · 已编辑");
+    expect(resolveRecordSource).toHaveBeenCalledWith(entry.detail.record);
   });
 
   it("renders immutable detail and only offers the saved long card when complete", async () => {
@@ -179,6 +213,7 @@ describe("S10 about and navigation", () => {
     const markup = renderToStaticMarkup(createElement(AboutView, {
       onNavigateHome: vi.fn(),
       onRequestDeleteWorkspace: vi.fn(),
+      experienceSource: "edited",
       workspace: {
         expires_at: "2026-08-24T08:00:00.000Z",
         last_active_at: "2026-07-25T08:00:00.000Z",
@@ -188,15 +223,18 @@ describe("S10 about and navigation", () => {
     }));
 
     expect(markup).toContain("不是投资建议，也不替你交易");
+    expect(markup).toContain("体验持仓 · 已编辑");
     expect(markup).toContain("公开应用入口不会公开");
-    expect(markup).toContain("不承诺跨设备找回");
+    expect(markup).toContain("不支持跨设备找回");
+    expect(markup).toContain("公开页面、URL 或默认日志");
     expect(markup).toContain("原始截图会在提取成功、失败或中止后删除");
     expect(markup).toContain("30 天");
+    expect(markup).toContain("每次活动都会刷新保留期");
     expect(markup).toContain("预计删除");
     expect(markup).toContain("主动删除当前工作区");
     expect(markup).toContain("缓存或 fixture 证据");
     expect(markup).toContain("不证明供应商当前可用");
-    expect(markup).not.toContain("收益保证");
+    expect(markup).not.toContain("精确交易指令");
   });
 
   it("exposes two keyboard tabs and stable journey callbacks", async () => {

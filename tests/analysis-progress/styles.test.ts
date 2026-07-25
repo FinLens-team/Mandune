@@ -15,6 +15,11 @@ describe("analysis progress motion and responsive styles", () => {
     expect(css).toContain('[data-reduce-motion="true"]');
     expect(css).toContain("animation: none");
     expect(css).toContain("var(--duration-base)");
+    expect(css).toContain(".analysis-progress__mascot");
+    expect(css).toContain("aspect-ratio: 1");
+    expect(css).toContain("object-fit: contain");
+    expect(css).not.toContain("infinite");
+    expect(css).not.toContain("analysis-guide-breathe");
     expect(css).not.toMatch(/transition:\s*all/);
   });
 });

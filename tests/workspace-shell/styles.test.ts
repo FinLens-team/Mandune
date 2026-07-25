@@ -14,5 +14,10 @@ describe("workspace shell responsive and motion styles", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain('[data-reduce-motion="true"] .workspace-mascot');
     expect(css).toContain("env(safe-area-inset-bottom)");
+    expect(css).toContain('[data-state="closing"] .workspace-drawer');
+    expect(css).toContain('[data-state="closing"] .analysis-confirm');
+    expect(css).toContain("top: var(--space-6)");
+    expect(css).not.toContain("transition: all");
+    expect(css).not.toContain("workspace-mascot__ear");
   });
 });
