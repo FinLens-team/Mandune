@@ -63,13 +63,33 @@ test("returning workspace skips first-run screens without exposing locator data"
   await expectPublicPrivacySurface(page);
 });
 
+test("first-S4 coachmark dismisses on review trigger and stays dismissed", async ({ page }) => {
+  await completeOnboarding(page);
+  const coachmark = page.getByText("点击兜兜，先确认本次复盘", { exact: true });
+  const mascot = page.getByRole("button", { name: "点击兜兜，确认发起今日复盘" });
+  await expect(coachmark).toBeVisible();
+  await mascot.click();
+  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
+  await expect(dialog.getByRole("button", { name: "开始复盘" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(mascot).toBeFocused();
+  await expect(coachmark).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: /和兜兜一起/ })).toBeVisible();
+  await expect(coachmark).toHaveCount(0);
+});
+
 test("ordinary UI reaches a supported result when all constraints are known", async ({ page }) => {
   await completeOnboarding(page);
   await setConstraints(page, KNOWN_CONSTRAINTS);
+  await expect(page.getByText("体验持仓 · 已编辑").first()).toBeVisible();
   await enableReducedMotion(page);
   await runAnalysisAndOpenResult(page);
 
   const card = page.getByRole("region", { name: "每日复盘报告" });
+  await expect(card.getByText("体验持仓 · 已编辑").first()).toBeVisible();
   await expect(card.getByText("证据支持", { exact: true })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
@@ -92,10 +112,10 @@ test("ordinary UI fails closed when an edited holding has no same-asset fixture"
   await page.getByRole("button", { name: "保存后续复盘输入" }).click();
   await enableReducedMotion(page);
 
-  await page.getByRole("button", { name: "点击兜兜，发起今日复盘" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "本次复盘未能生成报告" }),
-  ).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByRole("region", { name: "每日复盘报告" })).toHaveCount(0);
+  await page.getByRole("button", { name: "点击兜兜，确认发起今日复盘" }).click();
+  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
+  await dialog.getByRole("button", { name: "开始复盘" }).click();
+  await expect(page.getByText("分析不可用，可重试", { exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole("button", { name: "查看复盘报告" })).toHaveCount(0);
   await expectPublicPrivacySurface(page);
 });

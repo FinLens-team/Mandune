@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   JourneyController,
   createJourneyPersistence,
@@ -272,6 +272,34 @@ describe("journey controller first and returning entry", () => {
     expect(app.state.phase).toBe("home");
     expect(app.state.draft).toEqual(identityToPortfolioDraft(identity));
     expect(gateway.calls).toContain("saveCurrentDraft");
+    expect(app.state.experienceSource).toBe("random");
+  });
+
+  it("persists the edited source and first-S4 coachmark dismissal per workspace", async () => {
+    const gateway = new FakeGateway();
+    const app = harness(gateway);
+    await enterReturning(app);
+
+    app.controller.updateDraft({
+      ...app.state.draft!,
+      constraints: { ...app.state.draft!.constraints, investment_horizon: "5年以上" },
+    });
+    app.controller.dismissReviewCoachmark();
+
+    expect(app.state.experienceSource).toBe("edited");
+    expect(app.state.draft?.source_label).toMatch(/^体验持仓 · 已编辑/);
+    expect(app.state.reviewCoachmarkVisible).toBe(false);
+    await vi.waitFor(() => {
+      expect(app.persistence.getExperienceSource(workspace.workspace_id)).toBe("edited");
+    });
+    expect(app.persistence.getReviewCoachmarkDismissed(workspace.workspace_id)).toBe(true);
+
+    const returning = harness(gateway, app.persistence);
+    await returning.controller.bootstrap();
+    expect(returning.state).toMatchObject({
+      experienceSource: "edited",
+      reviewCoachmarkVisible: false,
+    });
   });
 
   it("does not invent a returning draft when durable hydration is empty", async () => {
@@ -312,11 +340,11 @@ describe("journey controller first and returning entry", () => {
     app.controller.updateDraft(first);
     app.controller.updateDraft(second);
     await Promise.resolve();
-    expect(app.state.draft?.source_label).toBe("最新草稿");
+    expect(app.state.draft?.source_label).toBe("体验持仓 · 已编辑 · 最新草稿");
     releaseFirst();
     await Promise.resolve();
     await Promise.resolve();
-    expect(app.state.draft?.source_label).toBe("最新草稿");
+    expect(app.state.draft?.source_label).toBe("体验持仓 · 已编辑 · 最新草稿");
     releaseSecond();
     await Promise.resolve();
     await Promise.resolve();
@@ -334,8 +362,7 @@ describe("journey controller analysis status matrix", () => {
     await enterReturning(app);
     await app.controller.startAnalysis(app.state.draft!);
 
-    // Displayable terminals now open the long card directly; degraded ones stay honest.
-    expect(app.state.phase).toBe(displayable ? "result" : "analysis");
+    expect(app.state.phase).toBe("analysis");
     expect(app.state.activeAnalysis?.terminal).toMatchObject({
       analysis_id: `analysis_${scenarioId}`,
       displayable,
@@ -344,13 +371,49 @@ describe("journey controller analysis status matrix", () => {
     expect(Boolean(app.state.activeAnalysis?.resultInput)).toBe(displayable);
     if (displayable) {
       expect(app.state.activeAnalysis?.resultInput?.exampleLabel).toBe("示例 fixture（非实时）");
-      expect(app.state.displayedResult).toEqual(app.state.activeAnalysis?.resultInput);
-      expect(app.state.resultReturn).toBe("home");
+      expect(app.state.activeAnalysis?.resultInput?.experienceSource).toBe("random");
+      app.controller.openCurrentResult();
+      expect(app.state.phase).toBe("result");
     } else {
       expect(app.state.displayedResult).toBeNull();
       app.controller.openCurrentResult();
       expect(app.state.phase).toBe("analysis");
     }
+  });
+
+  it("freezes source at analysis creation and never relabels old history from the current draft", async () => {
+    const app = harness(new FakeGateway("supported_full"));
+    await enterReturning(app);
+    await app.controller.startAnalysis(app.state.draft!, "random");
+    expect(app.state.activeAnalysis?.resultInput?.experienceSource).toBe("random");
+
+    app.controller.updateDraft({
+      ...app.state.draft!,
+      constraints: { ...app.state.draft!.constraints, investment_objective: "长期增长" },
+    });
+    expect(app.state.experienceSource).toBe("edited");
+    expect(app.controller.historyRecordExperienceSource(app.gateway.record)).toBe("random");
+
+    await app.controller.openHistoryRecord(app.gateway.record.record_id);
+    expect(app.state.displayedResult?.experienceSource).toBe("random");
+  });
+
+  it("restores the frozen source for the same active analysis after bootstrap", async () => {
+    const gateway = new FakeGateway("supported_full", { running: true });
+    const first = harness(gateway);
+    await enterReturning(first);
+    first.controller.setExperienceSource("edited");
+    await first.controller.startAnalysis(first.state.draft!, "edited");
+
+    const returning = harness(gateway, first.persistence);
+    await enterReturning(returning);
+    expect(returning.state).toMatchObject({
+      phase: "analysis",
+      activeAnalysis: {
+        analysisId: gateway.status.analysis_id,
+        experienceSource: "edited",
+      },
+    });
   });
 
   it("fails closed when a supported result has no validated narrative", async () => {
@@ -409,7 +472,7 @@ describe("journey controller mascot startToday entry", () => {
 
     expect(app.gateway.calls).toContain("listHistory");
     expect(app.gateway.calls.filter((call) => call === "startAnalysis")).toHaveLength(1);
-    expect(app.state).toMatchObject({ phase: "result", resultReturn: "home" });
+    expect(app.state.phase).toBe("analysis");
   });
 
   it("replays today's readable record instead of starting another analysis", async () => {
@@ -446,7 +509,7 @@ describe("journey controller mascot startToday entry", () => {
     await app.controller.startToday(app.state.draft!);
 
     expect(gateway.calls.filter((call) => call === "startAnalysis")).toHaveLength(1);
-    expect(app.state.phase).toBe("result");
+    expect(app.state.phase).toBe("analysis");
   });
 });
 

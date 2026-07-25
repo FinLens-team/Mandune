@@ -18,6 +18,12 @@ import type {
 import { JourneyGatewayError } from "./gateway.js";
 import type { JourneyPersistence } from "./persistence.js";
 import type { JourneyAction, JourneyPhase, JourneyState } from "./state.js";
+import {
+  experienceSourceFromDraft,
+  experienceSourceFromHistoryRecord,
+  markDraftExperienceSource,
+  type JourneyExperienceSource,
+} from "./source.js";
 
 export interface JourneyControllerOptions {
   dispatch: (action: JourneyAction) => void;
@@ -79,10 +85,12 @@ function historyExampleLabel(record: HistoryRecordV1): string | undefined {
 function historyInput(
   record: HistoryRecordV1,
   exampleLabel?: string,
+  experienceSource?: JourneyExperienceSource,
 ): JourneyLongCardRuntimeInput {
   return {
     analysis: record.analysis,
     ...(exampleLabel ? { exampleLabel } : {}),
+    ...(experienceSource ? { experienceSource } : {}),
     isExample: record.snapshot.lines.some((line) => line.entry_method === "example"),
     ...(record.narrative ? { narrative: record.narrative } : {}),
     ...(record.ai_text ? { aiText: record.ai_text } : {}),
@@ -113,6 +121,7 @@ function terminalUnavailable(
 }
 
 export class JourneyController {
+  private readonly analysisSources = new Map<string, JourneyExperienceSource>();
   private draftRevision = 0;
   private draftWrites: Promise<void> = Promise.resolve();
   private readonly refreshes = new Set<string>();
@@ -131,12 +140,29 @@ export class JourneyController {
       const draft = await this.options.gateway.getCurrentDraft();
       const storedMotion = this.options.persistence.getReducedMotion(workspace.workspace_id);
       const reducedMotion = storedMotion ?? this.options.prefersReducedMotion?.() ?? false;
+      const experienceSource =
+        this.options.persistence.getExperienceSource(workspace.workspace_id) ??
+        experienceSourceFromDraft(draft);
+      const resumeAnalysisId = this.options.persistence.getActiveAnalysis(workspace.workspace_id);
+      const resumeAnalysisSource = resumeAnalysisId
+        ? this.options.persistence.getAnalysisExperienceSource(
+            workspace.workspace_id,
+            resumeAnalysisId,
+          )
+        : null;
+      if (resumeAnalysisId && resumeAnalysisSource) {
+        this.analysisSources.set(resumeAnalysisId, resumeAnalysisSource);
+      }
       this.options.dispatch({
         type: "BOOT_SUCCEEDED",
         workspace,
         draft,
+        experienceSource,
         reducedMotion,
-        resumeAnalysisId: this.options.persistence.getActiveAnalysis(workspace.workspace_id),
+        reviewCoachmarkVisible:
+          !this.options.persistence.getReviewCoachmarkDismissed(workspace.workspace_id),
+        resumeAnalysisId,
+        resumeAnalysisSource,
       });
     } catch (error) {
       this.options.dispatch({ type: "WORKSPACE_FAILED", message: workspaceFailureMessage(error) });
@@ -152,6 +178,8 @@ export class JourneyController {
       const saved = await this.persistDraft(draft, ++this.draftRevision);
       if (!saved) return;
       draft = saved;
+      this.options.persistence.setExperienceSource(state.workspace.workspace_id, "random");
+      this.options.dispatch({ type: "EXPERIENCE_SOURCE_CHANGED", source: "random" });
     }
     if (!draft) {
       this.options.dispatch({
@@ -176,8 +204,10 @@ export class JourneyController {
   }
 
   updateDraft(draft: PortfolioDraft): void {
-    this.options.dispatch({ type: "DRAFT_CHANGED", draft });
-    void this.persistDraft(draft, ++this.draftRevision);
+    const editedDraft = markDraftExperienceSource(draft, "edited");
+    this.setExperienceSource("edited");
+    this.options.dispatch({ type: "DRAFT_CHANGED", draft: editedDraft });
+    void this.persistDraft(editedDraft, ++this.draftRevision);
   }
 
   private async persistDraft(
@@ -191,6 +221,10 @@ export class JourneyController {
       .then(async () => {
         saved = await this.options.gateway.saveCurrentDraft(draft);
         if (revision === this.draftRevision) {
+          const source = experienceSourceFromDraft(saved);
+          const workspaceId = this.options.getState().workspace?.workspace_id;
+          if (workspaceId) this.options.persistence.setExperienceSource(workspaceId, source);
+          this.options.dispatch({ type: "EXPERIENCE_SOURCE_CHANGED", source });
           this.options.dispatch({ type: "DRAFT_SAVE_SUCCEEDED", draft: saved });
         }
       })
@@ -213,6 +247,23 @@ export class JourneyController {
     this.options.dispatch({ type: "REDUCED_MOTION_CHANGED", enabled });
   }
 
+  setExperienceSource(source: JourneyExperienceSource): void {
+    const state = this.options.getState();
+    if (state.experienceSource !== source) {
+      this.options.dispatch({ type: "EXPERIENCE_SOURCE_CHANGED", source });
+    }
+  }
+
+  dismissReviewCoachmark(): void {
+    const state = this.options.getState();
+    if (state.workspace) {
+      this.options.persistence.setReviewCoachmarkDismissed(state.workspace.workspace_id);
+    }
+    if (state.reviewCoachmarkVisible) {
+      this.options.dispatch({ type: "REVIEW_COACHMARK_DISMISSED" });
+    }
+  }
+
   navigate(phase: Extract<JourneyPhase, "home" | "history" | "about">): void {
     const state = this.options.getState();
     if (phase === "home" && state.activeAnalysis?.terminal && state.workspace) {
@@ -223,16 +274,38 @@ export class JourneyController {
     this.options.dispatch({ type: "NAVIGATED", phase });
   }
 
-  async startAnalysis(draft: PortfolioDraft): Promise<void> {
+  async startAnalysis(
+    draft: PortfolioDraft,
+    experienceSource: JourneyExperienceSource = this.options.getState().experienceSource,
+  ): Promise<void> {
     const state = this.options.getState();
     if (!state.workspace) return;
     this.options.dispatch({ type: "ANALYSIS_STARTING" });
-    const saved = await this.persistDraft(draft, ++this.draftRevision);
+    const saved = await this.persistDraft(
+      markDraftExperienceSource(draft, experienceSource),
+      ++this.draftRevision,
+    );
     if (!saved) return;
     try {
       const started = await this.options.gateway.startAnalysis();
+      const frozenSource = started.reused_active
+        ? this.options.persistence.getAnalysisExperienceSource(
+            state.workspace.workspace_id,
+            started.analysis_id,
+          ) ?? "random"
+        : experienceSource;
       this.options.persistence.setActiveAnalysis(state.workspace.workspace_id, started.analysis_id);
-      this.options.dispatch({ type: "ANALYSIS_STARTED", analysisId: started.analysis_id });
+      this.options.persistence.setAnalysisExperienceSource(
+        state.workspace.workspace_id,
+        started.analysis_id,
+        frozenSource,
+      );
+      this.analysisSources.set(started.analysis_id, frozenSource);
+      this.options.dispatch({
+        type: "ANALYSIS_STARTED",
+        analysisId: started.analysis_id,
+        experienceSource: frozenSource,
+      });
       await this.refreshAnalysis(started.analysis_id);
     } catch {
       this.options.dispatch({
@@ -290,7 +363,15 @@ export class JourneyController {
   }
 
   async resumeAnalysis(analysisId: string): Promise<void> {
-    this.options.dispatch({ type: "ANALYSIS_RESUMED", analysisId });
+    const state = this.options.getState();
+    const experienceSource = state.workspace
+      ? this.analysisSources.get(analysisId) ??
+        this.options.persistence.getAnalysisExperienceSource(
+          state.workspace.workspace_id,
+          analysisId,
+        ) ?? "random"
+      : "random";
+    this.options.dispatch({ type: "ANALYSIS_RESUMED", analysisId, experienceSource });
     await this.refreshAnalysis(analysisId);
   }
 
@@ -382,7 +463,11 @@ export class JourneyController {
       });
       return;
     }
-    const input = historyInput(replay.record, result.source.label);
+    const input = historyInput(
+      replay.record,
+      result.source.label,
+      this.historyRecordExperienceSource(replay.record),
+    );
     // Relaxed Demo mode: either a matching free-text narrative or a matching
     // theme narrative makes the card displayable over the same analysis shell.
     const narrativeMatch = Boolean(result.narrative) &&
@@ -423,7 +508,11 @@ export class JourneyController {
     try {
       const replay = await this.options.gateway.replayHistory(recordId);
       if (replay.status !== "replayed") throw new Error("history_not_replayable");
-      const input = historyInput(replay.record, historyExampleLabel(replay.record));
+      const input = historyInput(
+        replay.record,
+        historyExampleLabel(replay.record),
+        this.historyRecordExperienceSource(replay.record),
+      );
       if (!journeyLongCardIsDisplayable(input)) throw new Error("history_not_displayable");
       this.options.dispatch({ type: "RESULT_OPENED", input, returnTo: "history" });
     } catch {
@@ -434,11 +523,26 @@ export class JourneyController {
     }
   }
 
+  historyRecordExperienceSource(record: HistoryRecordV1): JourneyExperienceSource {
+    const state = this.options.getState();
+    if (state.activeAnalysis?.analysisId === record.analysis.analysis_id) {
+      return state.activeAnalysis.experienceSource;
+    }
+    const workspaceId = state.workspace?.workspace_id;
+    return this.analysisSources.get(record.analysis.analysis_id) ?? (workspaceId
+      ? this.options.persistence.getAnalysisExperienceSource(
+          workspaceId,
+          record.analysis.analysis_id,
+        )
+      : null) ?? experienceSourceFromHistoryRecord(record);
+  }
+
   async deleteWorkspace(): Promise<void> {
     const workspaceId = this.options.getState().workspace?.workspace_id;
     if (!workspaceId) return;
     try {
       await this.options.gateway.deleteWorkspace();
+      this.analysisSources.clear();
       this.options.persistence.clearWorkspace(workspaceId);
       this.options.dispatch({ type: "WORKSPACE_DELETED" });
     } catch {

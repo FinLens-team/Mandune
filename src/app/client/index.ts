@@ -20,6 +20,14 @@ export {
 } from "./runtime.js";
 export type { JourneyLongCardRuntimeInput } from "./runtime.js";
 export {
+  EDITED_EXPERIENCE_LABEL,
+  RANDOM_EXPERIENCE_LABEL,
+  experienceSourceFromDraft,
+  experienceSourceFromHistoryRecord,
+  markDraftExperienceSource,
+} from "./source.js";
+export type { JourneyExperienceSource } from "./source.js";
+export {
   createJourneyPersistence,
   getBrowserJourneyStorage,
 } from "./persistence.js";
