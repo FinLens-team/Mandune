@@ -135,6 +135,7 @@ export function AboutView({
 }: AboutViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const easterEggButtonRef = useRef<HTMLButtonElement>(null);
+  const easterEggCanvasRef = useRef<HTMLCanvasElement>(null);
   const easterEggCloseRef = useRef<HTMLButtonElement>(null);
   const [easterEggOpen, setEasterEggOpen] = useState(false);
 
@@ -290,6 +291,11 @@ export function AboutView({
             tabIndex={-1}
             type="button"
           />
+          <canvas
+            aria-hidden="true"
+            className="about-easter-egg__effects"
+            ref={easterEggCanvasRef}
+          />
           <section
             aria-labelledby="about-easter-egg-heading"
             aria-modal="true"
@@ -308,7 +314,10 @@ export function AboutView({
                 <X aria-hidden="true" size={20} />
               </button>
             </div>
-            <AboutEasterEggGame themeId={themeId} />
+            <AboutEasterEggGame
+              effectsCanvasRef={easterEggCanvasRef}
+              themeId={themeId}
+            />
           </section>
         </div>
       ) : null}

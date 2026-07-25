@@ -1,16 +1,19 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from "react";
 import type { ThemeId } from "../../theme/index.js";
 import easterEggImage from "../../client/assets/developer-easter-egg.webp";
 import { EASTER_EGG_AUDIO_THEMES, EasterEggAudioEngine } from "./easter-egg-audio.js";
+import { EasterEggEffectsEngine } from "./easter-egg-effects.js";
 
 const PITCH_LABELS = ["高音", "中音", "低音"] as const;
 
 export interface AboutEasterEggGameProps {
+  effectsCanvasRef: RefObject<HTMLCanvasElement | null>;
   themeId: ThemeId;
 }
 
-export function AboutEasterEggGame({ themeId }: AboutEasterEggGameProps) {
+export function AboutEasterEggGame({ effectsCanvasRef, themeId }: AboutEasterEggGameProps) {
   const engineRef = useRef<EasterEggAudioEngine | null>(null);
+  const effectsRef = useRef<EasterEggEffectsEngine | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef({ active: false, cell: -1 });
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -22,6 +25,14 @@ export function AboutEasterEggGame({ themeId }: AboutEasterEggGameProps) {
   useEffect(() => {
     const engine = new EasterEggAudioEngine(themeId);
     engineRef.current = engine;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reducedMotion && effectsCanvasRef.current && gridRef.current) {
+      effectsRef.current = new EasterEggEffectsEngine(
+        effectsCanvasRef.current,
+        gridRef.current,
+        () => engine.getBeatPulse(),
+      );
+    }
     setAudioState("idle");
     return () => {
       if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
@@ -29,9 +40,11 @@ export function AboutEasterEggGame({ themeId }: AboutEasterEggGameProps) {
       visualTimersRef.current.clear();
       pulseTimerRef.current = null;
       engineRef.current = null;
+      effectsRef.current?.destroy();
+      effectsRef.current = null;
       void engine.stop();
     };
-  }, [themeId]);
+  }, [effectsCanvasRef, themeId]);
 
   function pulse(cellIndex: number) {
     setActiveCell(cellIndex);
@@ -48,6 +61,7 @@ export function AboutEasterEggGame({ themeId }: AboutEasterEggGameProps) {
       const timer = setTimeout(() => {
         visualTimersRef.current.delete(timer);
         pulse(cellIndex);
+        effectsRef.current?.trigger();
       }, waitMs);
       visualTimersRef.current.add(timer);
     }).catch(() => {

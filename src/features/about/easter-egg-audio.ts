@@ -108,6 +108,13 @@ export class EasterEggAudioEngine {
     this.theme = EASTER_EGG_AUDIO_THEMES[themeId];
   }
 
+  getBeatPulse(): number {
+    const context = this.context;
+    if (!context || this.startTime <= 0 || context.currentTime < this.startTime) return 0;
+    const phase = ((context.currentTime - this.startTime) / SECONDS_PER_BEAT) % 1;
+    return Math.pow(1 - phase, 2.4);
+  }
+
   async trigger(cellIndex: number): Promise<number | null> {
     await this.start();
     if (this.stopped || !this.context || !this.soundBus) return null;

@@ -5,6 +5,7 @@
 - `AboutView.tsx` owns the About page and the accessible easter-egg dialog boundary.
 - `AboutEasterEggGame.tsx` owns the image-grid input surface and theme-driven feedback.
 - `easter-egg-audio.ts` owns the credited Dagou Tap sample mapping, 128 BPM Web Audio scheduler, pitch shifting, and teardown. Closing the dialog must unmount the game and close its task-owned `AudioContext`.
+- `easter-egg-effects.ts` adapts Dagou Tap's 12 full-viewport Canvas effects and underdamped jelly spring. The canvas stays behind the dialog card, never captures input, and releases its RAF, observer, timers, and inline transform on teardown.
 
 ## Gotchas & Decisions
 

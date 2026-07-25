@@ -354,10 +354,21 @@
   border: 0;
   background: var(--color-overlay);
   cursor: pointer;
+  z-index: 0;
+}
+
+.about-easter-egg__effects {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .about-easter-egg {
   position: relative;
+  z-index: 2;
   width: min(100%, 34rem);
   max-height: calc(100dvh - 2 * var(--space-4));
   overflow: auto;
@@ -453,6 +464,7 @@
   box-shadow: 0 0 0 1px var(--color-border-subtle);
   touch-action: none;
   user-select: none;
+  transform-origin: center;
 }
 
 .about-easter-game__grid button {
@@ -547,9 +559,14 @@
   .about-devs > li,
   .about-actions,
   .about-easter-egg,
+  .about-easter-egg__effects,
   .about-easter-game__grid button {
     animation: none;
     transition: none;
+  }
+
+  .about-easter-egg__effects {
+    display: none;
   }
 
   .about-topic,
