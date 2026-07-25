@@ -34,8 +34,13 @@ describe("S6 portfolio editor", () => {
       }),
     );
 
-    expect(markup).toContain("仓位／身份");
+    expect(markup).toContain("数据管理");
     expect(markup).not.toContain("随机体验身份 · 示例数据");
+    // 未决字段提示使用表单语言，不暴露契约英文字段名。
+    expect(markup).toContain("待补充：代码、持仓规模依据");
+    expect(markup).not.toContain("待补充：symbol");
+    // unknown 状态展示为空输入框，不把字面量 unknown 渲染进输入值。
+    expect(markup).not.toContain('value="unknown"/>');
     expect(markup).toContain("投资期限");
     expect(markup).toContain("近期流动性需求");
     expect(markup).toContain("可承受回撤");
