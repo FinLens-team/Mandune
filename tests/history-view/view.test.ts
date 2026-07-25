@@ -101,7 +101,7 @@ describe("S10 history list and detail", () => {
     expect(markup).toContain("近期流动性需求");
     expect(markup).toContain("未知／尚未决定");
     expect(markup).toContain("不请求供应商，也不采用后来数据");
-    expect(markup).toContain("打开本次观象长笺");
+    expect(markup).toContain("打开本次复盘报告");
 
     const unavailable = record();
     unavailable.analysis.status = "unavailable";
@@ -111,8 +111,8 @@ describe("S10 history list and detail", () => {
       onNavigateHome: vi.fn(),
       onOpenRecord: vi.fn(),
     }));
-    expect(unavailableMarkup).toContain("本次分析未生成观象长笺");
-    expect(unavailableMarkup).not.toContain("打开本次观象长笺");
+    expect(unavailableMarkup).toContain("本次分析未生成复盘报告");
+    expect(unavailableMarkup).not.toContain("打开本次复盘报告");
   });
 
   it("keeps unsupported, unreadable, not-found, and storage failures explicit", async () => {
@@ -145,7 +145,7 @@ describe("S10 history list and detail", () => {
         onOpenRecord: vi.fn(),
       }));
       expect(markup).toContain(text);
-      expect(markup).not.toContain("打开本次观象长笺");
+      expect(markup).not.toContain("打开本次复盘报告");
     }
   });
 

@@ -213,7 +213,7 @@ export function AnalysisProgress({
             }
             variant="primary"
           >
-            查看观象长笺
+            查看复盘报告
           </Button>
         ) : null}
         {model.canRetry && onRetry ? (

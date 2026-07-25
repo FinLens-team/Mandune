@@ -58,7 +58,7 @@ test("returning workspace skips first-run screens without exposing locator data"
   await page.reload();
 
   await expect(page.getByRole("heading", { level: 1, name: /和兜兜一起/ })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "选择长笺主题" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "选择复盘主题" })).toHaveCount(0);
   await expect(page).toHaveURL(/\/$/);
   await expectPublicPrivacySurface(page);
 });
@@ -69,7 +69,7 @@ test("ordinary UI reaches a supported result when all constraints are known", as
   await enableReducedMotion(page);
   await runAnalysisAndOpenResult(page);
 
-  const card = page.getByRole("region", { name: "观象长笺结果" });
+  const card = page.getByRole("region", { name: "每日复盘报告" });
   await expect(card.getByText("证据支持", { exact: true })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
@@ -80,7 +80,7 @@ test("ordinary UI reaches a limited result when one constraint stays unknown", a
   await enableReducedMotion(page);
   await runAnalysisAndOpenResult(page);
 
-  const card = page.getByRole("region", { name: "观象长笺结果" });
+  const card = page.getByRole("region", { name: "每日复盘报告" });
   await expect(card.getByText("有限分析", { exact: true })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
@@ -94,8 +94,8 @@ test("ordinary UI fails closed when an edited holding has no same-asset fixture"
 
   await page.getByRole("button", { name: "点击兜兜，发起今日复盘" }).click();
   await expect(
-    page.getByRole("heading", { level: 1, name: "本次复盘未能生成观象长笺" }),
+    page.getByRole("heading", { level: 1, name: "本次复盘未能生成报告" }),
   ).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByRole("region", { name: "观象长笺结果" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "每日复盘报告" })).toHaveCount(0);
   await expectPublicPrivacySurface(page);
 });

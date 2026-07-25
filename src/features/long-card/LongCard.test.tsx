@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "../../fixtures/index.js";
 import {
+  AiNarrativeFront,
   LongCard,
   RationalEvidenceBack,
   longCardRuntimeFromFixture,
@@ -23,13 +24,15 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("横向拖动也可翻面，纵向滚动始终用于阅读。");
     expect(markup).toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("有限分析");
+    expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
+    expect(markup).not.toContain("风险与判断边界");
   });
 
   it("renders an unavailable result without a normal long-card stage", () => {
     const markup = renderToStaticMarkup(
       createElement(LongCard, { input: longCardRuntimeFromFixture(FIXTURES.unavailable_no_evidence) }),
     );
-    expect(markup).toContain("当前证据不足以生成观象长笺");
+    expect(markup).toContain("当前证据不足以生成复盘报告");
     expect(markup).not.toContain("mandong-long-card__stage");
     expect(markup).toContain("可以怎样恢复");
   });
@@ -71,6 +74,7 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain(fixture.snapshot.snapshot_id);
     expect(markup).toContain(fixture.analysis.analysis_id);
     expect(markup).toContain(fixture.analysis.evidence_cutoff_at);
+    expect(markup).not.toContain("与正面同一版本");
     for (const conclusion of fixture.analysis.conclusions) {
       expect(markup).toContain(conclusion.statement);
       for (const ref of conclusion.refs) expect(markup).toContain(ref.ref_id);
@@ -100,7 +104,7 @@ describe("long-card rendering and interaction boundaries", () => {
     };
     const mismatchedMarkup = renderToStaticMarkup(createElement(LongCard, { input: mismatched }));
     expect(longCardRuntimeIsDisplayable(mismatched)).toBe(false);
-    expect(mismatchedMarkup).toContain("观象长笺暂不可展示");
+    expect(mismatchedMarkup).toContain("复盘报告暂不可展示");
     expect(mismatchedMarkup).not.toContain("mandong-long-card__stage");
   });
 
@@ -117,8 +121,22 @@ describe("long-card rendering and interaction boundaries", () => {
     const withoutNarrative = longCardRuntimeFromFixture(FIXTURES.limited_partial);
     delete withoutNarrative.narrative;
     const markup = renderToStaticMarkup(createElement(LongCard, { input: withoutNarrative }));
-    expect(markup).toContain("观象长笺暂不可展示");
+    expect(markup).toContain("复盘报告暂不可展示");
     expect(markup).not.toContain("mandong-long-card__stage");
+  });
+
+  it("renders relaxed model text as Markdown on the long-card front", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const markup = renderToStaticMarkup(createElement(AiNarrativeFront, {
+      aiText: "## 核心观察\n\n- **保持观察**",
+      faceId: "front",
+      headingId: "front-heading",
+      headingRef: { current: null },
+      input,
+    }));
+
+    expect(markup).toContain("<h2>核心观察</h2>");
+    expect(markup).toContain("<strong>保持观察</strong>");
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

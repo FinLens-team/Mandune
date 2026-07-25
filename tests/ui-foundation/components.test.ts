@@ -86,7 +86,7 @@ describe("shared UI primitives", () => {
       ["supported", "证据支持", "当前证据支持全部物质性结论"],
       ["limited", "有限分析", "部分证据缺口限制了结论范围"],
       ["observation_only", "仅观察", "当前证据仅支持事实与观察项"],
-      ["unavailable", "分析不可用", "当前证据不足以生成观象长笺"],
+      ["unavailable", "分析不可用", "当前证据不足以生成复盘报告"],
     ];
 
     for (const [status, label, description] of states) {

@@ -2,6 +2,8 @@ export { AnalysisStatus } from "./AnalysisStatus.js";
 export type { AnalysisStatusProps, AnalysisStatusValue } from "./AnalysisStatus.js";
 export { Badge, DemoBadge, LockBadge } from "./Badge.js";
 export type { BadgeProps, BadgeTone, DemoBadgeProps, LockBadgeProps } from "./Badge.js";
+export { GeneratedMarkdown } from "./GeneratedMarkdown.js";
+export type { GeneratedMarkdownProps } from "./GeneratedMarkdown.js";
 export { Button } from "./Button.js";
 export type { ButtonProps, ButtonVariant } from "./Button.js";
 export { IconButton } from "./IconButton.js";

@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import {
   FetchJourneyGateway,
   JourneyController,
@@ -9,12 +9,34 @@ import {
   type JourneyGateway,
   type JourneyPersistence,
 } from "../app/client/index.js";
-import { Button, DemoBadge } from "./ui/index.js";
+import { Button, DemoBadge, GeneratedMarkdown } from "./ui/index.js";
 import { HistoryAboutView } from "../features/history-view/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
 import { WorkspaceShell } from "../features/workspace-shell/index.js";
+import doudouObserver from "./assets/doudou/doudou-observer.png";
+import previewOne from "./assets/theme-previews/theme-preview-1.png";
+import previewTwo from "./assets/theme-previews/theme-preview-2.png";
+import previewThree from "./assets/theme-previews/theme-preview-3.png";
 import "../app/client/styles.css";
+
+/** Static assets used by the fixed pages right after the splash. */
+const SPLASH_PRELOAD_ASSETS = [doudouObserver, previewOne, previewTwo, previewThree] as const;
+
+/** Splash stays up at least this long so the animation reads as intentional. */
+const SPLASH_MIN_VISIBLE_MS = 1_200;
+
+/** Never hold entry hostage to slow asset downloads. */
+const SPLASH_PRELOAD_CAP_MS = 2_500;
+
+function preloadImage(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = src;
+  });
+}
 
 export interface AppProps {
   gateway?: JourneyGateway;
@@ -66,15 +88,46 @@ function JourneyStatePage({
   );
 }
 
+function SplashScreen() {
+  return (
+    <main aria-live="polite" className="journey-splash" id="main" role="status">
+      <img alt="" aria-hidden="true" className="journey-splash__mascot" src={doudouObserver} />
+      <h1>满懂</h1>
+      <p>正在准备匿名私密工作区与页面资源</p>
+      <span aria-hidden="true" className="journey-splash__dots">
+        <i /><i /><i />
+      </span>
+    </main>
+  );
+}
+
 export function App(props: AppProps = {}) {
   const [state, controller, gateway] = useJourney(props);
   const bootStarted = useRef(false);
+  // The splash is non-interactive: it holds until bootstrap finishes, the next
+  // fixed pages' static assets are warmed, and a minimum animation beat passes.
+  const [splashHolding, setSplashHolding] = useState(true);
 
   useEffect(() => {
     if (bootStarted.current) return;
     bootStarted.current = true;
     void controller.bootstrap();
   }, [controller]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const minimumBeat = new Promise((resolve) => setTimeout(resolve, SPLASH_MIN_VISIBLE_MS));
+    const preload = Promise.race([
+      Promise.all(SPLASH_PRELOAD_ASSETS.map(preloadImage)),
+      new Promise((resolve) => setTimeout(resolve, SPLASH_PRELOAD_CAP_MS)),
+    ]);
+    void Promise.all([minimumBeat, preload]).then(() => {
+      if (!cancelled) setSplashHolding(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const active = state.activeAnalysis;
@@ -110,14 +163,13 @@ export function App(props: AppProps = {}) {
     return () => source.close();
   }, [controller, streamAnalysisId]);
 
-  if (state.phase === "booting") {
-    return (
-      <main aria-live="polite" className="journey-state" id="main" role="status">
-        <span className="journey-state__pulse" aria-hidden="true" />
-        <h1>正在准备匿名私密工作区</h1>
-        <p>只读取 HttpOnly Cookie 授权的当前工作区，不把定位信息放入页面或 URL。</p>
-      </main>
-    );
+  // Error, deletion and analysis states break out of the splash immediately;
+  // only the normal entry pages wait for the animation-and-preload hold.
+  const splashVisible =
+    state.phase === "booting" ||
+    (splashHolding && (state.phase === "onboarding" || state.phase === "home"));
+  if (splashVisible) {
+    return <SplashScreen />;
   }
 
   if (state.phase === "workspace_error") {
@@ -161,8 +213,8 @@ export function App(props: AppProps = {}) {
         <JourneyStatePage
           action={() => controller.navigate("home")}
           actionLabel="返回主页"
-          heading="本次复盘未能生成观象长笺"
-          message={terminal.reason ?? "当前证据不足，未生成正常观象长笺。"}
+          heading="本次复盘未能生成报告"
+          message={terminal.reason ?? "当前证据不足，未生成复盘报告。"}
         />
       );
     }
@@ -172,14 +224,10 @@ export function App(props: AppProps = {}) {
         <h1>正在核对本次复盘</h1>
         {state.activeAnalysis.streamText?.trim() ? (
           <div className="journey-stream">
-            {state.activeAnalysis.streamText
-              .split(/\n+/)
-              .map((line) => line.trim())
-              .filter((line) => line.length > 0)
-              .map((line, index) => <p key={`${index}-${line.slice(0, 12)}`}>{line}</p>)}
+            <GeneratedMarkdown>{state.activeAnalysis.streamText}</GeneratedMarkdown>
           </div>
         ) : (
-          <p>只随真实任务事件推进，完成后直接打开观象长笺。</p>
+          <p>只随真实任务事件推进，完成后直接打开复盘报告。</p>
         )}
         <Button onClick={() => controller.leaveAnalysis()} variant="secondary">
           暂时离开，任务继续进行
@@ -267,7 +315,7 @@ export function App(props: AppProps = {}) {
       action={() => void controller.bootstrap()}
       actionLabel="重新读取工作区"
       heading="旅程状态不完整"
-      message="为避免展示错配的草稿、任务或长笺，页面已停止并等待重新读取。"
+      message="为避免展示错配的草稿、任务或复盘报告，页面已停止并等待重新读取。"
     />
   );
 }

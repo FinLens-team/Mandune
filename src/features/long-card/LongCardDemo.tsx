@@ -16,7 +16,7 @@ export function LongCardDemo() {
       <div className="long-card-demo-head">
         <div>
           <p className="eyebrow">每日复盘示例</p>
-          <h2 id="long-card-demo-heading">同一快照的观象长笺</h2>
+          <h2 id="long-card-demo-heading">同一快照的每日复盘报告</h2>
         </div>
         <p>示例数据</p>
       </div>

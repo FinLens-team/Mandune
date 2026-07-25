@@ -11,7 +11,6 @@ import {
   BookOpenCheck,
   Rotate3D,
   ScrollText,
-  ShieldAlert,
 } from "lucide-react";
 import {
   validatePortfolioSnapshot,
@@ -33,6 +32,7 @@ import {
   Badge,
   Button,
   DemoBadge,
+  GeneratedMarkdown,
   LockBadge,
 } from "../../client/ui/index.js";
 import { LOCKED_THEME_PREVIEWS, OBSERVATION_THEME } from "../../theme/observation.js";
@@ -321,14 +321,6 @@ export function NarrativeFront({
         ) : <p>当前证据只支持观察，不支持方向性建议。</p>}
       </section>
 
-      <section className="mandong-long-card__risk" aria-labelledby={`${headingId}-risk`}>
-        <ShieldAlert aria-hidden="true" size={22} />
-        <div>
-          <h3 id={`${headingId}-risk`}>风险与判断边界</h3>
-          {analysis.risk_notes.map((note) => <p key={note.id}>{note.statement}</p>)}
-        </div>
-      </section>
-
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-unknowns`}>
         <h3 id={`${headingId}-unknowns`}>未知与限制</h3>
         {analysis.unknowns.length + analysis.limitations.length > 0 ? (
@@ -340,7 +332,7 @@ export function NarrativeFront({
       </section>
 
       <footer className="mandong-long-card__footer">
-        <p>用户保留最终判断与操作权。满懂不连接券商，也不代客操作。</p>
+        <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
       </footer>
     </article>
   );
@@ -359,10 +351,6 @@ export function AiNarrativeFront({
   aiText,
 }: AiNarrativeFaceProps) {
   const { analysis } = input;
-  const paragraphs = aiText
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
   return (
     <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -387,25 +375,13 @@ export function AiNarrativeFront({
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-observations`}>
         <h3 id={`${headingId}-observations`}>本次复盘</h3>
-        {paragraphs.length > 0 ? (
-          <div className="mandong-long-card__statements">
-            {paragraphs.map((paragraph, index) => (
-              <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>
-            ))}
-          </div>
+        {aiText.trim() ? (
+          <GeneratedMarkdown>{aiText}</GeneratedMarkdown>
         ) : <p>模型未返回可展示的复盘文本。</p>}
       </section>
 
-      <section className="mandong-long-card__risk" aria-labelledby={`${headingId}-risk`}>
-        <ShieldAlert aria-hidden="true" size={22} />
-        <div>
-          <h3 id={`${headingId}-risk`}>风险与判断边界</h3>
-          {analysis.risk_notes.map((note) => <p key={note.id}>{note.statement}</p>)}
-        </div>
-      </section>
-
       <footer className="mandong-long-card__footer">
-        <p>用户保留最终判断与操作权。满懂不连接券商，也不代客操作。</p>
+        <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
       </footer>
     </article>
   );
@@ -441,12 +417,6 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
   // (the model's report text plus the inputs it was given). The placeholder
   // conclusion/advice shells and derivation bookkeeping stay hidden.
   const relaxed = Boolean(input.aiText && !input.narrative);
-  const reportParagraphs = relaxed
-    ? (input.aiText ?? "")
-        .split(/\n+/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-    : [];
   return (
     <article className="mandong-long-card__face mandong-long-card__back" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -456,7 +426,6 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
-            <p className="mandong-long-card__theme">与正面同一版本</p>
             <h2 id={headingId} ref={headingRef} tabIndex={-1}>{relaxed ? "今日理性分析报告" : "逐项核对这份分析"}</h2>
           </div>
           <BookOpenCheck aria-hidden="true" size={40} strokeWidth={1.5} />
@@ -475,12 +444,8 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
       {relaxed ? (
         <section className="mandong-long-card__section" aria-labelledby={`${headingId}-report`}>
           <h3 id={`${headingId}-report`}>报告正文</h3>
-          {reportParagraphs.length > 0 ? (
-            <div className="mandong-long-card__statements">
-              {reportParagraphs.map((paragraph, index) => (
-                <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>
-              ))}
-            </div>
+          {input.aiText?.trim() ? (
+            <GeneratedMarkdown>{input.aiText}</GeneratedMarkdown>
           ) : <p>模型未返回可展示的分析报告。</p>}
         </section>
       ) : null}
@@ -598,12 +563,8 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
       </section>
       ) : null}
 
-      <footer className="mandong-long-card__risk mandong-long-card__risk--footer">
-        <ShieldAlert aria-hidden="true" size={22} />
-        <div>
-          <h3>风险提示</h3>
-          {analysis.risk_notes.map((note) => <p key={note.id}>{note.statement}</p>)}
-        </div>
+      <footer className="mandong-long-card__footer">
+        <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
       </footer>
     </article>
   );
@@ -615,7 +576,7 @@ function Unavailable({ input }: { input: LongCardRuntimeInput }) {
     <section className="mandong-long-card mandong-long-card--unavailable" aria-labelledby="analysis-unavailable-heading">
       <ExampleBadge input={input} />
       <AnalysisStatus status="unavailable" />
-      <h2 id="analysis-unavailable-heading">当前证据不足以生成观象长笺</h2>
+      <h2 id="analysis-unavailable-heading">当前证据不足以生成复盘报告</h2>
       <p>{analysis.limitations.join(" ")}</p>
       <h3>可以怎样恢复</h3>
       <ul className="mandong-long-card__plain-list">
@@ -633,7 +594,7 @@ function IncompleteLongCard({ input }: { input: LongCardRuntimeInput }) {
       role="status"
     >
       <ExampleBadge input={input} />
-      <h2 id="analysis-incomplete-heading">观象长笺暂不可展示</h2>
+      <h2 id="analysis-incomplete-heading">复盘报告暂不可展示</h2>
       <p>分析结果或主题叙事缺失、版本不匹配，未通过同一快照与同一结论校验。</p>
       <h3>可以怎样恢复</h3>
       <ul className="mandong-long-card__plain-list">
@@ -741,7 +702,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
       data-reduced-motion={reducedMotion || undefined}
-      aria-label="观象长笺结果"
+      aria-label="每日复盘报告"
     >
       <div className="mandong-long-card__toolbar">
         <span aria-live="polite" className="mandong-long-card__face-state">当前：{faceLabel}</span>
@@ -789,7 +750,7 @@ export function ThemePreview() {
     <section className="mandong-theme-preview" aria-labelledby="theme-preview-heading">
       <div className="mandong-theme-preview__heading">
         <div>
-          <p>长笺主题</p>
+          <p>复盘主题</p>
           <h2 id="theme-preview-heading">{OBSERVATION_THEME.label}</h2>
         </div>
         <p>主题只改变表达，不改变证据、风险与建议。</p>

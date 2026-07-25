@@ -107,7 +107,7 @@ export interface AnalysisResult {
 }
 
 /**
- * Long-card (观象长笺) data sufficient for downstream presentation.
+ * Long-card data sufficient to present the daily review report.
  * Unavailable status should not be rendered as a normal card.
  */
 export interface LongCardData {

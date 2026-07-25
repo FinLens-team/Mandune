@@ -1,0 +1,92 @@
+.generated-markdown {
+  max-width: 70ch;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.generated-markdown > :first-child { margin-top: 0; }
+.generated-markdown > :last-child { margin-bottom: 0; }
+
+.generated-markdown h1,
+.generated-markdown h2,
+.generated-markdown h3,
+.generated-markdown h4,
+.generated-markdown h5,
+.generated-markdown h6 {
+  margin: var(--space-6) 0 var(--space-3);
+  color: var(--color-text-primary);
+  font-family: var(--font-serif);
+  line-height: 1.4;
+}
+
+.generated-markdown h1,
+.generated-markdown h2 { font-size: var(--font-size-xl); }
+
+.generated-markdown h3,
+.generated-markdown h4,
+.generated-markdown h5,
+.generated-markdown h6 { font-size: var(--font-size-lg); }
+
+.generated-markdown p,
+.generated-markdown ul,
+.generated-markdown ol,
+.generated-markdown blockquote,
+.generated-markdown pre,
+.generated-markdown table { margin: var(--space-3) 0; }
+
+.generated-markdown ul,
+.generated-markdown ol { padding-left: 1.25rem; }
+
+.generated-markdown li + li { margin-top: var(--space-1); }
+
+.generated-markdown blockquote {
+  margin-left: 0;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-observed);
+  color: var(--color-text-primary);
+}
+
+.generated-markdown code {
+  padding: 0.08em 0.3em;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.generated-markdown pre {
+  overflow-x: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+.generated-markdown pre code { padding: 0; background: transparent; }
+
+.generated-markdown a {
+  color: var(--color-observed);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.generated-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.generated-markdown th,
+.generated-markdown td {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  text-align: left;
+  vertical-align: top;
+}
+
+.generated-markdown th {
+  color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+}

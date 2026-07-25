@@ -63,7 +63,7 @@ export function ThemeSelectionScreen({
       <header className="onboarding-heading">
         <p className="onboarding-step">首次引导 · 1 / 3</p>
         <h1 id="s1-title" ref={titleRef} tabIndex={-1}>
-          选择长笺主题
+          选择复盘主题
         </h1>
         <p>主题只改变表达方式，不改变证据、风险判断或方向性建议。</p>
       </header>

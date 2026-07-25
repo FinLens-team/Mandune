@@ -318,8 +318,8 @@ function FoundDetail({
 
       {record.analysis.status === "unavailable" ? (
         <section className="history-detail__notice" role="status">
-          <h3>本次分析未生成观象长笺</h3>
-          <p>历史保留当时的不可用结果，不把它补成正常长笺。</p>
+          <h3>本次分析未生成复盘报告</h3>
+          <p>历史保留当时的不可用结果，不补写复盘报告。</p>
           {record.analysis.recovery_actions?.length ? (
             <ul>{record.analysis.recovery_actions.map((action) => <li key={action}>{action}</li>)}</ul>
           ) : null}
@@ -328,10 +328,10 @@ function FoundDetail({
 
       <div className="history-actions">
         {canOpenLongCard ? (
-          <Button onClick={() => onOpenRecord(record)} variant="primary">打开本次观象长笺</Button>
+          <Button onClick={() => onOpenRecord(record)} variant="primary">打开本次复盘报告</Button>
         ) : (
           <p className="history-detail__no-card">
-            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的正常长笺。" : "本次未生成主题叙事，不能展示不完整长笺。"}
+            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未生成主题叙事，不能展示不完整的复盘报告。"}
           </p>
         )}
       </div>

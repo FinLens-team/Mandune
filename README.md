@@ -1,6 +1,6 @@
 # 满懂
 
-满懂是面向年轻轻投资者的每日持仓复盘产品。它把用户确认的基金、ETF 和少量 A 股持仓、四项个人约束，以及截至最新完整交易日的带时点证据，整理成一张可阅读、可翻面核对的“观象长笺”。产品只提供证据支持的方向性建议，不预测涨跌，不给出精确交易指令，也不替用户操作。
+满懂是面向年轻轻投资者的每日持仓复盘产品。它把用户确认的基金、ETF 和少量 A 股持仓、四项个人约束，以及截至最新完整交易日的带时点证据，整理成一份可阅读、可翻面核对的每日复盘报告。产品只提供证据支持的方向性建议，不预测涨跌，不给出精确交易指令，也不替用户操作。
 
 仓库名继续使用 `finlens`；用户界面、演示和对外材料统一使用“满懂”。
 
@@ -18,7 +18,7 @@ PandaAI 和 Bocha 的资料边界已经整理，但项目凭据下的接口权�
 
 1. [`PRODUCT.md`](PRODUCT.md)：稳定产品目的、范围、不变量和非目标。
 2. [`CONTEXT.md`](CONTEXT.md)：满懂统一使用的领域术语。
-3. [`DESIGN.md`](DESIGN.md)：东方观象、兜兜、观测台和观象长笺的设计边界。
+3. [`DESIGN.md`](DESIGN.md)：东方观象、兜兜、观测台和每日复盘报告的设计边界。
 4. [`docs/specs/demo-v1.md`](docs/specs/demo-v1.md)：Demo V1 的完整可观察流程和验收条件。
 5. [`docs/specs/analysis-contract.md`](docs/specs/analysis-contract.md)：分析输入、证据、结果、降级和模型边界。
 6. [`docs/integrations/pandaai-bocha.md`](docs/integrations/pandaai-bocha.md)：PandaAI 与 Bocha 的已知事实、未知项和运行验收门槛。

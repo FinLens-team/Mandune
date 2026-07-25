@@ -105,7 +105,7 @@ describe("S8 analysis progress view", () => {
     expect(markup).toContain('data-animation-active="false"');
     expect(markup).toContain('data-status="limited"');
     expect(markup).toContain("复盘完成，结论受限");
-    expect(markup).toContain("查看观象长笺");
+    expect(markup).toContain("查看复盘报告");
     expect(markup).not.toContain("重试本次复盘");
   });
 
@@ -121,7 +121,7 @@ describe("S8 analysis progress view", () => {
         terminal: {
           analysis_id: "analysis-31",
           displayable: false,
-          reason: "当前证据不足，未生成观象长笺。",
+          reason: "当前证据不足，未生成复盘报告。",
           status: "unavailable",
           terminal_reason: "model_failure",
         },
@@ -130,9 +130,9 @@ describe("S8 analysis progress view", () => {
 
     expect(markup).toContain('data-status="unavailable"');
     expect(markup).toContain("分析不可用，可重试");
-    expect(markup).toContain("当前证据不足，未生成观象长笺。");
+    expect(markup).toContain("当前证据不足，未生成复盘报告。");
     expect(markup).toContain("重试本次复盘");
-    expect(markup).not.toContain("查看观象长笺");
+    expect(markup).not.toContain("查看复盘报告");
   });
 
   it("keeps a successful status visible without opening S9 when narrative is not displayable", async () => {
@@ -155,6 +155,6 @@ describe("S8 analysis progress view", () => {
 
     expect(markup).toContain('data-status="supported"');
     expect(markup).toContain("主题叙事尚未通过一致性校验。");
-    expect(markup).not.toContain("查看观象长笺");
+    expect(markup).not.toContain("查看复盘报告");
   });
 });

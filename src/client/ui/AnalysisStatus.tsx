@@ -31,7 +31,7 @@ const STATUS_CONTENT: Record<AnalysisStatusValue, StatusContent> = {
     label: "仅观察",
   },
   unavailable: {
-    description: "当前证据不足以生成观象长笺",
+    description: "当前证据不足以生成复盘报告",
     icon: CircleX,
     label: "分析不可用",
   },

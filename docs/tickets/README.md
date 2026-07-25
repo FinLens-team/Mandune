@@ -40,7 +40,7 @@
 | [#29](https://github.com/FinLens-team/finlens/issues/29) | MD-007 中立市场与事件证据 | #24、#25 | Closed | providers、evidence |
 | [#30](https://github.com/FinLens-team/finlens/issues/30) | MD-008 证据边界内单 agent 分析 | #29、#25 | Ready | `analysis`、`model` |
 | [#31](https://github.com/FinLens-team/finlens/issues/31) | MD-009 真实单 agent 分析进度 | #30、#46 | Blocked | `analysis-progress` |
-| [#32](https://github.com/FinLens-team/finlens/issues/32) | MD-010 东方观象长笺、兜兜与主题 | #25 | Closed | long-card、theme |
+| [#32](https://github.com/FinLens-team/finlens/issues/32) | MD-010 每日复盘报告、兜兜与主题 | #25 | Closed | long-card、theme |
 | [#33](https://github.com/FinLens-team/finlens/issues/33) | MD-011 不可变分析历史 | #26、#30 | Blocked | history、历史迁移与测试 |
 | [#34](https://github.com/FinLens-team/finlens/issues/34) | MD-012 完整随机体验 Demo 旅程 | #31、#33、#47、#48、#49、#50 | Blocked | app 路由、journey tests |
 | [#35](https://github.com/FinLens-team/finlens/issues/35) | MD-013 公网部署与验收 | #34 | Blocked | deploy、E2E、acceptance |
@@ -48,7 +48,7 @@
 | [#46](https://github.com/FinLens-team/finlens/issues/46) | MD-015 视觉基础与共享 UI | #23 | Ready | 全局 tokens、共享组件、asset slots |
 | [#47](https://github.com/FinLens-team/finlens/issues/47) | MD-016 首次引导与随机体验 | #46、#26、#27、#29 | Blocked | onboarding、demo-experience |
 | [#48](https://github.com/FinLens-team/finlens/issues/48) | MD-017 主界面、侧栏与仓位控制 | #46、#26、#27 | Blocked | workspace-shell、review、constraints UI |
-| [#49](https://github.com/FinLens-team/finlens/issues/49) | MD-018 长笺视觉与兜兜表现 | #46、#32 | Blocked | long-card、theme、兜兜素材 |
+| [#49](https://github.com/FinLens-team/finlens/issues/49) | MD-018 复盘报告视觉与兜兜表现 | #46、#32 | Blocked | long-card、theme、兜兜素材 |
 | [#50](https://github.com/FinLens-team/finlens/issues/50) | MD-019 历史与关于视图 | #46、#33 | Blocked | history-view、about |
 
 当前 ready frontier 为 `#30` 与 `#46`，可以并行交付。之后的主要依赖链为：

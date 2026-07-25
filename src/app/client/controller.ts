@@ -336,7 +336,7 @@ export class JourneyController {
         analysisId,
         terminal: terminalUnavailable(
           analysisId,
-          "终态结果未通过校验，未展示任何部分长笺。",
+          "终态结果未通过校验，未展示任何部分复盘报告。",
           "persistence_failure",
         ),
       });
@@ -358,7 +358,7 @@ export class JourneyController {
         completedAt: result.analysis.analysis_completed_at,
         terminal: terminalUnavailable(
           analysisId,
-          result.analysis.limitations.join(" ") || "当前证据不足，未生成正常观象长笺。",
+          result.analysis.limitations.join(" ") || "当前证据不足，未生成复盘报告。",
           mappedReason,
         ),
       });
@@ -376,7 +376,7 @@ export class JourneyController {
         analysisId,
         terminal: terminalUnavailable(
           analysisId,
-          "不可变快照或历史结果尚不可核对，未展示正常长笺。",
+          "不可变快照或历史结果尚不可核对，未展示复盘报告。",
           "persistence_failure",
         ),
       });
@@ -395,7 +395,7 @@ export class JourneyController {
       displayable,
       reason: displayable
         ? result.source.label
-        : "模型叙事缺失或与快照不一致，未展示不完整长笺。",
+        : "模型叙事缺失或与快照不一致，未展示不完整的复盘报告。",
       status: result.analysis.status,
       terminal_reason: displayable ? mappedReason : "model_failure",
     };
@@ -429,7 +429,7 @@ export class JourneyController {
     } catch {
       this.options.dispatch({
         type: "HISTORY_RECORD_FAILED",
-        message: "这条历史没有完整且版本一致的长笺，未使用当前数据重新生成。",
+        message: "这条历史没有完整且版本一致的复盘报告，未使用当前数据重新生成。",
       });
     }
   }

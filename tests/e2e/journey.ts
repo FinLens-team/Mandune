@@ -18,7 +18,7 @@ export async function completeOnboarding(page: Page): Promise<string> {
   await checkpoint(page, "S0 splash");
   await page.getByRole("button", { name: "跳过" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "选择长笺主题" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "选择复盘主题" })).toBeVisible();
   const lockedThemes = page.getByRole("button", { name: /主题预览 \d/ });
   await expect(lockedThemes).toHaveCount(3);
   for (let index = 0; index < 3; index += 1) {
@@ -94,19 +94,18 @@ export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<Journey
   expect(typeof startBody.analysis_id).toBe("string");
   const analysisId = String(startBody.analysis_id);
 
-  // 进度页已隐藏：无确认框，复盘完成后直接打开观象长笺。
-  const card = page.getByRole("region", { name: "观象长笺结果" });
+  // 进度页已隐藏：无确认框，复盘完成后直接打开复盘报告。
+  const card = page.getByRole("region", { name: "每日复盘报告" });
   await expect(card).toBeVisible({ timeout: 45_000 });
   await expect(page.getByRole("button", { name: "刷新复盘" })).toBeVisible();
   await expect(card.getByText(/fixture.*非实时/i).first()).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "核心观察" })).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "方向性建议" })).toBeVisible();
-  await expect(card.getByRole("heading", { level: 3, name: "风险与判断边界" })).toBeVisible();
+  await expect(card.getByText("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。")).toBeVisible();
   await checkpoint(page, "S9 narrative front");
 
   await card.getByRole("button", { name: "查看证据" }).click();
   await expect(card.getByRole("heading", { level: 2, name: "逐项核对这份分析" })).toBeVisible();
-  await expect(card.getByText("与正面同一版本")).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "确认输入与覆盖" })).toBeVisible();
   const snapshotId = (await card.locator("dt", { hasText: "组合快照" }).locator("+ dd").first().textContent())?.trim() ?? "";
   const cutoff = (await card.locator("dt", { hasText: "证据截止" }).locator("+ dd").first().textContent())?.trim() ?? "";
@@ -133,8 +132,8 @@ export async function verifyImmutableHistory(
   await checkpoint(page, "S10 immutable history detail");
 
   await page.reload();
-  // 刷新后同一任务的可展示终态直接打开观象长笺，不再停留在进度页。
-  await expect(page.getByRole("region", { name: "观象长笺结果" })).toBeVisible({ timeout: 45_000 });
+  // 刷新后同一任务的可展示终态直接打开复盘报告，不再停留在进度页。
+  await expect(page.getByRole("region", { name: "每日复盘报告" })).toBeVisible({ timeout: 45_000 });
   await page.getByRole("button", { name: "查看全部历史" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "历史记录" })).toBeVisible();
   await expect(page.getByText("共 1 次复盘，按完成时间倒序排列。")).toBeVisible();

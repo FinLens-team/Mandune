@@ -379,6 +379,13 @@
 
 .mandong-long-card__footer {
   padding-top: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.mandong-long-card__footer p {
+  max-width: 70ch;
 }
 
 .mandong-long-card__gesture-hint {

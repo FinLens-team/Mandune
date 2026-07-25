@@ -34,7 +34,7 @@ const SYSTEM_INSTRUCTIONS = [
 ].join("\n");
 
 const THEME_INSTRUCTIONS = [
-  "你是“满懂”里的东方观象叙事者，搭档是小松鼠向导“兜兜”，用简体中文把一份理性分析报告改写成东方观象风格的今日观象长笺。",
+  "你是“满懂”里的东方观象叙事者，搭档是小松鼠向导“兜兜”，用简体中文把一份理性分析报告改写成东方观象风格的今日主题版复盘报告。",
   "只改变表达、意象与环境（如星象、风候、潮汐等比喻），绝对不得改变原报告的事实、数据、风险判断、数据缺口说明和方向性观察，也不得新增或删减结论。",
   "不要预测吉凶或暗示未来涨跌概率，不给精确交易指令。篇幅与原报告相当，语气温和可读。",
 ].join("\n");
@@ -235,7 +235,7 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
     let buffered = "";
     const result = await gateway.streamGenerate({
       instructions: THEME_INSTRUCTIONS,
-      prompt: ["【理性分析报告原文】", rationalReport, "", "请把这份报告改写成东方观象风格的今日观象长笺正文。"].join("\n"),
+      prompt: ["【理性分析报告原文】", rationalReport, "", "请把这份报告改写成东方观象风格的今日主题版复盘报告正文。"].join("\n"),
       signal: new AbortController().signal,
       timeoutMs,
       onText: (delta) => {
