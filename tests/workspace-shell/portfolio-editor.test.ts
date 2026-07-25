@@ -30,15 +30,13 @@ describe("S6 portfolio and identity editor", () => {
       }),
     );
 
-    expect(markup).toContain("体验持仓 · 已编辑");
-    expect(markup).toContain("持仓（3）");
-    expect(markup).toContain("四项约束");
-    expect(markup).toContain("核对与编辑完整字段");
+    expect(markup).toContain("数据管理");
+    expect(markup).toContain("持仓数据（3）");
+    expect(markup).toContain("个人偏好");
+    expect(markup).toContain("名称");
+    expect(markup).toContain("代码");
+    expect(markup).toContain("持仓规模依据");
     expect(markup).toContain("观察日");
-    expect(markup).toContain("市场");
-    expect(markup).toContain("录入方式");
-    expect(markup).toContain("体验生成");
-    expect(markup).toContain("这里只展示草稿中真实存在的输入字段");
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("止损线");
   });

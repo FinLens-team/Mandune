@@ -1,0 +1,24 @@
+{
+  "source": "E:\\weixin\\xwechat_files\\cao445714414_f8b1\\msg\\video\\2026-07\\dff8184b0cb2809e1fc6d448789e389e.mp4",
+  "original": {
+    "retained": false,
+    "size": 836447,
+    "sha256": "8f5bb60c5014a5aac479e2e937563f0789a1a64fe3addf141a98b2dc47298e95"
+  },
+  "web": {
+    "file": "nailong-intro.webp",
+    "size": 556932,
+    "sha256": "aa0dde5f5577e08ffb1347a57642608ade421676239d921af6562d234b4460f5",
+    "codec": "Animated WebP, 384px, 12fps",
+    "alpha": true,
+    "audio": false
+  },
+  "poster": {
+    "file": "nailong-rest.webp",
+    "size": 20076,
+    "sha256": "50c31056259f6001d91ed335da85eb372a22378b0edf71aff76c8e4fe6979ad9",
+    "alpha": true
+  },
+  "conversion_source": "nailong-intro-alpha.webm is retained as an unreferenced local conversion source and is not emitted by the client build.",
+  "background_processing": "The source contained a baked light-gray checkerboard. Near-neutral gray pixels were keyed out before the static and animated WebP derivatives were encoded with alpha."
+}

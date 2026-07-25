@@ -8,3 +8,7 @@ export { Button } from "./Button.js";
 export type { ButtonProps, ButtonVariant } from "./Button.js";
 export { IconButton } from "./IconButton.js";
 export type { IconButtonProps } from "./IconButton.js";
+export { BrandLockup } from "./BrandLockup.js";
+export type { BrandLockupProps } from "./BrandLockup.js";
+export { BrandBanner } from "./BrandBanner.js";
+export type { BrandBannerProps } from "./BrandBanner.js";

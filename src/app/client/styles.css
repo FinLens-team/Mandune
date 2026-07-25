@@ -28,11 +28,45 @@
 
 .journey-workspace,
 .journey-secondary,
-.journey-analysis {
+.journey-analysis,
+.journey-result-page,
+.journey-state-page {
   min-height: 100vh;
   min-height: 100dvh;
 }
 
+.journey-secondary__page {
+  width: min(100%, 48rem);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-16);
+}
+
+.journey-secondary__header {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.journey-secondary__header h1,
+.journey-secondary__header p {
+  margin: 0;
+}
+
+.journey-secondary__header h1 {
+  font-size: var(--font-size-2xl);
+  line-height: 1.35;
+}
+
+.journey-secondary__header p {
+  max-width: var(--content-reading);
+  color: var(--color-text-secondary);
+}
+
+.journey-secondary__page > .history-view,
+.journey-secondary__page > .about-view {
+  padding-top: var(--space-6);
+}
 
 .journey-analysis__terminal-actions {
   width: min(100% - 2rem, var(--content-form));

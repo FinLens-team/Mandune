@@ -3,7 +3,7 @@
 ## Architecture
 
 - `projection.ts` 是 S8 的纯投影边界：只接受指定 `analysisId` 的 `TaskEvent`、显式连接状态和显式终态结果。
-- `AnalysisProgress.tsx` 同时渲染许可兜兜素材、事件驱动气泡与完整文字阶段列表；`styles.css` 只负责表现和可停止动效。
+- `AnalysisProgress.tsx` 同时渲染奶龙主题向导、事件驱动气泡与完整文字阶段列表；`styles.css` 只负责表现和可停止动效。
 
 ## Conventions
 
@@ -15,7 +15,7 @@
 
 - `persist_or_return:succeeded` 不等于结果已到达。只有同一 `analysisId` 的显式 `terminal` 输入才能结束 S8。
 - `failed`、`cancelled`、`timed_out` 事件会立即停止事件动效，但不会自行生成终态或重试入口。
-- S8 不使用持续忙碌动画；只有真实新事件到达时淡变气泡。页面隐藏、组件离屏、连接中断、结果到达或减少动态效果开启时不播放该动效。
+- S8 不使用持续忙碌动画；只有真实新事件到达时淡变气泡。页面隐藏、组件离屏、连接中断、结果到达或系统减少动态偏好开启时不播放该动效。
 
 ## Commands
 

@@ -3,6 +3,7 @@ import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
+import mandongLogo from "../../client/assets/mandong-logo.webp";
 import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
 import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
 import { createExampleDraft } from "../../portfolio/index.js";
@@ -80,6 +81,9 @@ const HOME_SPEECH_BUBBLES = [
   "笑一笑，再稳稳看",
   "先核对，再判断",
 ] as const;
+
+/** Always-visible poster copy from the「我是龙」theme pack; expression only. */
+const HOME_STATIC_BUBBLES = ["先核对，再判断", "笑一笑，再稳稳看"] as const;
 
 interface HomeSpeechBubble {
   id: number;
@@ -195,8 +199,8 @@ export function WorkspaceShell({
         setSpeechBubble({
           id: bubbleId,
           message: HOME_SPEECH_BUBBLES[messageIndex] ?? HOME_SPEECH_BUBBLES[0],
-          x: randomBetween(22, 78),
-          y: randomBetween(43, 67),
+          x: randomBetween(14, 70),
+          y: randomBetween(6, 44),
         });
         bubbleId += 1;
         timer = window.setTimeout(() => {
@@ -265,66 +269,101 @@ export function WorkspaceShell({
           {view === "home" ? (
             <section className="workspace-home" aria-labelledby="workspace-home-heading">
               <div className="workspace-home__poster">
-                {latestCompleteTradingDay ? (
-                  <div className="workspace-home__context-chip">
-                    截至 {latestCompleteTradingDay}
-                  </div>
-                ) : null}
+                <svg
+                  aria-hidden="true"
+                  className="workspace-home__curve"
+                  fill="none"
+                  preserveAspectRatio="xMidYMid slice"
+                  viewBox="0 0 390 780"
+                >
+                  <path d="M-40 300 C 50 130, 232 118, 244 244 C 256 372, 84 402, 116 528 C 148 652, 338 646, 432 496" />
+                  <circle cx="52" cy="356" r="13" />
+                  <circle cx="330" cy="196" r="8" />
+                </svg>
 
-                <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
-                  今日持仓观察
-                </h1>
+                <header className="workspace-home__brand">
+                  <img
+                    alt="满懂 Mandong"
+                    className="workspace-home__brand-logo"
+                    decoding="async"
+                    height={317}
+                    src={mandongLogo}
+                    width={1200}
+                  />
+                  <span aria-hidden="true" className="workspace-home__brand-rule" />
+                </header>
 
-                <div className="workspace-home__status-cluster" aria-label="当前复盘上下文">
-                  <span className="workspace-home__status-chip">
-                    {usableLineCount} 项持仓已确认
-                  </span>
-                  <span className="workspace-home__status-chip">
-                    约束 {knownConstraintCount} / 4
-                  </span>
-                  <span className="workspace-home__status-chip">
+                <div className="workspace-home__badges">
+                  {latestCompleteTradingDay ? (
+                    <span className="workspace-home__badge">
+                      截至 {latestCompleteTradingDay}
+                    </span>
+                  ) : null}
+                  <span className="workspace-home__badge workspace-home__badge--demo">
                     {sourceLabel(experienceSource)}
                   </span>
-                  <span className="workspace-home__status-chip">
-                    {homeRunStatus}
-                  </span>
+                </div>
+
+                <div className="workspace-home__copy">
+                  <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
+                    {activeAnalysis ? "复盘进行中" : "今日持仓观察"}
+                  </h1>
+                  <p className="workspace-home__subtitle">看懂一点，安心一点</p>
+                  <div className="workspace-home__status-cluster" aria-label="当前复盘上下文">
+                    <span className="workspace-home__status-chip">
+                      {usableLineCount} 项持仓已确认
+                    </span>
+                    <span className="workspace-home__status-chip">
+                      约束 {knownConstraintCount} / 4
+                    </span>
+                    <span className="workspace-home__status-chip">
+                      {homeRunStatus}
+                    </span>
+                  </div>
                 </div>
 
                 <div
-                  aria-hidden="true"
-                  className="workspace-home__speech"
+                  className="workspace-home__stage"
                   data-coachmark={reviewCoachmarkVisible || undefined}
                 >
-                  {speechBubble ? (
-                    <span
-                      key={speechBubble.id}
-                      style={{
-                        "--bubble-x": `${speechBubble.x}%`,
-                        "--bubble-y": `${speechBubble.y}%`,
-                      } as CSSProperties}
-                    >
-                      {speechBubble.message}
-                    </span>
-                  ) : null}
-                </div>
+                  <div aria-hidden="true" className="workspace-home__bubbles">
+                    {HOME_STATIC_BUBBLES.map((text) => (
+                      <span key={text}>{text}</span>
+                    ))}
+                  </div>
 
-                <button
-                  aria-label={activeAnalysis
-                    ? "点击奶龙，继续查看正在运行的复盘"
-                    : "点击奶龙，确认发起今日复盘"}
-                  className="workspace-home__mascot-button"
-                  onClick={(event) => activateMascot(event.currentTarget)}
-                  type="button"
-                >
-                  <img
-                    alt=""
-                    decoding="async"
-                    fetchPriority="high"
-                    height="512"
-                    src={nailongRest}
-                    width="512"
-                  />
-                </button>
+                  <div aria-hidden="true" className="workspace-home__speech">
+                    {speechBubble ? (
+                      <span
+                        key={speechBubble.id}
+                        style={{
+                          "--bubble-x": `${speechBubble.x}%`,
+                          "--bubble-y": `${speechBubble.y}%`,
+                        } as CSSProperties}
+                      >
+                        {speechBubble.message}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <button
+                    aria-label={activeAnalysis
+                      ? "点击奶龙，继续查看正在运行的复盘"
+                      : "点击奶龙，确认发起今日复盘"}
+                    className="workspace-home__mascot-button"
+                    onClick={(event) => activateMascot(event.currentTarget)}
+                    type="button"
+                  >
+                    <img
+                      alt=""
+                      decoding="async"
+                      fetchPriority="high"
+                      height="512"
+                      src={nailongRest}
+                      width="512"
+                    />
+                  </button>
+                </div>
 
                 <div className="workspace-home__menu">
                   <IconButton

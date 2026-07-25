@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-07-25T11:24:00Z",
+  "files": [
+    {
+      "source": "C:\\Users\\wuxie\\Pictures\\bf17d9c7ed72233088c03c2b7807121d.png",
+      "target": "theme-card-1.png",
+      "size": 93373,
+      "sha256": "793404e011fd5ad026c46ab1cec081a9ff92154a8b4b73a65e0d6e3cc9980f22"
+    },
+    {
+      "source": "C:\\Users\\wuxie\\Pictures\\17fd8ee7d75ef4cdf277bce49f637c71.png",
+      "target": "theme-card-2.png",
+      "size": 125060,
+      "sha256": "5f3e3bd0245166baee14ef17f58cb52dc3d1fc260e45e5167a000865e6b02059"
+    },
+    {
+      "source": "C:\\Users\\wuxie\\Pictures\\2df8466e143ead6759fe12228822f7c4.png",
+      "target": "theme-card-3.png",
+      "size": 122168,
+      "sha256": "14b93da7040316410523949d4c1132181d4f598c051cbd64e5f18940d6e9eb85"
+    },
+    {
+      "source": "C:\\Users\\wuxie\\Pictures\\8f4552d76e18c8e3485e972c873d0103.png",
+      "target": "theme-card-4.png",
+      "size": 397714,
+      "sha256": "d3ce4c8317747b7ebb6a2f30204fe97cfcf4a014abb5f6096babc418d41481a1"
+    }
+  ],
+  "derivatives": [
+    {
+      "source": "theme-card-1.png",
+      "target": "theme-card-1.webp",
+      "size": 24064,
+      "sha256": "dc27b9d88d9e5f9be877b003b0bf42066ba9c98bcd38b5e250077efa21804ccc"
+    },
+    {
+      "source": "theme-card-2.png",
+      "target": "theme-card-2.webp",
+      "size": 22074,
+      "sha256": "f617b22ac9d0347c95a5f6f7574ef5715fb35f8a8fc1405bd05e7c1f332ba2ea"
+    },
+    {
+      "source": "theme-card-3.png",
+      "target": "theme-card-3.webp",
+      "size": 30406,
+      "sha256": "78647a2904327f3d0d31c715fb19825e3d2c68f1f5f43eb563b613453ee8a856"
+    },
+    {
+      "source": "theme-card-4.png",
+      "target": "theme-card-4.webp",
+      "size": 40956,
+      "sha256": "4ec323e07e79e6baec53a32a65b287b16b290c166539e39b0166036edf15130f"
+    }
+  ],
+  "derivative_encoding": "ffmpeg libwebp lossy q88 with alpha (yuva420p), same pixel dimensions as the PNG sources. The client imports only the .webp files; the .png files are retained as unreferenced conversion sources and are not emitted by the client build.",
+  "verification": "Windows and Linux size and SHA-256 matched for all files."
+}

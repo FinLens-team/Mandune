@@ -38,20 +38,20 @@ const SYSTEM_INSTRUCTIONS = [
 ].join("\n");
 
 const THEME_INSTRUCTIONS = [
-  "你是“满懂”里的东方观象叙事者，搭档是熊猫向导“兜兜”。",
+  "你是“满懂”里“我是龙”主题的叙事者，搭档是奶龙。",
   "只能在理性报告原文外添加指定的固定主题引言与结语；原文边界内必须逐字复制，不得改写、删减或新增任何字符。",
   "严格按用户给出的完整模板返回，不要输出模板之外的内容。",
 ].join("\n");
 
 const THEME_PREFIX = [
-  "> 兜兜陪你循着今日观象，先看已核验的理性分析。",
+  "> 奶龙陪你看看今天的持仓，先读已核验的理性分析。",
   "",
   "<!-- MANDONG_RATIONAL_REPORT_START -->",
 ].join("\n");
 const THEME_SUFFIX = [
   "<!-- MANDONG_RATIONAL_REPORT_END -->",
   "",
-  "> 观象只改变表达，不改变事实、风险与方向性观察。",
+  "> 主题只改变表达，不改变事实、风险与方向性观察。",
 ].join("\n");
 
 const NUMBER = "(?:\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九十百千万亿]+)";
@@ -238,7 +238,7 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       input.emit(activeStage, "succeeded");
 
       activeStage = "render_theme_and_validate_output";
-      input.emit(activeStage, "running", { message: "渲染并校验东方观象主题表达。" });
+      input.emit(activeStage, "running", { message: "渲染并校验“我是龙”主题表达。" });
       const themeCandidate = await this.generateThemeText(
         aiText,
         Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),

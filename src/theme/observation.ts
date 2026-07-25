@@ -1,10 +1,10 @@
 export const OBSERVATION_THEME = {
   id: "eastern_observation",
-  label: "东方观象",
-  narration: "以确认输入与证据为边界，循序观察组合变化。",
+  label: "我是龙",
+  narration: "我是奶龙！哈哈哈哈哈",
   mascot: {
-    name: "兜兜",
-    alt: "熊猫兜兜，东方观象主题的观察向导",
+    name: "奶龙",
+    alt: "奶龙，我是龙主题的复盘向导",
   },
 } as const;
 

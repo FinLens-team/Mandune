@@ -6,7 +6,7 @@ import {
   Home,
 } from "lucide-react";
 import { BrandLockup } from "../../client/ui/index.js";
-import { handleOverlayKeyDown, useOverlayFocus } from "./focus.js";
+import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
 
 export type WorkspaceView = "home" | "portfolio";
 
@@ -24,7 +24,7 @@ export interface WorkspaceDrawerProps {
 
 export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
   const drawerRef = useRef<HTMLElement>(null);
-  const presence = useOverlayPresence(props.open, props.reduceMotion ? 100 : 180);
+  const presence = useOverlayPresence(props.open, props.reduceMotion ? 100 : 220);
   useOverlayFocus({
     open: presence.present,
     focusScopeRef: drawerRef,
@@ -44,7 +44,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [props.open, props.onClose]);
 
-  if (!props.open) return null;
+  if (!presence.present) return null;
 
   function navigate(action: () => void) {
     action();
@@ -55,7 +55,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
     <div
       className="workspace-drawer-layer"
       data-reduce-motion={props.reduceMotion || undefined}
-      data-state="open"
+      data-state={presence.phase}
     >
       <button
         aria-label="关闭导航菜单"
@@ -77,10 +77,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
         role="dialog"
       >
         <header className="workspace-drawer__header">
-          <div>
-            <BrandLockup compact />
-            <span>匿名私密工作区</span>
-          </div>
+          <p className="workspace-drawer__title">匿名私密工作区</p>
         </header>
 
         <nav className="workspace-drawer__nav" aria-label="主要导航">
@@ -115,6 +112,10 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
             <span>关于项目</span>
           </button>
         </nav>
+
+        <footer className="workspace-drawer__footer">
+          <BrandLockup compact />
+        </footer>
       </aside>
     </div>
   );

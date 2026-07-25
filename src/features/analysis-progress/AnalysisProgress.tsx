@@ -10,6 +10,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisResultStatus, TaskEvent } from "../../contracts/index.js";
 import { AnalysisStatus, Button } from "../../client/ui/index.js";
+import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
+import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
 import {
   projectAnalysisProgress,
   shouldAnimateAnalysisProgress,
@@ -18,6 +20,27 @@ import {
   type AnalysisProgressTerminal,
 } from "./projection.js";
 import "./styles.css";
+
+const MASCOT_INTRO_DURATION_MS = 4200;
+const MASCOT_INTRO_STORAGE_PREFIX = "mandong.analysis-mascot-intro.";
+
+function hasPlayedMascotIntro(analysisId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(`${MASCOT_INTRO_STORAGE_PREFIX}${analysisId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markMascotIntroPlayed(analysisId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(`${MASCOT_INTRO_STORAGE_PREFIX}${analysisId}`, "1");
+  } catch {
+    // Storage is optional; the visual remains non-essential when unavailable.
+  }
+}
 
 export interface AnalysisProgressProps {
   analysisId: string;
@@ -108,67 +131,111 @@ export function AnalysisProgress({
     model.phase,
     reduceMotion,
   );
+  const [showMascotIntro, setShowMascotIntro] = useState(false);
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!animationActive || reduceMotion || model.isTerminal || hasPlayedMascotIntro(analysisId)) {
+      setShowMascotIntro(false);
+      return;
+    }
+
+    let cancelled = false;
+    let started = false;
+    let timer: number | undefined;
+    const image = new Image();
+
+    function startIntro() {
+      if (cancelled || started) return;
+      started = true;
+      markMascotIntroPlayed(analysisId);
+      setShowMascotIntro(true);
+      timer = window.setTimeout(() => setShowMascotIntro(false), MASCOT_INTRO_DURATION_MS);
+    }
+
+    image.decoding = "async";
+    image.onload = startIntro;
+    image.onerror = () => setShowMascotIntro(false);
+    image.src = nailongIntro;
+    if (image.complete && image.naturalWidth > 0) startIntro();
+
+    return () => {
+      cancelled = true;
+      image.onload = null;
+      image.onerror = null;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [analysisId, animationActive, model.isTerminal, reduceMotion]);
 
   return (
     <main
       aria-labelledby="analysis-progress-heading"
       className="analysis-progress"
       data-animation-active={animationActive}
+      data-mascot-intro={showMascotIntro || undefined}
       data-phase={model.phase}
       data-reduce-motion={reduceMotion || undefined}
       ref={rootRef}
     >
-      <header className="analysis-progress__header">
-        <div>
+      <section className="analysis-progress__hero" aria-labelledby="analysis-progress-heading">
+        <div aria-hidden="true" className="analysis-progress__orbit" />
+        <div aria-hidden="true" className="analysis-progress__signal-bars">
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <header className="analysis-progress__header">
           <p className="analysis-progress__eyebrow">单个分析 agent</p>
           <h1 id="analysis-progress-heading" ref={headingRef} tabIndex={-1}>
             正在核对本次复盘
           </h1>
-        </div>
-      </header>
+        </header>
 
-      <p className="analysis-progress__connection" data-connection={connection}>
-        <ConnectionIcon connection={connection} />
-        <span>
-          <strong>{model.connectionLabel}</strong>
-          {connection === "disconnected" || connection === "reconnecting"
-            ? "，已收到的阶段不会丢失"
-            : "，阶段只随真实任务事件更新"}
-        </span>
-      </p>
+        <p className="analysis-progress__connection" data-connection={connection}>
+          <ConnectionIcon connection={connection} />
+          <span>
+            <strong>{model.connectionLabel}</strong>
+            {connection === "disconnected" || connection === "reconnecting"
+              ? "，已收到的阶段不会丢失"
+              : "，阶段只随真实任务事件更新"}
+          </span>
+        </p>
 
-      <section className="analysis-progress__current" aria-labelledby="analysis-current-heading">
-        <h2 className="analysis-progress__section-title" id="analysis-current-heading">
-          当前状态
-        </h2>
-        <div className="analysis-progress__scene">
-          <img
-            alt=""
-            className="analysis-progress__mascot"
-            decoding="async"
-            draggable={false}
-            height={512}
-            src={doudouObserver}
-            width={512}
-          />
-          <p
-            aria-atomic="true"
-            aria-live="polite"
-            className="analysis-progress__bubble"
-            data-event-id={model.latestEventId}
-            key={model.latestEventId ?? "no-event"}
-            role="status"
-          >
-            {model.currentMessage}
-          </p>
-        </div>
-        {model.coveredCount === undefined ? null : (
-          <p className="analysis-progress__coverage">真实事件报告已覆盖 {model.coveredCount} 项持仓</p>
-        )}
+        <section className="analysis-progress__current" aria-labelledby="analysis-current-heading">
+          <h2 className="analysis-progress__section-title" id="analysis-current-heading">
+            当前状态
+          </h2>
+          <div className="analysis-progress__scene">
+            <img
+              alt=""
+              className="analysis-progress__mascot"
+              decoding="async"
+              height="512"
+              onError={() => setShowMascotIntro(false)}
+              src={showMascotIntro ? nailongIntro : nailongRest}
+              width="512"
+            />
+            <p
+              aria-atomic="true"
+              aria-live="polite"
+              className="analysis-progress__bubble"
+              data-event-id={model.latestEventId}
+              key={model.latestEventId ?? "no-event"}
+              role="status"
+            >
+              {model.currentMessage}
+            </p>
+          </div>
+          {model.coveredCount === undefined ? null : (
+            <p className="analysis-progress__coverage">
+              真实事件报告已覆盖 {model.coveredCount} 项持仓
+            </p>
+          )}
+        </section>
       </section>
 
       {model.terminal ? (

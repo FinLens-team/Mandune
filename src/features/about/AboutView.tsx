@@ -4,14 +4,12 @@ import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import {
   Badge,
   Button,
-  DemoBadge,
-  type DemoBadgeSource,
 } from "../../client/ui/index.js";
 import type { HistoryAvailability } from "../history-view/HistoryView.js";
 
 export interface AboutViewProps {
   availability?: HistoryAvailability;
-  experienceSource?: DemoBadgeSource;
+  experienceSource?: string;
   onNavigateHome: () => void;
   onRequestDeleteWorkspace?: () => void;
   workspace: WorkspacePublicStatus | null;
@@ -25,6 +23,12 @@ function formatWorkspaceTime(value: string): string {
     timeStyle: "short",
     timeZone: "Asia/Shanghai",
   }).format(date);
+}
+
+function experienceSourceLabel(value: string): string {
+  if (value === "edited") return "体验持仓 · 已编辑";
+  if (value === "random") return "随机体验身份 · 示例数据";
+  return value;
 }
 
 export function AboutView({
@@ -44,7 +48,7 @@ export function AboutView({
     <article className="about-view" aria-labelledby="about-heading">
       <header className="about-view__header">
         {experienceSource ? (
-          <DemoBadge source={experienceSource} />
+          <Badge tone="observed">{experienceSourceLabel(experienceSource)}</Badge>
         ) : (
           <Badge tone="observed">每日持仓复盘</Badge>
         )}
@@ -88,12 +92,6 @@ export function AboutView({
                   : "当前没有可显示的工作区保留时间。"}
             </p>
           )}
-          {availability === "active" && onRequestDeleteWorkspace ? (
-            <Button onClick={onRequestDeleteWorkspace} variant="danger">
-              <Trash2 aria-hidden="true" size={20} />
-              主动删除当前工作区
-            </Button>
-          ) : null}
         </div>
       </section>
 
@@ -108,6 +106,12 @@ export function AboutView({
 
       <div className="about-actions">
         <Button onClick={onNavigateHome} variant="primary">返回主页</Button>
+        {availability === "active" && onRequestDeleteWorkspace ? (
+          <Button onClick={onRequestDeleteWorkspace} variant="danger">
+            <Trash2 aria-hidden="true" size={20} />
+            注销数据
+          </Button>
+        ) : null}
       </div>
     </article>
   );

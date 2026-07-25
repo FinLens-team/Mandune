@@ -19,7 +19,6 @@ interface WorkspaceShellModule {
   WorkspaceDrawer: ComponentType<{
     open: boolean;
     currentView: "home" | "portfolio";
-    workspace: WorkspacePublicStatus | null;
     reduceMotion: boolean;
     returnFocus: null;
     onClose: () => void;
@@ -27,7 +26,6 @@ interface WorkspaceShellModule {
     onNavigateHistory: () => void;
     onNavigateAtlas?: () => void;
     onNavigateAbout: () => void;
-    onReduceMotionChange: (enabled: boolean) => void;
   }>;
   WorkspaceShell: ComponentType<{
     activeAnalysis?: { analysisId: string };
@@ -82,8 +80,12 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).not.toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("熊猫兜兜，东方观象向导");
-    expect(markup).toContain("点击兜兜，发起今日复盘");
+    expect(markup).toContain("今日持仓");
+    expect(markup).toContain("观察");
+    expect(markup).toContain("随机体验数据");
+    expect(markup).toContain('aria-label="点击奶龙，确认发起今日复盘"');
+    expect(markup).toContain('class="workspace-home__mascot-button"');
+    expect(markup).toContain('alt=""');
     expect(markup).not.toContain("体验证据将在发起后按最新完整交易日核对");
     expect(markup).not.toContain("最近一次复盘");
     expect(markup).not.toContain("查看持仓与约束");
@@ -127,7 +129,8 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).toContain('data-reduce-motion="true"');
-    expect(markup).toContain("已有复盘仍在进行，可返回同一任务继续查看。");
+    expect(markup).toContain("复盘进行中");
+    expect(markup).toContain('aria-label="点击奶龙，继续查看正在运行的复盘"');
   });
 
   it("renders an account-free drawer with workspace retention and accessible controls", async () => {
@@ -136,7 +139,6 @@ describe("S4-S7 workspace shell", () => {
       createElement(WorkspaceDrawer, {
         open: true,
         currentView: "home",
-        workspace,
         reduceMotion: false,
         returnFocus: null,
         onClose: vi.fn(),
@@ -144,27 +146,23 @@ describe("S4-S7 workspace shell", () => {
         onNavigateHistory: vi.fn(),
         onNavigateAtlas: vi.fn(),
         onNavigateAbout: vi.fn(),
-        onReduceMotionChange: vi.fn(),
       }),
     );
 
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('aria-modal="true"');
     expect(markup).toContain('data-initial-focus="true"');
-    expect(markup).toContain('data-state="opening"');
+    expect(markup).not.toContain("lucide-x");
     expect(markup).toContain("主页");
-    expect(markup).toContain("仓位／身份");
+    expect(markup).toContain("数据管理");
     expect(markup).toContain("历史记录");
     expect(markup).toContain("满懂图鉴");
     expect(markup).toContain("关于项目");
-    expect(markup).toContain("最后活动");
-    expect(markup).toContain("预计删除");
-    expect(markup).toContain("30 天无活动后自动删除");
-    expect(markup).toContain("工作区详情");
-    expect(markup).toContain("到期前可主动删除");
-    expect(markup).toContain("不能通过正常产品路径恢复");
-    expect(markup).toContain("只保留在当前设备");
-    expect(markup).toContain("减少动态效果");
+    expect(markup).not.toContain("最后活动");
+    expect(markup).not.toContain("预计删除");
+    expect(markup).not.toContain("30 天无活动后自动删除");
+    expect(markup).not.toContain("减少动态效果");
+    expect(markup).not.toContain("更多观察方式");
     expect(markup).not.toContain("手机号");
     expect(markup).not.toContain("登录");
   });

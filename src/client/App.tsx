@@ -10,10 +10,10 @@ import {
   type JourneyGateway,
   type JourneyPersistence,
 } from "../app/client/index.js";
-import { Button, DemoBadge } from "./ui/index.js";
+import { BrandBanner, Button } from "./ui/index.js";
+import { AboutView } from "../features/about/index.js";
 import { AnalysisProgress } from "../features/analysis-progress/index.js";
-import { HistoryAboutView } from "../features/history-view/index.js";
-import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
+import { HistoryView } from "../features/history-view/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
 import { WorkspaceShell } from "../features/workspace-shell/index.js";
@@ -77,12 +77,14 @@ function JourneyStatePage({
   message: string;
 }) {
   return (
-    <main className="journey-state" id="main" role="status">
-      <DemoBadge />
-      <h1 tabIndex={-1}>{heading}</h1>
-      <p>{message}</p>
-      <Button onClick={action} variant="primary">{actionLabel}</Button>
-    </main>
+    <div className="journey-state-page">
+      <BrandBanner />
+      <main className="journey-state" id="main" role="status">
+        <h1 tabIndex={-1}>{heading}</h1>
+        <p>{message}</p>
+        <Button onClick={action} variant="primary">{actionLabel}</Button>
+      </main>
+    </div>
   );
 }
 
@@ -194,8 +196,10 @@ export function App(props: AppProps = {}) {
         ? "返回满懂图鉴"
         : "返回主页";
     return (
-      <main className="journey-result" id="main">
-        <nav aria-label="结果导航" className="journey-result__actions">
+      <div className="journey-result-page">
+        <BrandBanner />
+        <main className="journey-result" id="main">
+          <nav aria-label="结果导航" className="journey-result__actions">
           <Button
             onClick={() => controller.navigate(state.resultReturn)}
             variant="secondary"
@@ -205,16 +209,10 @@ export function App(props: AppProps = {}) {
           <Button onClick={() => controller.navigate("history")} variant="secondary">
             查看全部历史
           </Button>
-        </nav>
-        <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
-        {atlasGateway && state.resultReturn === "home" && state.activeAnalysis?.analysisId === state.displayedResult.analysis.analysis_id ? (
-          <AtlasReveal
-            analysisId={state.displayedResult.analysis.analysis_id}
-            gateway={atlasGateway}
-            onOpenAtlas={() => controller.navigate("atlas")}
-          />
-        ) : null}
-      </main>
+          </nav>
+          <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
+        </main>
+      </div>
     );
   }
 
@@ -232,25 +230,34 @@ export function App(props: AppProps = {}) {
   if ((state.phase === "history" || state.phase === "about") && state.workspace) {
     return (
       <div className="journey-secondary">
+        <BrandBanner />
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
-        <HistoryAboutView
-          initialTab={state.phase}
-          experienceSource={state.experienceSource}
-          key={state.phase}
-          onNavigateHome={() => controller.navigate("home")}
-          onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
-          onRequestDeleteWorkspace={() => {
-            if (window.confirm("确认删除当前匿名工作区及全部历史？此操作无法恢复。")) {
-              void controller.deleteWorkspace();
-            }
-          }}
-          onTabChange={(tab) => controller.navigate(tab)}
-          reader={gateway}
-          reduceMotion={state.reducedMotion}
-          resolveRecordSource={(record) => controller.historyRecordExperienceSource(record)}
-          workspace={state.workspace}
-          workspaceId={state.workspace.workspace_id}
-        />
+        <main className="journey-secondary__page" id="main">
+          <header className="journey-secondary__header">
+            <h1>{state.phase === "history" ? "复盘历史" : "关于项目"}</h1>
+            <p>{state.phase === "history" ? "核对已保存复盘的原始快照与证据边界。" : "了解满懂的使用边界、隐私与数据保留方式。"}</p>
+          </header>
+          {state.phase === "history" ? (
+            <HistoryView
+              onNavigateHome={() => controller.navigate("home")}
+              onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
+              reader={gateway}
+              reduceMotion={state.reducedMotion}
+              workspaceId={state.workspace.workspace_id}
+            />
+          ) : (
+            <AboutView
+              experienceSource={state.experienceSource}
+              onNavigateHome={() => controller.navigate("home")}
+              onRequestDeleteWorkspace={() => {
+                if (window.confirm("确认注销当前工作区数据及全部历史？此操作无法恢复。")) {
+                  void controller.deleteWorkspace();
+                }
+              }}
+              workspace={state.workspace}
+            />
+          )}
+        </main>
       </div>
     );
   }
@@ -258,11 +265,6 @@ export function App(props: AppProps = {}) {
   if (state.phase === "home" && state.workspace && state.draft) {
     return (
       <div className="journey-workspace">
-        <p className="journey-source-banner" role="note">
-          <DemoBadge source={state.experienceSource} />
-          <span>{state.draft.source_label ?? "随机体验身份 · 示例数据（非实时）"}</span>
-          {state.draftSaving ? <span>正在保存草稿…</span> : <span>草稿已绑定当前私密工作区</span>}
-        </p>
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <WorkspaceShell
           activeAnalysis={state.activeAnalysis && !state.activeAnalysis.terminal

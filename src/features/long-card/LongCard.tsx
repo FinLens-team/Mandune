@@ -33,7 +33,7 @@ import {
   type DemoBadgeSource,
 } from "../../client/ui/index.js";
 import { LOCKED_THEME_PREVIEWS, OBSERVATION_THEME } from "../../theme/observation.js";
-import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
+import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
 import previewOne from "../../client/assets/theme-previews/theme-preview-1.png";
 import previewTwo from "../../client/assets/theme-previews/theme-preview-2.png";
 import previewThree from "../../client/assets/theme-previews/theme-preview-3.png";
@@ -225,10 +225,10 @@ function evidenceStatusLabel(status: EvidenceRecord["status"]): string {
   return labels[status];
 }
 
-function Doudou() {
+function ThemeMascot() {
   return (
     <figure className="mandong-doudou">
-      <img alt="" height="192" src={doudouObserver} width="192" />
+      <img alt={OBSERVATION_THEME.mascot.alt} height="192" src={nailongRest} width="192" />
       <figcaption>
         <strong>{OBSERVATION_THEME.mascot.name}</strong>
         <span>陪你观察，也承认未知</span>
@@ -350,7 +350,7 @@ export function NarrativeFront({
           </div>
         </div>
         <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
-          <Doudou />
+          <ThemeMascot />
         </div>
         <FrontBoundarySummary input={input} />
       </header>
@@ -441,7 +441,7 @@ export function AiNarrativeFront({
           </div>
         </div>
         <div className="mandong-long-card__guide" data-mascot-mood="calm">
-          <Doudou />
+          <ThemeMascot />
         </div>
       </header>
 
@@ -813,11 +813,11 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   }
 
   const showEvidence = face === "evidence";
-  const faceLabel = showEvidence ? "理性证据" : "东方观象";
-  const rotation = reducedMotion
-    ? face === "evidence" ? -180 : 0
-    : longCardDragRotation(face, dragDeltaX, stageWidthRef.current);
-  const motionStyle = { transform: `rotateY(${rotation}deg)` } as CSSProperties;
+  // Relaxed Demo mode: the back is the formal rational report, the front is the
+  // theme rendition of the same report.
+  const relaxedMode = Boolean(aiText && !narrative);
+  const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : OBSERVATION_THEME.label;
+  const stageStyle = { "--long-card-drag-x": `${dragOffset}px` } as CSSProperties;
   return (
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
@@ -894,12 +894,12 @@ export function ThemePreview() {
       </div>
       <div className="mandong-theme-preview__options" aria-label="主题展示">
         <div className="mandong-theme-preview__option mandong-theme-preview__option--current">
-          <img alt={OBSERVATION_THEME.mascot.alt} height="128" src={doudouObserver} width="128" />
-          <div><strong>{OBSERVATION_THEME.label}</strong><span>兜兜 · 当前主题</span></div>
+          <img alt={OBSERVATION_THEME.mascot.alt} decoding="async" height="128" loading="lazy" src={nailongRest} width="128" />
+          <div><strong>{OBSERVATION_THEME.label}</strong><span>奶龙 · 当前主题</span></div>
         </div>
         {LOCKED_THEME_PREVIEWS.map((preview, index) => (
           <div className="mandong-theme-preview__option" key={preview.id}>
-            <img alt={`${preview.label}的中性占位角色`} height="128" src={PREVIEW_ASSETS[index]} width="128" />
+            <img alt={`${preview.label}的中性占位角色`} decoding="async" height="128" loading="lazy" src={PREVIEW_ASSETS[index]} width="128" />
             <div><strong>{preview.label}</strong><span>{preview.description}</span></div>
             <LockBadge />
           </div>

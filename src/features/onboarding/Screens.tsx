@@ -1,18 +1,20 @@
 import {
+  ArrowRight,
+  ImageUp,
+  LockKeyhole,
   PenLine,
   RefreshCw,
-  ScanLine,
-  Shuffle,
+  Sparkles,
 } from "lucide-react";
-import { useEffect, useRef, useState, type Ref } from "react";
+import type { CSSProperties, Ref } from "react";
 import type { PersonalConstraints } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
-import { Badge, Button, DemoBadge, LockBadge } from "../../client/ui/index.js";
-import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
-import mandongLogo from "../../client/assets/mandong-logo.png";
-import previewOne from "../../client/assets/theme-previews/theme-preview-1.png";
-import previewTwo from "../../client/assets/theme-previews/theme-preview-2.png";
-import previewThree from "../../client/assets/theme-previews/theme-preview-3.png";
+import { Button } from "../../client/ui/index.js";
+import mandongLogo from "../../client/assets/mandong-logo.webp";
+import themeCardOne from "../../client/assets/themes/theme-card-1.webp";
+import themeCardTwo from "../../client/assets/themes/theme-card-2.webp";
+import themeCardThree from "../../client/assets/themes/theme-card-3.webp";
+import themeCardFour from "../../client/assets/themes/theme-card-4.webp";
 
 interface ScreenTitleProps {
   titleRef?: Ref<HTMLHeadingElement>;
@@ -36,7 +38,11 @@ export function SplashScreen({ returning = false, leaving = false }: SplashScree
         <img
           alt="满懂"
           className="onboarding-splash__logo"
+          decoding="async"
+          fetchPriority="high"
+          height={317}
           src={mandongLogo}
+          width={1200}
           id="s0-title"
         />
         <p className="onboarding-splash__positioning">数据有剧情，复盘不无聊</p>
@@ -54,118 +60,149 @@ export interface ThemeSelectionScreenProps extends ScreenTitleProps {
   onContinue: () => void;
 }
 
-const LOCKED_THEME_PREVIEWS = [
+const THEME_CARDS = [
   {
-    description: "明快色彩与独立角色的表现方向",
-    image: previewOne,
+    available: false,
+    description: "鸿运当头，把今天的变化看个明白",
+    height: 622,
+    image: themeCardOne,
+    index: 1,
+    name: "鸿运当头",
+    width: 368,
+  },
+  {
+    available: true,
+    description: "我是奶龙！哈哈哈哈哈",
+    height: 622,
+    image: themeCardTwo,
     index: 2,
+    name: "我是龙",
+    width: 366,
   },
   {
-    description: "轻盈留白与独立角色的表现方向",
-    image: previewTwo,
+    available: false,
+    description: "吉星高照，和AI一起寻找值得留意的信号",
+    height: 622,
+    image: themeCardThree,
     index: 3,
+    name: "吉星高照",
+    width: 364,
   },
   {
-    description: "清朗动势与独立角色的表现方向",
-    image: previewThree,
+    available: false,
+    description: "能和AI聊天就不要和人类聊天",
+    height: 1244,
+    image: themeCardFour,
     index: 4,
+    name: "孙哥",
+    width: 730,
   },
 ] as const;
 
+function themeCardMotion(index: number, focusedIndex: number | null): CSSProperties {
+  const initialX = [-1.5, -0.5, 0.5, 1.5][index - 1] ?? 0;
+  const initialRotation = [-10, -3.5, 3.5, 10][index - 1] ?? 0;
+  let x = initialX;
+  let y = 92 + Math.abs(initialX) * 8;
+  let rotation = initialRotation;
+  let scale = 1;
+  let z = index === 2 ? 8 : index;
+
+  if (focusedIndex !== null) {
+    if (index === focusedIndex) {
+      x = 0;
+      y = -28;
+      rotation = 0;
+      scale = 1.08;
+      z = 10;
+    } else {
+      const remainingCards = THEME_CARDS.filter((card) => card.index !== focusedIndex);
+      const remainingPosition = remainingCards.findIndex((card) => card.index === index);
+      const centeredPosition = remainingPosition - (remainingCards.length - 1) / 2;
+      x = centeredPosition * 1.05;
+      y = 126 + Math.abs(centeredPosition) * 8;
+      rotation = centeredPosition * 7;
+      scale = 0.82;
+      z = 5 + remainingPosition;
+    }
+  }
+
+  return {
+    "--card-delay": `${70 + index * 65}ms`,
+    "--card-r": `${rotation}deg`,
+    "--card-scale": scale,
+    "--card-x": `calc(${x} * var(--fan-unit))`,
+    "--card-y": `${y}px`,
+    "--card-z": z,
+  } as CSSProperties;
+}
+
 export function ThemeSelectionScreen({
   selected,
-  previewMessage,
   previewIndex = null,
   titleRef,
   onSelect,
   onPreview,
   onContinue,
 }: ThemeSelectionScreenProps) {
-  const themeGridRef = useRef<HTMLDivElement>(null);
-  const [forceList, setForceList] = useState(false);
-
-  useEffect(() => {
-    const grid = themeGridRef.current;
-    if (!grid || typeof ResizeObserver === "undefined") return;
-
-    const checkFit = () => {
-      const cards = grid.querySelectorAll<HTMLElement>(".onboarding-theme-card");
-      const contentOverflows = [...cards].some(
-        (card) => card.scrollHeight > card.clientHeight + 1 || card.scrollWidth > card.clientWidth + 1,
-      );
-      if (contentOverflows) setForceList(true);
-    };
-    const observer = new ResizeObserver(checkFit);
-    observer.observe(grid);
-    grid.querySelectorAll(".onboarding-theme-card").forEach((card) => observer.observe(card));
-    checkFit();
-    return () => observer.disconnect();
-  }, []);
+  const focusedIndex = selected ? 2 : previewIndex;
+  const focusedTheme = THEME_CARDS.find((theme) => theme.index === focusedIndex) ?? null;
 
   return (
-    <section className="onboarding-screen" aria-labelledby="s1-title">
+    <section className="onboarding-screen onboarding-theme-screen" aria-labelledby="s1-title">
       <header className="onboarding-heading">
         <p className="onboarding-step">首次引导 · 1 / 3</p>
         <h1 id="s1-title" ref={titleRef} tabIndex={-1}>
-          选择复盘主题
+          选择你喜欢的主题~
         </h1>
-        <p>主题只改变表达方式，不改变证据、风险判断或方向性建议。</p>
       </header>
 
-      <fieldset className="onboarding-theme-fieldset">
-        <legend>主题选择与预览</legend>
-        <div
-          className={`onboarding-theme-grid${selected ? " is-selected" : ""}${forceList ? " onboarding-theme-grid--list" : ""}`}
-          ref={themeGridRef}
-        >
-          <label className={`onboarding-theme-card onboarding-theme-card--available${selected ? " is-selected" : ""}`}>
-            <input
-              checked={selected}
-              name="theme"
-              onChange={onSelect}
-              type="radio"
-              value="eastern_observation"
-            />
-            <img alt="" className="onboarding-theme-art" height="512" src={doudouObserver} width="512" />
-            <strong>东方观象</strong>
-            <span>熊猫兜兜陪你观察、解释并承认未知</span>
-            <Badge tone="observed">当前可用</Badge>
-          </label>
-
-          {LOCKED_THEME_PREVIEWS.map((preview) => (
+      <div className="onboarding-theme-stage" data-focused={focusedIndex ?? "none"}>
+        <div aria-label="复盘主题" className="onboarding-theme-deck" role="group">
+          {THEME_CARDS.map((theme) => (
             <button
-              aria-disabled="true"
-              aria-controls="s1-preview-detail"
-              aria-describedby="s1-preview-detail"
-              aria-expanded={previewIndex === preview.index}
-              aria-label={`查看主题预览 ${String(preview.index).padStart(2, "0")} 详情，尚未开放`}
-              className={`onboarding-theme-card onboarding-theme-card--locked${previewIndex === preview.index ? " is-previewed" : ""}`}
-              data-preview={preview.index}
-              key={preview.index}
-              onClick={() => onPreview(preview.index)}
+              aria-label={theme.available ? `选择${theme.name}主题` : `查看${theme.name}主题预览，暂未开放`}
+              aria-pressed={theme.available ? selected : undefined}
+              className={`onboarding-theme-card ${theme.available ? "onboarding-theme-card--available" : "onboarding-theme-card--locked"}${focusedIndex === theme.index ? " is-focused" : ""}`}
+              data-theme-index={theme.index}
+              key={theme.index}
+              onClick={theme.available ? onSelect : () => onPreview(theme.index)}
+              style={themeCardMotion(theme.index, focusedIndex)}
               type="button"
             >
-              <img alt="" className="onboarding-theme-art" height="512" src={preview.image} width="512" />
-              <strong>主题预览 {String(preview.index).padStart(2, "0")}</strong>
-              <span>{preview.description}</span>
-              <LockBadge />
+              <span className="onboarding-theme-card__artwork">
+                <img
+                  alt=""
+                  decoding="async"
+                  fetchPriority={theme.available ? "high" : "low"}
+                  height={theme.height}
+                  src={theme.image}
+                  width={theme.width}
+                />
+              </span>
             </button>
           ))}
         </div>
-      </fieldset>
+      </div>
 
-      <div className="onboarding-theme-selection-row">
-        <Button onClick={onSelect}>选择东方观象</Button>
-        <span>{selected ? "已选择，主题仅改变表达。" : "当前只有这一主题可选择。"}</span>
+      <div className="onboarding-theme-detail" aria-live="polite" data-open={focusedTheme ? "true" : "false"}>
+        {focusedTheme ? (
+          <>
+            <div>
+              <span>{focusedTheme.available ? "当前可用" : "主题预览"}</span>
+              <strong>{focusedTheme.name}</strong>
+            </div>
+            <p>{focusedTheme.description}</p>
+            {!focusedTheme.available ? <span className="onboarding-theme-detail__lock"><LockKeyhole aria-hidden="true" size={14} />暂未开放</span> : null}
+          </>
+        ) : <p>点击一张卡片查看主题介绍</p>}
       </div>
-      <p className="onboarding-inline-status" id="s1-preview-detail" role="status">
-        {previewMessage ?? "当前只有东方观象可进入下一步。"}
-      </p>
-      <div className="onboarding-actions onboarding-actions--end">
+
+      <footer className="onboarding-theme-footer">
         <Button disabled={!selected} onClick={onContinue} variant="primary">
-          下一步
+          下一步 <ArrowRight aria-hidden="true" size={18} />
         </Button>
-      </div>
+      </footer>
     </section>
   );
 }
@@ -189,57 +226,73 @@ export function SourceSelectionScreen({
       <header className="onboarding-heading">
         <p className="onboarding-step">首次引导 · 2 / 3</p>
         <h1 id="s2-title" ref={titleRef} tabIndex={-1}>
-          从哪里开始
+          我们需要一些你的数据..
         </h1>
-        <p>Demo 主路径不需要提交真实账户或持仓信息。</p>
       </header>
 
-      <div className="onboarding-source__primary">
-        <Shuffle aria-hidden="true" size={28} />
-        <div>
-          <h2>先体验一次</h2>
-          <p>生成一份明确标注的示例持仓与四项约束，不需要提交真实资料。</p>
-        </div>
-        <Button onClick={onChooseRandom} variant="primary">
-          生成体验持仓
-        </Button>
+      <div aria-label="数据填入方式" className="onboarding-source__options" role="group">
+        <button
+          className="onboarding-source-option onboarding-source-option--available"
+          onClick={onChooseRandom}
+          type="button"
+        >
+          <span className="onboarding-source-option__icon">
+            <Sparkles aria-hidden="true" size={22} />
+          </span>
+          <span className="onboarding-source-option__copy">
+            <strong>生成体验持仓</strong>
+            <small>使用模拟数据直接体验完整复盘</small>
+          </span>
+          <ArrowRight aria-hidden="true" size={19} />
+        </button>
+
+        <button
+          aria-describedby="onboarding-source-feedback"
+          className="onboarding-source-option"
+          onClick={() => onPlaceholder("manual")}
+          type="button"
+        >
+          <span className="onboarding-source-option__icon">
+            <PenLine aria-hidden="true" size={22} />
+          </span>
+          <span className="onboarding-source-option__copy">
+            <strong>手动填写持仓</strong>
+            <small>逐项添加并检查持仓信息</small>
+          </span>
+          <span className="onboarding-source-option__status">
+            即将开放 <LockKeyhole aria-hidden="true" size={15} />
+          </span>
+        </button>
+
+        <button
+          aria-describedby="onboarding-source-feedback"
+          className="onboarding-source-option"
+          onClick={() => onPlaceholder("screenshot")}
+          type="button"
+        >
+          <span className="onboarding-source-option__icon">
+            <ImageUp aria-hidden="true" size={22} />
+          </span>
+          <span className="onboarding-source-option__copy">
+            <strong>截图识别持仓</strong>
+            <small>识别后仍由你逐项确认</small>
+          </span>
+          <span className="onboarding-source-option__status">
+            即将开放 <LockKeyhole aria-hidden="true" size={15} />
+          </span>
+        </button>
       </div>
 
-      <section className="onboarding-source__own" aria-labelledby="own-holdings-title">
-        <div className="onboarding-source__group-heading">
-          <h2 id="own-holdings-title">使用自己的持仓</h2>
-          <span>即将开放</span>
-        </div>
-        <div className="onboarding-placeholder-grid">
-          <button
-            aria-disabled="true"
-            aria-describedby="s2-placeholder-detail"
-            className="onboarding-placeholder"
-            onClick={() => onPlaceholder("manual")}
-            type="button"
-          >
-            <PenLine aria-hidden="true" size={22} />
-            <span>手工录入</span>
-            <LockBadge />
-          </button>
-          <button
-            aria-disabled="true"
-            aria-describedby="s2-placeholder-detail"
-            className="onboarding-placeholder"
-            onClick={() => onPlaceholder("screenshot")}
-            type="button"
-          >
-            <ScanLine aria-hidden="true" size={22} />
-            <span>截图识别</span>
-            <LockBadge />
-          </button>
-        </div>
-        <p className="onboarding-inline-status" id="s2-placeholder-detail" role="status">
-          {placeholderMessage ?? "未开放入口不会打开表单、相机或文件选择器。"}
-        </p>
-      </section>
-      <div className="onboarding-actions">
-        <Button onClick={onBack}>返回主题选择</Button>
+      <p
+        className="onboarding-source__feedback"
+        id="onboarding-source-feedback"
+        aria-live="polite"
+      >
+        {placeholderMessage ?? "手动填写与截图识别将在后续版本开放。"}
+      </p>
+
+      <div className="onboarding-source__back">
+        <Button onClick={onBack}>返回选择主题</Button>
       </div>
     </section>
   );
@@ -278,26 +331,22 @@ export function ExperienceSummaryScreen({
     <section className="onboarding-screen onboarding-summary" aria-labelledby="s3-title">
       <header className="onboarding-heading">
         <p className="onboarding-step">首次引导 · 3 / 3</p>
-        <DemoBadge aria-label="随机体验身份，以下均为示例数据，不是真实持仓" />
         <h1 id="s3-title" ref={titleRef} tabIndex={-1}>
-          确认随机体验身份
+          随机模拟数据已出炉
         </h1>
-        <p>这不是你的真实持仓，也不是系统推荐的约束；进入主界面后仍可修改。</p>
       </header>
 
       <div className="onboarding-summary__identity" key={identity.identity_id}>
-        <p className="onboarding-seed" role="status">
-          可复现体验编号：<code>{identity.seed}</code> · {identity.source_label}
-        </p>
         <div className="onboarding-summary__grid">
           <section aria-labelledby="holdings-title">
-            <div className="onboarding-section-heading">
-              <h2 id="holdings-title">体验持仓</h2>
-              <span>{identity.holdings.length} 项</span>
-            </div>
+            <div className="onboarding-section-heading"><h2 id="holdings-title">本次模拟持仓</h2></div>
             <div className="onboarding-holdings">
-              {identity.holdings.map((holding) => (
-                <article className="onboarding-holding" key={holding.line_id}>
+              {identity.holdings.map((holding, index) => (
+                <article
+                  className="onboarding-holding"
+                  key={holding.line_id}
+                  style={{ "--item-index": index } as CSSProperties}
+                >
                   <div className="onboarding-holding__title">
                     <div>
                       <h3>{holding.name}</h3>
@@ -306,47 +355,28 @@ export function ExperienceSummaryScreen({
                         {holding.market ? ` · ${holding.market}` : ""}
                       </p>
                     </div>
-                    <span className="onboarding-evidence-kind">{holding.provenance}</span>
                   </div>
-                  <dl>
-                    <div>
-                      <dt>持仓规模依据</dt>
+                  <dl className="onboarding-holding__metrics">
+                    <div className="onboarding-holding__metric">
+                      <dt>模拟持仓</dt>
                       <dd>{holding.size_basis}</dd>
                     </div>
-                    <div>
+                    <div className="onboarding-holding__metric">
                       <dt>观察值</dt>
                       <dd>
                         {String(holding.observed_value)}
                         {holding.observed_unit ? ` ${holding.observed_unit}` : ""}
                       </dd>
                     </div>
+                  </dl>
+                  <dl className="onboarding-holding__meta">
                     <div>
-                      <dt>观察日期</dt>
+                      <dt>数据日期</dt>
                       <dd>{holding.observation_date}</dd>
                     </div>
                     <div>
-                      <dt>市场观察时间</dt>
-                      <dd>{holding.observed_at}</dd>
-                    </div>
-                    <div>
-                      <dt>系统获取时间</dt>
-                      <dd>{holding.fetched_at}</dd>
-                    </div>
-                    <div>
-                      <dt>证据来源</dt>
-                      <dd>{holding.source_name}</dd>
-                    </div>
-                    <div>
-                      <dt>来源状态</dt>
-                      <dd>{holding.evidence_status}</dd>
-                    </div>
-                    <div>
-                      <dt>数据边界</dt>
-                      <dd>{identity.source_label}</dd>
-                    </div>
-                    <div>
-                      <dt>证据定位</dt>
-                      <dd>{holding.source_locator}</dd>
+                      <dt>数据来源</dt>
+                      <dd>随机生成</dd>
                     </div>
                   </dl>
                 </article>
@@ -356,20 +386,16 @@ export function ExperienceSummaryScreen({
 
           <section aria-labelledby="constraints-title">
             <div className="onboarding-section-heading">
-              <h2 id="constraints-title">四项体验约束</h2>
-              <span>体验生成值</span>
+              <h2 id="constraints-title">本次模拟偏好</h2>
             </div>
             <dl className="onboarding-constraints">
-              {(Object.keys(CONSTRAINT_LABELS) as (keyof PersonalConstraints)[]).map((key) => (
-                <div key={key}>
+              {(Object.keys(CONSTRAINT_LABELS) as (keyof PersonalConstraints)[]).map((key, index) => (
+                <div key={key} style={{ "--item-index": index } as CSSProperties}>
                   <dt>{CONSTRAINT_LABELS[key]}</dt>
                   <dd>{formatConstraint(identity.constraints[key])}</dd>
                 </div>
               ))}
             </dl>
-            <p className="onboarding-constraints-note">
-              「未知／尚未决定」是有效输入，会缩小相关判断，不会由系统补成默认答案。
-            </p>
           </section>
         </div>
       </div>
@@ -377,13 +403,13 @@ export function ExperienceSummaryScreen({
       <div className="onboarding-sticky-spacer" aria-hidden="true" />
       <footer className="onboarding-confirm-bar">
         <div className="onboarding-confirm-bar__inner">
-          <Button onClick={onBack}>返回来源选择</Button>
+          <Button onClick={onBack}>上一步</Button>
           <Button onClick={onReroll}>
             <RefreshCw aria-hidden="true" size={18} />
-            换一份体验身份
+            换一份
           </Button>
           <Button onClick={onConfirm} variant="primary">
-            确认此体验身份
+            下一步
           </Button>
         </div>
       </footer>

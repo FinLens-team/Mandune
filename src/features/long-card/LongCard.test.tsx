@@ -8,7 +8,6 @@ import {
   RationalEvidenceBack,
   longCardRuntimeFromFixture,
   longCardRuntimeIsDisplayable,
-  longCardDragRotation,
   longCardFlipTarget,
   longCardGestureIntent,
   preserveFaceScrollOffsets,
@@ -39,9 +38,7 @@ describe("long-card rendering and interaction boundaries", () => {
 
   it("accepts provenance fields from existing callers without rendering source badges", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
-    const editedMarkup = renderToStaticMarkup(createElement(LongCard, {
-      input: { ...input, experienceSource: "edited" },
-    }));
+    const editedMarkup = renderToStaticMarkup(createElement(LongCard, { input }));
     const cachedMarkup = renderToStaticMarkup(createElement(LongCard, {
       input: { ...input, exampleLabel: "随机体验身份 · 缓存证据（非实时）" },
     }));
@@ -66,9 +63,6 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(longCardFlipTarget({ x: 160, y: 20 }, { x: 80, y: 140 })).toBeNull();
     expect(longCardGestureIntent({ x: 120, y: 20 }, { x: 112, y: 160 })).toBe("vertical");
     expect(longCardGestureIntent({ x: 160, y: 20 }, { x: 80, y: 28 })).toBe("horizontal");
-    expect(longCardDragRotation("narrative", -160, 320)).toBe(-90);
-    expect(longCardDragRotation("evidence", 160, 320)).toBe(-90);
-    expect(longCardDragRotation("narrative", -1000, 320)).toBe(-112);
   });
 
   it("keeps separate reading offsets for each face", () => {
@@ -90,7 +84,6 @@ describe("long-card rendering and interaction boundaries", () => {
     const input = longCardRuntimeFromFixture(fixture);
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
-        active: true,
         faceId: "evidence-face",
         input,
         headingId: "evidence-heading",
@@ -127,7 +120,6 @@ describe("long-card rendering and interaction boundaries", () => {
     };
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
-        active: true,
         faceId: "evidence-face",
         input: {
           ...input,
@@ -155,7 +147,6 @@ describe("long-card rendering and interaction boundaries", () => {
     }));
     const markup = renderToStaticMarkup(
       createElement(RationalEvidenceBack, {
-        active: true,
         faceId: "evidence-face",
         input: { ...input, analysis: { ...input.analysis, derived } },
         headingId: "evidence-heading",

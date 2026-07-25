@@ -45,8 +45,8 @@ export function ConstraintsForm({ compact = false, onChange, value }: Constraint
       aria-labelledby={headingId}
     >
       <div className="panel-head">
-        <h2 id={headingId}>四项个人约束</h2>
-        <p className="panel-note">“未知／尚未决定”是有效答案，会缩小对应分析范围。</p>
+        <h2 id={headingId}>个人偏好</h2>
+        <p className="panel-note">不确定的项目可以保留为“未知／尚未决定”。</p>
       </div>
       <div className="constraint-grid">
         {CONSTRAINT_FIELDS.map((field) => {

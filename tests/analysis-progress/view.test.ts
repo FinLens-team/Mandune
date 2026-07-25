@@ -53,9 +53,10 @@ describe("S8 analysis progress view", () => {
     expect(markup).toContain("等待首条真实任务事件");
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain('role="status"');
-    expect(markup).toContain("doudou-observer.png");
+    expect(markup).toContain("nailong-rest.webp");
     expect(markup).toContain('class="analysis-progress__mascot"');
     expect(markup).toContain('alt=""');
+    expect(markup).not.toContain("<video");
     expect(markup).toContain("完整阶段列表");
     expect(markup.match(/data-stage=/g)).toHaveLength(8);
     expect(markup.match(/尚无任务事件/g)).toHaveLength(8);
@@ -65,7 +66,7 @@ describe("S8 analysis progress view", () => {
     expect(markup).toContain("分析任务不会因此取消");
     expect(markup).not.toContain("跳过");
     expect(markup).not.toContain("进度");
-    expect(markup).not.toContain(">兜兜</span>");
+    expect(markup).not.toContain(">奶龙</span>");
   });
 
   it("shows retry, coverage, disconnect, and reduced-motion states without losing history", async () => {

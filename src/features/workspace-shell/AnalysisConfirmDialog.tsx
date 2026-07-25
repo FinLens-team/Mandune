@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { PersonalConstraints, PortfolioSnapshot } from "../../contracts/index.js";
-import { Button, DemoBadge, type DemoBadgeSource } from "../../client/ui/index.js";
+import { Button } from "../../client/ui/index.js";
 import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
 
 export interface AnalysisConfirmDialogProps {
   open: boolean;
   snapshot: PortfolioSnapshot | null;
-  experienceSource?: DemoBadgeSource;
+  experienceSource?: string;
   latestCompleteTradingDay?: string;
   reduceMotion: boolean;
   returnFocus: HTMLElement | null;
@@ -76,7 +76,6 @@ export function AnalysisConfirmDialog(props: AnalysisConfirmDialogProps) {
         ref={dialogRef}
         role="dialog"
       >
-        <DemoBadge source={props.experienceSource} />
         <h2 id="analysis-confirm-heading">按当前输入发起今日复盘？</h2>
         <p id="analysis-confirm-description">
           将冻结当前 {snapshot.lines.length} 项确认持仓和四项约束，使用截至

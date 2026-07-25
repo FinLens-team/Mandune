@@ -12,19 +12,6 @@ import { record, summary } from "./model.test.js";
 type DemoBadgeSource = "random" | "edited";
 
 interface HistoryViewModule {
-  HistoryAboutView: ComponentType<{
-    availability?: "active" | "deleted" | "expired";
-    experienceSource?: DemoBadgeSource;
-    initialTab?: "history" | "about";
-    onNavigateHome: () => void;
-    onOpenRecord: (record: HistoryRecordV1) => void;
-    onRequestDeleteWorkspace?: () => void;
-    reader: HistoryReader;
-    reduceMotion?: boolean;
-    resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
-    workspace: WorkspacePublicStatus | null;
-    workspaceId: string;
-  }>;
   HistoryDetail: ComponentType<{
     detail: HistoryReadResult;
     onBack: () => void;
@@ -46,7 +33,6 @@ interface HistoryViewModule {
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
     workspaceId: string;
   }>;
-  nextHistoryAboutTab(current: "history" | "about", key: string): "history" | "about";
 }
 
 interface AboutModule {
@@ -271,33 +257,22 @@ describe("S10 about and navigation", () => {
     expect(markup).toContain("30 天");
     expect(markup).toContain("每次活动都会刷新保留期");
     expect(markup).toContain("预计删除");
-    expect(markup).toContain("主动删除当前工作区");
+    expect(markup).toContain("注销数据");
     expect(markup).toContain("缓存或 fixture 证据");
     expect(markup).toContain("不证明供应商当前可用");
     expect(markup).not.toContain("精确交易指令");
   });
 
-  it("exposes two keyboard tabs and stable journey callbacks", async () => {
-    const { HistoryAboutView, nextHistoryAboutTab } = await loadHistoryView();
-    const markup = renderToStaticMarkup(createElement(HistoryAboutView, {
-      initialTab: "about",
+  it("keeps the about page independent from history tabs", async () => {
+    const { AboutView } = await loadAbout();
+    const markup = renderToStaticMarkup(createElement(AboutView, {
       onNavigateHome: vi.fn(),
-      onOpenRecord: vi.fn(),
       onRequestDeleteWorkspace: vi.fn(),
-      reader: noopReader,
-      reduceMotion: true,
       workspace: null,
-      workspaceId: "workspace-history",
     }));
 
-    expect(markup).toContain('role="tablist"');
-    expect(markup).toContain('aria-selected="true"');
-    expect(markup).toContain('data-reduce-motion="true"');
+    expect(markup).not.toContain('role="tablist"');
     expect(markup).toContain("关于满懂");
-    expect(markup).not.toContain("正在读取当前工作区历史");
-    expect(nextHistoryAboutTab("history", "ArrowRight")).toBe("about");
-    expect(nextHistoryAboutTab("history", "ArrowLeft")).toBe("about");
-    expect(nextHistoryAboutTab("about", "Home")).toBe("history");
-    expect(nextHistoryAboutTab("history", "End")).toBe("about");
+    expect(markup).not.toContain("历史记录");
   });
 });
