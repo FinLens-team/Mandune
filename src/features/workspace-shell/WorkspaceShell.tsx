@@ -4,6 +4,7 @@ import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
 import mandongLogo from "../../client/assets/mandong-logo.webp";
+import { prepareWaitingMascotMusic } from "../../client/audio/waiting-mascot-music.js";
 import { createExampleDraft } from "../../portfolio/index.js";
 import { themeForId, type ThemeId } from "../../theme/index.js";
 import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
@@ -176,6 +177,7 @@ export function WorkspaceShell({
   }, [pageVisible, reduceMotion, theme.copy.danmaku, view]);
 
   function activateMascot(trigger: HTMLElement) {
+    prepareWaitingMascotMusic();
     setReviewTrigger(trigger);
     onReviewCoachmarkDismiss?.();
 
@@ -365,6 +367,7 @@ export function WorkspaceShell({
         <AnalysisConfirmDialog
           onCancel={() => setConfirmOpen(false)}
           onConfirm={(snapshot) => {
+            prepareWaitingMascotMusic();
             setConfirmOpen(false);
             onStartAnalysis(snapshot);
           }}

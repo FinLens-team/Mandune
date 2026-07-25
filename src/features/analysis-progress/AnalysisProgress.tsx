@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisResultStatus, TaskEvent } from "../../contracts/index.js";
 import { AnalysisStatus, BrandBanner, Button } from "../../client/ui/index.js";
+import { playWaitingMascotMusic } from "../../client/audio/waiting-mascot-music.js";
 import { themeForId, type ThemeId } from "../../theme/index.js";
 import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
 import {
@@ -80,6 +81,7 @@ export function AnalysisProgress({
   themeId = "eastern_observation",
 }: AnalysisProgressProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const initialMusicAnalysisRef = useRef<string | null>(null);
   const model = projectAnalysisProgress({ analysisId, connection, events, terminal });
   const [showPop, setShowPop] = useState(false);
   const theme = themeForId(themeId);
@@ -132,6 +134,12 @@ export function AnalysisProgress({
     : model.logLines.map((line) => ({ id: line.id, kind: "event" as const, text: line.text }))
         .slice(-8);
 
+  function playInitialMascotMusic() {
+    if (initialMusicAnalysisRef.current === analysisId) return;
+    initialMusicAnalysisRef.current = analysisId;
+    void playWaitingMascotMusic();
+  }
+
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
@@ -146,6 +154,7 @@ export function AnalysisProgress({
     }
 
     if (animation.kind === "video") {
+      playInitialMascotMusic();
       setShowPop(true);
       return () => setShowPop(false);
     }
@@ -159,6 +168,7 @@ export function AnalysisProgress({
     function startPop() {
       if (cancelled || started) return;
       started = true;
+      playInitialMascotMusic();
       setShowPop(true);
       // Mark as played only after a full playback so StrictMode's
       // dev-mode double effect run cannot swallow the animation.
@@ -223,7 +233,13 @@ export function AnalysisProgress({
             ))}
           </div>
 
-          <div className="analysis-progress__stage" data-idle={mascotIdle || undefined}>
+          <button
+            aria-label={`点击${theme.mascot.name}播放音乐`}
+            className="analysis-progress__stage"
+            data-idle={mascotIdle || undefined}
+            onClick={() => void playWaitingMascotMusic()}
+            type="button"
+          >
             {showPop && assets.progressAnimation?.kind === "video" ? (
               <video
                 autoPlay
@@ -253,7 +269,7 @@ export function AnalysisProgress({
                 width={assets.rest.width}
               />
             )}
-          </div>
+          </button>
 
           <ol aria-live="polite" className="analysis-progress__log" role="log">
             {visibleLogLines.length === 0 ? (

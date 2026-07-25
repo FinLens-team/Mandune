@@ -8,6 +8,7 @@ describe("analysis progress simple styles", () => {
     const css = await readFile(STYLES_PATH, "utf8");
 
     expect(css).toContain(".analysis-progress__mascot");
+    expect(css).toContain(".analysis-progress__stage:focus-visible");
     expect(css).toContain("object-fit: contain");
     expect(css).toContain(".analysis-progress__log");
     expect(css).toContain("mascot-breathe");

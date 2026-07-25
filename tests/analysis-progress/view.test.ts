@@ -50,6 +50,8 @@ describe("S8 analysis progress view (simple version)", () => {
 
     expect(markup).toContain("nailong-rest.webp");
     expect(markup).toContain('class="analysis-progress__mascot"');
+    expect(markup).toContain('aria-label="点击奶龙播放音乐"');
+    expect(markup).toContain('<button');
     expect(markup).toContain('alt=""');
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("等待首条真实任务事件");
