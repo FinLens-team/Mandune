@@ -89,7 +89,7 @@ describe("S10 history list and detail", () => {
     expect(markup).toContain("有限分析");
     expect(markup).toContain("snapshot-history-1");
     expect(markup).toContain("证据截止");
-    expect(markup).toContain("随机体验身份 · 示例数据");
+    expect(markup).not.toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("fixture 证据 · 非实时");
     expect(markup).toContain("主题叙事已保存");
     expect(markup).toContain("analysis-history.v1");

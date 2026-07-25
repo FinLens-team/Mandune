@@ -10,8 +10,7 @@ import {
   type JourneyGateway,
   type JourneyPersistence,
 } from "../app/client/index.js";
-import { Button, DemoBadge } from "./ui/index.js";
-import { AnalysisProgress } from "../features/analysis-progress/index.js";
+import { Button, GeneratedMarkdown } from "./ui/index.js";
 import { HistoryAboutView } from "../features/history-view/index.js";
 import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
@@ -78,8 +77,7 @@ function JourneyStatePage({
 }) {
   return (
     <main className="journey-state" id="main" role="status">
-      <DemoBadge />
-      <h1 tabIndex={-1}>{heading}</h1>
+      <h1>{heading}</h1>
       <p>{message}</p>
       <Button onClick={action} variant="primary">{actionLabel}</Button>
     </main>
@@ -263,11 +261,6 @@ export function App(props: AppProps = {}) {
   if (state.phase === "home" && state.workspace && state.draft) {
     return (
       <div className="journey-workspace">
-        <p className="journey-source-banner" role="note">
-          <DemoBadge source={state.experienceSource} />
-          <span>{state.draft.source_label ?? "随机体验身份 · 示例数据（非实时）"}</span>
-          {state.draftSaving ? <span>正在保存草稿…</span> : <span>草稿已绑定当前私密工作区</span>}
-        </p>
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <WorkspaceShell
           activeAnalysis={state.activeAnalysis && !state.activeAnalysis.terminal

@@ -35,8 +35,8 @@ export async function completeOnboarding(page: Page): Promise<string> {
   await checkpoint(page, "S2 source selection");
 
   await expect(page.getByRole("heading", { level: 1, name: "确认随机体验身份" })).toBeVisible();
-  await expect(page.getByText("随机体验身份 · 示例数据").first()).toBeVisible();
-  await expect(page.getByText(/测试 fixture · 非实时行情/).first()).toBeVisible();
+  await expect(page.getByText("随机体验身份 · 示例数据")).toHaveCount(0);
+  await expect(page.getByText(/随机体验身份 · 测试 fixture · 非实时行情/)).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 2, name: "四项体验约束" })).toBeVisible();
   const seed = (await page.locator(".onboarding-seed code").textContent())?.trim() ?? "";
   expect(seed).not.toBe("");
@@ -44,7 +44,7 @@ export async function completeOnboarding(page: Page): Promise<string> {
   await page.getByRole("button", { name: "确认此体验身份" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: /和兜兜一起/ })).toBeVisible();
-  await expect(page.getByText(/草稿已绑定当前私密工作区/)).toBeVisible();
+  await expect(page.getByText(/草稿已绑定当前私密工作区/)).toHaveCount(0);
   await checkpoint(page, "S4 workspace home");
   return seed;
 }

@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisResultStatus, TaskEvent } from "../../contracts/index.js";
-import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
-import { AnalysisStatus, Button, DemoBadge } from "../../client/ui/index.js";
+import { AnalysisStatus, Button } from "../../client/ui/index.js";
 import {
   projectAnalysisProgress,
   shouldAnimateAnalysisProgress,
@@ -130,7 +129,6 @@ export function AnalysisProgress({
             正在核对本次复盘
           </h1>
         </div>
-        <DemoBadge />
       </header>
 
       <p className="analysis-progress__connection" data-connection={connection}>

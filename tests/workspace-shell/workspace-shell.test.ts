@@ -81,12 +81,11 @@ describe("S4-S7 workspace shell", () => {
       }),
     );
 
-    expect(markup).toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("熊猫兜兜，东方观象主题的观察向导");
-    expect(markup).toContain("doudou-observer.png");
-    expect(markup).toContain("点击兜兜，确认发起今日复盘");
-    expect(markup).toContain("点击兜兜，先确认本次复盘");
-    expect(markup).not.toMatch(/>发起今日复盘</);
+    expect(markup).not.toContain("随机体验身份 · 示例数据");
+    expect(markup).toContain("熊猫兜兜，东方观象向导");
+    expect(markup).toContain("点击兜兜，发起今日复盘");
+    expect(markup).not.toContain("体验证据将在发起后按最新完整交易日核对");
+    expect(markup).not.toContain("最近一次复盘");
     expect(markup).not.toContain("查看持仓与约束");
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("已保存输入快照");

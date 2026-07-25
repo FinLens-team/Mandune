@@ -2,7 +2,7 @@ import { Lock } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
-export type BadgeTone = "demo" | "locked" | "observed" | "risk" | "neutral";
+export type BadgeTone = "locked" | "observed" | "risk" | "neutral";
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
@@ -29,21 +29,6 @@ export function Badge({
       {Icon ? <Icon aria-hidden="true" className="ui-badge__icon" size={14} /> : null}
       <span>{children}</span>
     </span>
-  );
-}
-
-export type DemoBadgeSource = "random" | "edited";
-
-export interface DemoBadgeProps
-  extends Omit<BadgeProps, "children" | "icon" | "showDot" | "tone"> {
-  source?: DemoBadgeSource;
-}
-
-export function DemoBadge({ source = "random", ...props }: DemoBadgeProps) {
-  return (
-    <Badge {...props} data-source={source} showDot tone="demo">
-      {source === "edited" ? "体验持仓 · 已编辑" : "随机体验身份 · 示例数据"}
-    </Badge>
   );
 }
 

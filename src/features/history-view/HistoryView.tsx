@@ -13,13 +13,7 @@ import type {
   HistoryRecordV1,
   HistorySummary,
 } from "../../history/index.js";
-import {
-  AnalysisStatus,
-  Badge,
-  Button,
-  DemoBadge,
-  type DemoBadgeSource,
-} from "../../client/ui/index.js";
+import { AnalysisStatus, Badge, Button } from "../../client/ui/index.js";
 import {
   formatHistoryDateTime,
   historyRecordBoundary,
@@ -132,15 +126,7 @@ function EntryBoundary({
       entry.detail.record.experience_source;
     return (
       <div className="history-entry__badges">
-        {boundary.isExample ? (
-          recordSource ? (
-            <DemoBadge source={recordSource} />
-          ) : (
-            <Badge tone="neutral">体验来源未保存</Badge>
-          )
-        ) : (
-          <Badge tone="neutral">用户确认快照</Badge>
-        )}
+        {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
         <EvidenceBoundaryBadge record={entry.detail.record} />
       </div>
     );
@@ -316,15 +302,7 @@ function FoundDetail({
           <p>核对分析完成时保存的输入、证据时点和版本。</p>
         </div>
         <div className="history-entry__badges">
-          {boundary.isExample ? (
-            recordSource ? (
-              <DemoBadge source={recordSource} />
-            ) : (
-              <Badge tone="neutral">体验来源未保存</Badge>
-            )
-          ) : (
-            <Badge tone="neutral">用户确认快照</Badge>
-          )}
+          {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
           <EvidenceBoundaryBadge record={record} />
         </div>
       </header>

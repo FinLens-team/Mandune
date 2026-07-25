@@ -35,7 +35,7 @@ describe("S6 portfolio editor", () => {
     );
 
     expect(markup).toContain("仓位／身份");
-    expect(markup).toContain("随机体验身份 · 示例数据");
+    expect(markup).not.toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("投资期限");
     expect(markup).toContain("近期流动性需求");
     expect(markup).toContain("可承受回撤");

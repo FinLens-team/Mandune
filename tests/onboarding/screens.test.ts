@@ -139,14 +139,13 @@ describe("S1-S3 onboarding screens", () => {
       onReroll: noop,
     }));
 
-    expect(html).toContain("随机体验身份 · 示例数据");
-    expect(html).toContain("测试 fixture · 非实时行情");
-    expect(html).toContain("观察日期");
+    expect(html).not.toContain("随机体验身份 · 示例数据");
+    expect(html).not.toContain("随机体验身份 · 测试 fixture · 非实时行情");
+    expect(html).not.toContain("测试 fixture · 非实时行情");
     expect(html).toContain("市场观察时间");
     expect(html).toContain("系统获取时间");
     expect(html).toContain("证据来源");
-    expect(html).toContain("数据边界");
-    expect(html).toContain(">available<");
+    expect(html).toContain("<dd>available</dd>");
     expect(html).toContain("observed");
     expect(html).toContain("投资期限");
     expect(html).toContain("近期流动性需求");

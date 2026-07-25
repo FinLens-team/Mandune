@@ -226,15 +226,6 @@
   font-size: var(--font-size-xs);
 }
 
-.workspace-drawer__identity {
-  padding: var(--space-4);
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-}
-
 .workspace-drawer__nav {
   display: grid;
   align-content: start;

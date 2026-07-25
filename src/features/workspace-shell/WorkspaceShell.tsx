@@ -2,13 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent, type RefObject } from "re
 import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import {
-  Button,
-  DemoBadge,
-  IconButton,
-  type DemoBadgeSource,
-} from "../../client/ui/index.js";
-import doudouObserver from "../../client/assets/doudou/doudou-observer.png";
+import { IconButton } from "../../client/ui/index.js";
 import { createExampleDraft } from "../../portfolio/index.js";
 import { OBSERVATION_THEME } from "../../theme/observation.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
@@ -178,7 +172,6 @@ export function WorkspaceShell({
       </a>
       <header className="workspace-shell__topbar">
         <span className="workspace-shell__brand">满懂</span>
-        <DemoBadge source={experienceSource} />
       </header>
 
       <main id="workspace-main">

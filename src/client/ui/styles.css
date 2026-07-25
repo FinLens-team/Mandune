@@ -62,12 +62,6 @@
   background: currentColor;
 }
 
-.ui-badge--demo {
-  border-color: var(--color-demo);
-  color: var(--color-demo);
-  background: var(--color-demo-bg);
-}
-
 .ui-badge--observed {
   border-color: var(--color-observed);
   color: var(--color-observed);

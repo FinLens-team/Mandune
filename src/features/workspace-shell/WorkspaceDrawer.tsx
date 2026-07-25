@@ -9,13 +9,8 @@ import {
   X,
 } from "lucide-react";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import {
-  DemoBadge,
-  IconButton,
-  LockBadge,
-  type DemoBadgeSource,
-} from "../../client/ui/index.js";
-import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
+import { IconButton, LockBadge } from "../../client/ui/index.js";
+import { handleOverlayKeyDown, useOverlayFocus } from "./focus.js";
 
 export type WorkspaceView = "home" | "portfolio";
 
@@ -101,11 +96,6 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
             tooltip="关闭"
           />
         </header>
-
-        <div className="workspace-drawer__identity">
-          <DemoBadge source={props.experienceSource} />
-          <span>匿名体验数据</span>
-        </div>
 
         <nav className="workspace-drawer__nav" aria-label="主要导航">
           <button

@@ -2,12 +2,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { AssetClass, PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import { createExampleDraft, listUnresolvedLines, listUsableLines } from "../../portfolio/index.js";
-import {
-  Button,
-  DemoBadge,
-  IconButton,
-  type DemoBadgeSource,
-} from "../../client/ui/index.js";
+import { Button, IconButton } from "../../client/ui/index.js";
 import { ConstraintsForm } from "../constraints/ConstraintsForm.js";
 import { InstrumentField } from "./InstrumentField.js";
 import {
@@ -101,7 +96,6 @@ export function PortfolioEditor({
     <div className="portfolio-editor">
       <header className="portfolio-editor__header">
         <div>
-          <DemoBadge source={experienceSource} />
           <h1>仓位／身份</h1>
           <p>编辑只影响后续复盘；已生成的历史快照不会被改写。</p>
           <p className="portfolio-editor__source">
