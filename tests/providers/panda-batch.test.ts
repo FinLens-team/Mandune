@@ -48,6 +48,19 @@ function client(workerPath: string, timeoutMs = 2_000): PandaBatchClient {
   });
 }
 
+function officialCredentialClient(workerPath: string): PandaBatchClient {
+  return new PandaBatchClient({
+    pythonExecutable: process.execPath,
+    workerPath,
+    timeoutMs: 2_000,
+    env: {
+      PATH: process.env.PATH,
+      PANDA_DATA_USERNAME: "86-public-test-user",
+      PANDA_DATA_PASSWORD: "test-only-password",
+    },
+  });
+}
+
 describe("PandaAI batch process boundary", () => {
   it("returns one typed result per request from one worker process", async () => {
     const workerPath = worker(`
@@ -83,6 +96,33 @@ describe("PandaAI batch process boundary", () => {
     expect(result).toHaveLength(2);
     expect(result.every((item) => item.status === "failed" && item.errorCode === "credentials_unavailable"))
       .toBe(true);
+  });
+
+  it("maps the public Panda Data credential names only inside the worker", async () => {
+    const workerPath = worker(`
+      process.stdin.resume();
+      process.stdin.on("end", () => {
+        const ok = process.env.PANDA_USERNAME === "86-public-test-user" &&
+          process.env.PANDA_PASSWORD === "test-only-password" &&
+          process.env.PANDA_DATA_USERNAME === undefined &&
+          process.env.PANDA_DATA_PASSWORD === undefined;
+        process.stdout.write(JSON.stringify({
+          status: "completed",
+          results: ${JSON.stringify(requests)}.map((request) => ({
+            lineId: request.lineId,
+            assetClass: request.assetClass,
+            symbol: request.symbol,
+            status: ok ? "empty" : "failed",
+            method: null,
+            rows: [],
+          })),
+        }));
+      });
+    `);
+
+    const result = await officialCredentialClient(workerPath)
+      .collect(requests, new AbortController().signal);
+    expect(result.every((item) => item.status === "empty")).toBe(true);
   });
 
   it("rejects malformed worker output and hard-stops a timed-out worker", async () => {

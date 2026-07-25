@@ -70,12 +70,14 @@ function validResult(value: unknown): value is PandaBatchResult {
 }
 
 function privateEnvironment(source: NodeJS.ProcessEnv, authDirectory: string): NodeJS.ProcessEnv {
+  const username = source.PANDA_DATA_USERNAME ?? source.PANDA_USERNAME;
+  const password = source.PANDA_DATA_PASSWORD ?? source.PANDA_PASSWORD;
   const result: NodeJS.ProcessEnv = {
     HOME: authDirectory,
     XDG_CONFIG_HOME: authDirectory,
     PANDA_AUTH_DIR: authDirectory,
-    PANDA_USERNAME: source.PANDA_USERNAME,
-    PANDA_PASSWORD: source.PANDA_PASSWORD,
+    PANDA_USERNAME: username,
+    PANDA_PASSWORD: password,
   };
   for (const key of ["PATH", "PYTHONPATH", "LANG", "LC_ALL", "LD_LIBRARY_PATH"] as const) {
     if (source[key]) result[key] = source[key];
@@ -117,7 +119,8 @@ export class PandaBatchClient {
       throw new Error("invalid_panda_batch_request");
     }
     if (signal.aborted) throw new DOMException("PandaAI batch cancelled", "AbortError");
-    if (!this.env.PANDA_USERNAME || !this.env.PANDA_PASSWORD) {
+    if (!(this.env.PANDA_DATA_USERNAME ?? this.env.PANDA_USERNAME) ||
+      !(this.env.PANDA_DATA_PASSWORD ?? this.env.PANDA_PASSWORD)) {
       return requests.map((request) => ({
         lineId: request.lineId,
         assetClass: request.assetClass,

@@ -23,7 +23,7 @@ import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
 import {
   DeepSeekDeepReviewAgent,
-  UnconfiguredAuthorizedMarketEvidenceSource,
+  PandaAuthorizedMarketEvidenceSource,
 } from "../a2a/index.js";
 import { openSqliteDatabase } from "./database.js";
 import { SqliteAtlasStore } from "./atlas-store.js";
@@ -108,7 +108,12 @@ export function createDurableServices(config: ServerConfig) {
           baseURL: config.a2a.baseURL,
           apiKey: config.a2a.apiKey,
           modelId: config.a2a.modelId,
-          marketEvidenceSource: new UnconfiguredAuthorizedMarketEvidenceSource(),
+          marketEvidenceSource: new PandaAuthorizedMarketEvidenceSource(
+            new CachedPandaEvidenceCollector(
+              new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
+              evidenceCache,
+            ),
+          ),
         }),
         bearerToken: config.a2a.bearerToken,
         ...(config.a2a.publicBaseUrl ? { publicBaseUrl: config.a2a.publicBaseUrl } : {}),

@@ -1,5 +1,8 @@
 export { DeepSeekDeepReviewAgent, type DeepSeekDeepReviewAgentConfig } from "./deep-agent.js";
-export { UnconfiguredAuthorizedMarketEvidenceSource } from "./market-evidence.js";
+export {
+  PandaAuthorizedMarketEvidenceSource,
+  UnconfiguredAuthorizedMarketEvidenceSource,
+} from "./market-evidence.js";
 export { buildAgentCard, createA2ARoutes, type A2ARouteOptions } from "./routes.js";
 export {
   A2A_DEEP_REVIEW_DEADLINE_MS,

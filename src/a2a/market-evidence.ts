@@ -1,5 +1,45 @@
 import type { MarketEvidenceSource } from "../analysis/index.js";
-import type { EvidenceRecord } from "../contracts/index.js";
+import type { EvidenceRecord, PortfolioSnapshot } from "../contracts/index.js";
+import type {
+  CachedPandaEvidenceCollector,
+} from "../providers/index.js";
+
+export class PandaAuthorizedMarketEvidenceSource implements MarketEvidenceSource {
+  constructor(private readonly collector: Pick<CachedPandaEvidenceCollector, "collect">) {}
+
+  async collectMarketEvidence(
+    input: Parameters<MarketEvidenceSource["collectMarketEvidence"]>[0],
+  ): Promise<EvidenceRecord[]> {
+    const snapshot: PortfolioSnapshot = {
+      snapshot_id: `a2a-${input.lineId}`,
+      created_at: input.acquiredAt,
+      contracts_version: "1.0.0",
+      theme_id: "a2a",
+      lines: [{
+        line_id: input.lineId,
+        asset_class: input.assetClass,
+        name: input.symbol,
+        symbol: input.symbol,
+        size_basis: "unknown",
+        observation_date: input.latestCompleteTradingDay,
+        entry_method: "manual",
+        confirmed_at: input.acquiredAt,
+      }],
+      constraints: {
+        investment_horizon: "unknown",
+        near_term_liquidity: "unknown",
+        tolerable_drawdown: "unknown",
+        investment_objective: "unknown",
+      },
+    };
+    const result = await this.collector.collect({
+      snapshot,
+      tradingDay: input.latestCompleteTradingDay,
+      signal: input.signal,
+    });
+    return result.evidence;
+  }
+}
 
 /**
  * Competition-safe default for the independent A2A boundary.
