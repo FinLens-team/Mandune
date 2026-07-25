@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createRandomDemoExperience,
   rerollDemoExperience,
@@ -10,6 +10,7 @@ import {
   markOnboardingCompleted,
   type OnboardingStorage,
 } from "./storage.js";
+import { BrandBanner } from "../../client/ui/index.js";
 import {
   ExperienceSummaryScreen,
   SourceSelectionScreen,
@@ -26,7 +27,6 @@ export interface OnboardingFlowProps {
   random?: () => number;
   now?: () => Date;
   reducedMotion?: boolean;
-  splashDurationMs?: number;
 }
 
 export function OnboardingFlow({
@@ -36,17 +36,18 @@ export function OnboardingFlow({
   random = Math.random,
   now = () => new Date(),
   reducedMotion = false,
-  splashDurationMs,
 }: OnboardingFlowProps) {
   const returningVisit = useRef(hasCompletedOnboarding(storage, workspaceId));
   const [step, setStep] = useState<OnboardingStep>("s0");
+  const [splashLeaving, setSplashLeaving] = useState(false);
+  const [splashReady, setSplashReady] = useState(false);
   const [themeSelected, setThemeSelected] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
   const [identity, setIdentity] = useState<DemoExperienceIdentity | null>(null);
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
-  const [splashLeaving, setSplashLeaving] = useState(false);
+  const [motionDirection, setMotionDirection] = useState<"back" | "forward">("forward");
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -65,68 +66,47 @@ export function OnboardingFlow({
     return () => mediaQuery.removeEventListener("change", updatePreference);
   }, []);
 
-  useEffect(() => {
-    if (step !== "complete" || notifiedReturningVisit.current) return;
-    // 仅作为兜底：正常路径已在 splash 退出时通知
-    notifiedReturningVisit.current = true;
-    onEnterApp({ identity: null, returning: true });
-  }, [onEnterApp, step]);
-
+  // Splash lifecycle: wait for document + fonts ready AND minimum 2 seconds
   useEffect(() => {
     if (step !== "s0") return;
-    const timers: number[] = [];
+    let cancelled = false;
+    const start = Date.now();
+    const MIN_DISPLAY = 2000;
 
-    // 所有用户都展示完整 splash 动画，等待资源加载 + 最低展示时间
-    const MIN_DISPLAY_MS = splashDurationMs ?? 2_000;
-    let minTimePassed = false;
-    let resourcesReady = false;
-
-    function tryLeave() {
-      if (minTimePassed && resourcesReady) {
-        if (returningVisit.current) {
-          // 回访：展开后直接进入主页
-          setSplashLeaving(true);
-          timers.push(window.setTimeout(() => {
-            notifiedReturningVisit.current = true;
-            setStep("complete");
-            onEnterApp({ identity: null, returning: true });
-          }, 600));
-        } else {
-          // 首次：展开进入引导流程
-          setSplashLeaving(true);
-          timers.push(window.setTimeout(() => setStep("s1"), 600));
-        }
+    async function waitForReady() {
+      // Wait for document and fonts
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
       }
+      // Ensure minimum display time
+      const elapsed = Date.now() - start;
+      if (elapsed < MIN_DISPLAY) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_DISPLAY - elapsed));
+      }
+      if (!cancelled) setSplashReady(true);
     }
 
-    // 最低展示时间
-    timers.push(window.setTimeout(() => {
-      minTimePassed = true;
-      tryLeave();
-    }, MIN_DISPLAY_MS));
+    waitForReady();
+    return () => { cancelled = true; };
+  }, [step]);
 
-    // 等待资源加载 (document ready + 字体 + 图片)
-    function checkResources() {
-      if (document.readyState === "complete") {
-        void document.fonts.ready.then(() => {
-          resourcesReady = true;
-          tryLeave();
-        });
-      } else {
-        window.addEventListener("load", () => {
-          void document.fonts.ready.then(() => {
-            resourcesReady = true;
-            tryLeave();
-          });
-        }, { once: true });
-      }
+  // When splash is ready, trigger leaving animation
+  useEffect(() => {
+    if (!splashReady || step !== "s0") return;
+    setSplashLeaving(true);
+  }, [splashReady, step]);
+
+  // After leaving animation completes, advance to next step
+  const onSplashAnimationEnd = useCallback(() => {
+    if (!splashLeaving) return;
+    if (returningVisit.current) {
+      notifiedReturningVisit.current = true;
+      setStep("complete");
+      onEnterApp({ identity: null, returning: true });
+    } else {
+      setStep("s1");
     }
-    checkResources();
-
-    return () => {
-      for (const t of timers) window.clearTimeout(t);
-    };
-  }, [effectiveReducedMotion, onEnterApp, splashDurationMs, step]);
+  }, [splashLeaving, onEnterApp]);
 
   useEffect(() => {
     if (step === "s1" || step === "s2" || step === "s3") {
@@ -140,7 +120,12 @@ export function OnboardingFlow({
 
   function chooseRandomExperience(): void {
     setIdentity(createRandomDemoExperience(random, now));
-    setStep("s3");
+    goToStep("s3", "forward");
+  }
+
+  function goToStep(nextStep: OnboardingStep, direction: "back" | "forward"): void {
+    setMotionDirection(direction);
+    setStep(nextStep);
   }
 
   function confirmIdentity(): void {
@@ -162,25 +147,31 @@ export function OnboardingFlow({
         }
       }}
     >
-      <main id="onboarding-main">
-        {step === "s0" ? (
-          <SplashScreen leaving={splashLeaving} returning={returningVisit.current} />
-        ) : null}
-        {step === "s1" || (step === "s0" && splashLeaving && !returningVisit.current) ? (
-          <div className={`onboarding-reveal${step === "s0" ? " onboarding-reveal--active" : ""}`}>
+      {step === "s0" ? (
+        <div onAnimationEnd={onSplashAnimationEnd}>
+          <SplashScreen
+            returning={returningVisit.current}
+            leaving={splashLeaving}
+          />
+        </div>
+      ) : (
+        <>
+          <BrandBanner />
+          <main id="onboarding-main">
+            {step === "s1" ? (
+          <div className={`onboarding-page onboarding-page--${motionDirection}`}>
             <ThemeSelectionScreen
               onContinue={() => {
-                if (themeSelected) setStep("s2");
+                if (themeSelected) goToStep("s2", "forward");
               }}
               onPreview={(index) => {
+                setThemeSelected(false);
                 setPreviewIndex(index);
-                setPreviewMessage(
-                  `主题预览 ${String(index).padStart(2, "0")} 暂未开放；它只预览表现方向，不能用于下一步。`,
-                );
+                setPreviewMessage(null);
               }}
               onSelect={() => {
                 setThemeSelected(true);
-                setPreviewIndex(null);
+                setPreviewIndex(2);
                 setPreviewMessage(null);
               }}
               previewIndex={previewIndex}
@@ -191,30 +182,36 @@ export function OnboardingFlow({
           </div>
         ) : null}
         {step === "s2" ? (
-          <SourceSelectionScreen
-            onBack={() => setStep("s1")}
-            onChooseRandom={chooseRandomExperience}
-            onPlaceholder={(source) => {
-              setPlaceholderMessage(
-                source === "manual"
-                  ? "手工录入暂未开放，请使用随机体验身份。"
-                  : "截图识别暂未开放；不会打开文件选择器或上传图片。",
-              );
-            }}
-            placeholderMessage={placeholderMessage}
-            titleRef={titleRef}
-          />
+          <div className={`onboarding-page onboarding-page--${motionDirection}`}>
+            <SourceSelectionScreen
+              onBack={() => goToStep("s1", "back")}
+              onChooseRandom={chooseRandomExperience}
+              onPlaceholder={(source) => {
+                setPlaceholderMessage(
+                  source === "manual"
+                    ? "手工录入暂未开放，请使用随机体验身份。"
+                    : "截图识别持仓暂未开放。",
+                );
+              }}
+              placeholderMessage={placeholderMessage}
+              titleRef={titleRef}
+            />
+          </div>
         ) : null}
         {step === "s3" && identity ? (
-          <ExperienceSummaryScreen
-            identity={identity}
-            onBack={() => setStep("s2")}
-            onConfirm={confirmIdentity}
-            onReroll={() => setIdentity(rerollDemoExperience(identity, random, now))}
-            titleRef={titleRef}
-          />
+          <div className={`onboarding-page onboarding-page--${motionDirection}`}>
+            <ExperienceSummaryScreen
+              identity={identity}
+              onBack={() => goToStep("s2", "back")}
+              onConfirm={confirmIdentity}
+              onReroll={() => setIdentity(rerollDemoExperience(identity, random, now))}
+              titleRef={titleRef}
+            />
+          </div>
         ) : null}
-      </main>
+          </main>
+        </>
+      )}
     </div>
   );
 }
