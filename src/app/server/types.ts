@@ -12,14 +12,16 @@ import {
 export const FIXTURE_NON_LIVE_LABEL = "示例 fixture（非实时）" as const;
 
 export interface AnalysisSourceLabel {
-  kind: "fixture" | "unavailable";
-  is_live: false;
+  kind: "fixture" | "live" | "unavailable";
+  is_live: boolean;
   label: string;
 }
 
 export interface AnalysisExecution {
   analysis: AnalysisResult;
   narrative?: ThemeModelOutput;
+  /** Relaxed Demo mode: free-form model narrative streamed to the client. */
+  ai_text?: string;
   rational_analysis_version: typeof RATIONAL_ANALYSIS_SCHEMA_VERSION;
   source: AnalysisSourceLabel;
 }
@@ -68,5 +70,7 @@ export interface AnalysisExecutor {
     snapshot: PortfolioSnapshot;
     emit: (stage: TaskEvent["stage"], state: TaskEvent["state"], extra?: Partial<TaskEvent>) => void;
     now: () => Date;
+    /** Relaxed Demo mode: receives incremental free-text deltas from the model. */
+    onText?: (delta: string) => void;
   }): Promise<AnalysisExecution>;
 }

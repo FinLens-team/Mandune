@@ -15,11 +15,12 @@ export interface JourneyLongCardRuntimeInput {
   exampleLabel?: string;
   isExample: boolean;
   narrative?: ThemeModelOutput;
+  aiText?: string;
   snapshot: PortfolioSnapshot;
 }
 
 export function journeyLongCardIsDisplayable(input: JourneyLongCardRuntimeInput): boolean {
-  const { analysis, narrative, snapshot } = input;
+  const { analysis, narrative, aiText, snapshot } = input;
   if (
     !validatePortfolioSnapshot(snapshot).ok ||
     !validateOwnedAnalysisResult(analysis).ok ||
@@ -27,11 +28,14 @@ export function journeyLongCardIsDisplayable(input: JourneyLongCardRuntimeInput)
     analysis.snapshot_id !== snapshot.snapshot_id ||
     analysis.contracts_version !== snapshot.contracts_version ||
     analysis.theme_id !== snapshot.theme_id ||
-    JSON.stringify(analysis.constraints) !== JSON.stringify(snapshot.constraints) ||
-    !narrative
+    JSON.stringify(analysis.constraints) !== JSON.stringify(snapshot.constraints)
   ) {
     return false;
   }
+  // Relaxed Demo mode: a free-text model narrative is a valid front on its own,
+  // rendered over the same deterministic analysis shell and rational back.
+  if (aiText && aiText.trim()) return true;
+  if (!narrative) return false;
   const rational = {
     schema_version: "rational-analysis.v1" as const,
     conclusions: analysis.conclusions,

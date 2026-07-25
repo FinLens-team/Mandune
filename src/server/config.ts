@@ -1,5 +1,13 @@
 import path from "node:path";
 
+export interface ModelGatewayConfig {
+  providerName: string;
+  baseURL: string;
+  apiKey: string;
+  modelId: string;
+  supportsStructuredOutputs: boolean;
+}
+
 export interface ServerConfig {
   host: string;
   port: number;
@@ -8,6 +16,8 @@ export interface ServerConfig {
   dbPath: string;
   migrationsDirectory: string;
   dbBusyTimeoutMs: number;
+  /** Server-only model gateway config. Never exposed by /health or to VITE_*. */
+  model?: ModelGatewayConfig;
 }
 
 export function loadServerConfig(
@@ -35,6 +45,8 @@ export function loadServerConfig(
     throw new Error("Invalid MANDONG_DB_BUSY_TIMEOUT_MS.");
   }
 
+  const model = loadModelConfig(env);
+
   return {
     host,
     port,
@@ -42,5 +54,32 @@ export function loadServerConfig(
     dbPath,
     migrationsDirectory,
     dbBusyTimeoutMs,
+    ...(model ? { model } : {}),
   };
+}
+
+/**
+ * Reads the server-only model gateway configuration. Returns undefined when the
+ * required MODEL_* variables are absent so the runtime falls back to fixtures.
+ * These values must never enter VITE_*, the browser bundle, logs, or /health.
+ */
+function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined {
+  const baseURL = env.MODEL_BASE_URL?.trim();
+  const apiKey = env.MODEL_API_KEY?.trim();
+  const modelId = env.MODEL_ID?.trim();
+  if (!baseURL && !apiKey && !modelId) return undefined;
+  if (!baseURL || !apiKey || !modelId) {
+    throw new Error("Incomplete model config: MODEL_BASE_URL, MODEL_API_KEY and MODEL_ID are all required.");
+  }
+  try {
+    const url = new URL(baseURL);
+    const secure =
+      url.protocol === "https:" || url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (!secure) throw new Error("insecure");
+  } catch {
+    throw new Error("Invalid MODEL_BASE_URL: expected an https URL or localhost.");
+  }
+  const providerName = env.MODEL_PROVIDER_NAME?.trim() || "model-gateway";
+  const supportsStructuredOutputs = env.MODEL_SUPPORTS_STRUCTURED_OUTPUTS?.trim() !== "false";
+  return { providerName, baseURL, apiKey, modelId, supportsStructuredOutputs };
 }

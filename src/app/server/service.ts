@@ -23,8 +23,18 @@ export class JourneyInputError extends Error {
   }
 }
 
+/** Relaxed Demo mode: SSE event delivered to a stream subscriber. */
+export type AnalysisStreamEvent = { type: "delta"; text: string } | { type: "done" };
+
+interface AnalysisStreamState {
+  buffer: string;
+  done: boolean;
+  subscribers: Set<(event: AnalysisStreamEvent) => void>;
+}
+
 export class JourneyAnalysisService {
   private readonly tasks = new Map<string, Promise<void>>();
+  private readonly streams = new Map<string, AnalysisStreamState>();
 
   constructor(
     private readonly store: JourneyStore,
@@ -91,6 +101,66 @@ export class JourneyAnalysisService {
     await Promise.allSettled([...this.tasks.values()]);
   }
 
+  /**
+   * Relaxed Demo mode: subscribe to the free-text model stream for a running
+   * analysis. Any already-buffered text is replayed immediately, then deltas
+   * are delivered until the stream finishes. Returns an unsubscribe function.
+   */
+  subscribeStream(analysisId: string, listener: (event: AnalysisStreamEvent) => void): () => void {
+    const state = this.getOrCreateStream(analysisId);
+    if (state.buffer) listener({ type: "delta", text: state.buffer });
+    if (state.done) {
+      listener({ type: "done" });
+      return () => undefined;
+    }
+    state.subscribers.add(listener);
+    return () => {
+      state.subscribers.delete(listener);
+    };
+  }
+
+  private getOrCreateStream(analysisId: string): AnalysisStreamState {
+    let state = this.streams.get(analysisId);
+    if (!state) {
+      state = { buffer: "", done: false, subscribers: new Set() };
+      this.streams.set(analysisId, state);
+    }
+    return state;
+  }
+
+  private pushStreamDelta(analysisId: string, delta: string): void {
+    if (!delta) return;
+    const state = this.getOrCreateStream(analysisId);
+    state.buffer += delta;
+    // Deltas carry the full cumulative text so replays and auto-reconnects are
+    // idempotent: subscribers replace, they never append.
+    for (const listener of state.subscribers) {
+      try {
+        listener({ type: "delta", text: state.buffer });
+      } catch {
+        // A failed subscriber must not interrupt streaming or other listeners.
+      }
+    }
+  }
+
+  private finishStream(analysisId: string, finalText?: string): void {
+    const state = this.getOrCreateStream(analysisId);
+    if (state.done) return;
+    if (finalText && finalText.length > state.buffer.length) state.buffer = finalText;
+    state.done = true;
+    for (const listener of state.subscribers) {
+      try {
+        listener({ type: "done" });
+      } catch {
+        // Ignore subscriber failures on completion.
+      }
+    }
+    state.subscribers.clear();
+    // Keep the buffer briefly so brief reconnects can replay, then release it.
+    // Late subscribers after this window fall back to the persisted result.
+    setTimeout(() => this.streams.delete(analysisId), 300_000).unref?.();
+  }
+
   private async executeRun(run: StoredAnalysisRun): Promise<void> {
     let eventCounter = 0;
     let eventWrites = Promise.resolve();
@@ -123,7 +193,9 @@ export class JourneyAnalysisService {
         snapshot: run.snapshot,
         emit,
         now: this.now,
+        onText: (delta) => this.pushStreamDelta(run.analysis_id, delta),
       });
+      this.finishStream(run.analysis_id, execution.ai_text);
       await eventWrites;
       emit("persist_or_return", "pending", {
         covered_count: execution.analysis.coverage.covered_line_ids.length,
@@ -147,6 +219,7 @@ export class JourneyAnalysisService {
         execution,
       });
     } catch {
+      this.finishStream(run.analysis_id);
       try {
         const failure: TaskEvent = {
           event_id: `${run.analysis_id}:event:${++eventCounter}`,
@@ -178,6 +251,7 @@ export class JourneyAnalysisService {
         analysis: execution.analysis,
         rational_analysis_version: execution.rational_analysis_version,
         ...(execution.narrative ? { narrative: execution.narrative } : {}),
+        ...(execution.ai_text ? { ai_text: execution.ai_text } : {}),
       }, {
         signal: controller.signal,
         canCommit: () => open && !controller.signal.aborted,

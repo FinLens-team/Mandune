@@ -85,6 +85,7 @@ function historyInput(
     ...(exampleLabel ? { exampleLabel } : {}),
     isExample: record.snapshot.lines.some((line) => line.entry_method === "example"),
     ...(record.narrative ? { narrative: record.narrative } : {}),
+    ...(record.ai_text ? { aiText: record.ai_text } : {}),
     snapshot: record.snapshot,
   };
 }
@@ -381,15 +382,19 @@ export class JourneyController {
       return;
     }
     const input = historyInput(replay.record, result.source.label);
-    const displayable = Boolean(result.narrative) &&
-      JSON.stringify(replay.record.narrative) === JSON.stringify(result.narrative) &&
+    // Relaxed Demo mode: either a matching free-text narrative or a matching
+    // theme narrative makes the card displayable over the same analysis shell.
+    const narrativeMatch = Boolean(result.narrative) &&
+      JSON.stringify(replay.record.narrative) === JSON.stringify(result.narrative);
+    const aiTextMatch = Boolean(result.aiText) && replay.record.ai_text === result.aiText;
+    const displayable = (narrativeMatch || aiTextMatch) &&
       journeyLongCardIsDisplayable(input);
     const terminal: AnalysisProgressTerminal = {
       analysis_id: analysisId,
       displayable,
       reason: displayable
         ? result.source.label
-        : "主题叙事缺失或版本不一致，未展示不完整长笺。",
+        : "模型叙事缺失或与快照不一致，未展示不完整长笺。",
       status: result.analysis.status,
       terminal_reason: displayable ? mappedReason : "model_failure",
     };
@@ -406,6 +411,11 @@ export class JourneyController {
     const input = this.options.getState().activeAnalysis?.resultInput;
     if (!input || !journeyLongCardIsDisplayable(input)) return;
     this.options.dispatch({ type: "RESULT_OPENED", input, returnTo: "home" });
+  }
+
+  /** Relaxed Demo mode: record cumulative free-text model output while running. */
+  applyStreamText(analysisId: string, text: string): void {
+    this.options.dispatch({ type: "ANALYSIS_STREAM_UPDATED", analysisId, text });
   }
 
   async openHistoryRecord(recordId: string): Promise<void> {

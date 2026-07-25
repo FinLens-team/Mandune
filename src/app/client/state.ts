@@ -22,6 +22,7 @@ export interface ActiveJourneyAnalysis {
   connection: AnalysisConnectionState;
   events: TaskEvent[];
   resultInput?: JourneyLongCardRuntimeInput;
+  streamText?: string;
   terminal?: AnalysisProgressTerminal;
 }
 
@@ -74,6 +75,7 @@ export type JourneyAction =
       completedAt?: string;
     }
   | { type: "ANALYSIS_DISCONNECTED"; analysisId: string; message: string }
+  | { type: "ANALYSIS_STREAM_UPDATED"; analysisId: string; text: string }
   | { type: "ANALYSIS_LEFT" }
   | { type: "ANALYSIS_RESUMED"; analysisId: string }
   | { type: "RESULT_OPENED"; input: JourneyLongCardRuntimeInput; returnTo: "home" | "history" }
@@ -226,6 +228,12 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
               : "reconnecting",
         },
         message: action.message,
+      };
+    case "ANALYSIS_STREAM_UPDATED":
+      if (state.activeAnalysis?.analysisId !== action.analysisId) return state;
+      return {
+        ...state,
+        activeAnalysis: { ...state.activeAnalysis, streamText: action.text },
       };
     case "ANALYSIS_LEFT":
       return { ...state, message: undefined, phase: "home" };

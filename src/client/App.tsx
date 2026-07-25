@@ -86,6 +86,30 @@ export function App(props: AppProps = {}) {
     return () => window.clearInterval(poll);
   }, [controller, gateway.pollIntervalMs, state.activeAnalysis, state.phase]);
 
+  // Relaxed Demo mode: stream the model's free-text narrative while it runs.
+  const streamAnalysisId =
+    state.phase === "analysis" && state.activeAnalysis && !state.activeAnalysis.terminal
+      ? state.activeAnalysis.analysisId
+      : null;
+  useEffect(() => {
+    if (!streamAnalysisId || typeof EventSource === "undefined") return;
+    const source = new EventSource(
+      `/api/analyses/${encodeURIComponent(streamAnalysisId)}/stream`,
+      { withCredentials: true },
+    );
+    source.addEventListener("delta", (event) => {
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as { text?: unknown };
+        // Deltas carry the full cumulative text: replace, never append.
+        if (typeof data.text === "string") controller.applyStreamText(streamAnalysisId, data.text);
+      } catch {
+        // Ignore malformed frames; the persisted result stays the source of truth.
+      }
+    });
+    source.addEventListener("done", () => source.close());
+    return () => source.close();
+  }, [controller, streamAnalysisId]);
+
   if (state.phase === "booting") {
     return (
       <main aria-live="polite" className="journey-state" id="main" role="status">
@@ -143,10 +167,20 @@ export function App(props: AppProps = {}) {
       );
     }
     return (
-      <main aria-live="polite" className="journey-state" id="main" role="status">
+      <main aria-live="polite" className="journey-state journey-state--streaming" id="main" role="status">
         <span className="journey-state__pulse" aria-hidden="true" />
         <h1>正在核对本次复盘</h1>
-        <p>只随真实任务事件推进，完成后直接打开观象长笺。</p>
+        {state.activeAnalysis.streamText?.trim() ? (
+          <div className="journey-stream">
+            {state.activeAnalysis.streamText
+              .split(/\n+/)
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0)
+              .map((line, index) => <p key={`${index}-${line.slice(0, 12)}`}>{line}</p>)}
+          </div>
+        ) : (
+          <p>只随真实任务事件推进，完成后直接打开观象长笺。</p>
+        )}
         <Button onClick={() => controller.leaveAnalysis()} variant="secondary">
           暂时离开，任务继续进行
         </Button>

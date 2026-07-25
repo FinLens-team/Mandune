@@ -54,6 +54,7 @@ export interface LongCardRuntimeInput {
   exampleLabel?: string;
   isExample: boolean;
   narrative?: ThemeModelOutput;
+  aiText?: string;
   snapshot: PortfolioSnapshot;
 }
 
@@ -108,7 +109,7 @@ export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRu
 }
 
 export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boolean {
-  const { analysis, narrative, snapshot } = input;
+  const { analysis, narrative, aiText, snapshot } = input;
   if (
     !validatePortfolioSnapshot(snapshot).ok ||
     !validateOwnedAnalysisResult(analysis).ok ||
@@ -116,11 +117,13 @@ export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boole
     analysis.snapshot_id !== snapshot.snapshot_id ||
     analysis.contracts_version !== snapshot.contracts_version ||
     analysis.theme_id !== snapshot.theme_id ||
-    JSON.stringify(analysis.constraints) !== JSON.stringify(snapshot.constraints) ||
-    !narrative
+    JSON.stringify(analysis.constraints) !== JSON.stringify(snapshot.constraints)
   ) {
     return false;
   }
+  // Relaxed Demo mode: a free-text model narrative alone can front the card.
+  if (aiText && aiText.trim()) return true;
+  if (!narrative) return false;
 
   return narrative.schema_version === THEME_NARRATIVE_SCHEMA_VERSION &&
     narrative.rational_analysis_id === analysis.analysis_id &&
@@ -253,6 +256,10 @@ interface NarrativeFaceProps extends FaceProps {
   narrative: ThemeModelOutput;
 }
 
+interface AiNarrativeFaceProps extends FaceProps {
+  aiText: string;
+}
+
 export function NarrativeFront({
   faceId,
   headingId,
@@ -311,6 +318,81 @@ export function NarrativeFront({
             </li>
           </ul>
         ) : <p>当前证据只支持观察，不支持方向性建议。</p>}
+      </section>
+
+      <section className="mandong-long-card__risk" aria-labelledby={`${headingId}-risk`}>
+        <ShieldAlert aria-hidden="true" size={22} />
+        <div>
+          <h3 id={`${headingId}-risk`}>风险与判断边界</h3>
+          {analysis.risk_notes.map((note) => <p key={note.id}>{note.statement}</p>)}
+        </div>
+      </section>
+
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-unknowns`}>
+        <h3 id={`${headingId}-unknowns`}>未知与限制</h3>
+        {analysis.unknowns.length + analysis.limitations.length > 0 ? (
+          <ul className="mandong-long-card__plain-list">
+            {analysis.unknowns.map((item) => <li key={item.id}>{item.impact}（{item.reason}）</li>)}
+            {analysis.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
+          </ul>
+        ) : <p>当前分析范围内未记录额外未知项。</p>}
+      </section>
+
+      <footer className="mandong-long-card__footer">
+        <p>用户保留最终判断与操作权。满懂不连接券商，也不代客操作。</p>
+      </footer>
+    </article>
+  );
+}
+
+/**
+ * Relaxed Demo mode front: renders the model's free-text narrative over the
+ * same deterministic shell (date, status, mascot, risk notes, unknowns). It
+ * changes only the expression, never the analysis, coverage, or risk judgement.
+ */
+export function AiNarrativeFront({
+  faceId,
+  headingId,
+  headingRef,
+  input,
+  aiText,
+}: AiNarrativeFaceProps) {
+  const { analysis } = input;
+  const paragraphs = aiText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return (
+    <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
+      <header className="mandong-long-card__intro">
+        <div className="mandong-long-card__date-row">
+          <p>
+            复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
+          </p>
+          <ExampleBadge input={input} />
+        </div>
+        <div className="mandong-long-card__masthead">
+          <div>
+            <p className="mandong-long-card__theme">{OBSERVATION_THEME.label}</p>
+            <h2 id={headingId} ref={headingRef} tabIndex={-1}>今日观象</h2>
+            <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
+          </div>
+        </div>
+        <AnalysisStatus status={analysis.status} />
+        <div className="mandong-long-card__guide" data-mascot-mood="calm">
+          <Doudou />
+        </div>
+      </header>
+
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-observations`}>
+        <h3 id={`${headingId}-observations`}>本次复盘</h3>
+        {paragraphs.length > 0 ? (
+          <div className="mandong-long-card__statements">
+            {paragraphs.map((paragraph, index) => (
+              <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>
+            ))}
+          </div>
+        ) : <p>模型未返回可展示的复盘文本。</p>}
       </section>
 
       <section className="mandong-long-card__risk" aria-labelledby={`${headingId}-risk`}>
@@ -550,7 +632,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const scrollOffsetsRef = useRef<FaceScrollOffsets>({ evidence: null, narrative: null });
   const pendingScrollRestoreRef = useRef<PendingScrollRestore | null>(null);
   const id = useId();
-  const { analysis, narrative } = input;
+  const { analysis, narrative, aiText } = input;
   const narrativeHeadingId = `${id}-narrative-heading`;
   const evidenceHeadingId = `${id}-evidence-heading`;
   const narrativeFaceId = `${id}-narrative-face`;
@@ -572,7 +654,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     return <Unavailable input={input} />;
   }
 
-  if (!narrative || !longCardRuntimeIsDisplayable(input)) {
+  if (!longCardRuntimeIsDisplayable(input)) {
     return <IncompleteLongCard input={input} />;
   }
 
@@ -663,8 +745,10 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
         >
           {showEvidence ? (
             <RationalEvidenceBack faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} />
-          ) : (
+          ) : narrative ? (
             <NarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} narrative={narrative} />
+          ) : (
+            <AiNarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiText ?? ""} />
           )}
         </div>
       </div>

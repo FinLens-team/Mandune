@@ -1,6 +1,12 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateText, jsonSchema, NoObjectGeneratedError, Output } from "ai";
-import type { ModelGateway, ModelGatewayRequest, ModelGatewayResult } from "./gateway.js";
+import { generateText, jsonSchema, NoObjectGeneratedError, Output, streamText } from "ai";
+import type {
+  ModelGateway,
+  ModelGatewayRequest,
+  ModelGatewayResult,
+  ModelStreamRequest,
+  ModelStreamResult,
+} from "./gateway.js";
 import { hasPrivatePayload } from "./privacy.js";
 
 export interface OpenAICompatibleModelGatewayConfig {
@@ -15,7 +21,8 @@ export interface OpenAICompatibleModelGatewayConfig {
 
 function validServerConfig(config: OpenAICompatibleModelGatewayConfig): boolean {
   if (!config.providerName.trim() || !config.apiKey || !config.modelId.trim()) return false;
-  if (!config.supportsStructuredOutputs) return false;
+  // The Demo streaming path does not require provider-side structured outputs;
+  // the strict generate() path guards on this flag per request instead.
   try {
     const url = new URL(config.baseURL);
     return url.protocol === "https:" || url.hostname === "localhost" || url.hostname === "127.0.0.1";
@@ -108,6 +115,52 @@ export function createOpenAICompatibleModelGateway(
         return { ok: true, value };
       } catch (error) {
         return failureFrom(error, request.signal, timedOut);
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+
+    async streamGenerate(request: ModelStreamRequest): Promise<ModelStreamResult> {
+      if (!provider) {
+        return { ok: false, code: "configuration_unavailable", retryable: false };
+      }
+      if (request.signal.aborted) {
+        return { ok: false, code: "cancelled", retryable: false };
+      }
+      if (!request.prompt.trim() || request.timeoutMs <= 0) {
+        return { ok: false, code: "configuration_unavailable", retryable: false };
+      }
+
+      const timeoutController = new AbortController();
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        timeoutController.abort();
+      }, request.timeoutMs);
+      const combinedSignal = AbortSignal.any([request.signal, timeoutController.signal]);
+      try {
+        const result = streamText({
+          model: provider(config.modelId),
+          system: request.instructions,
+          prompt: request.prompt,
+          abortSignal: combinedSignal,
+          maxRetries: 0,
+          temperature: 0.4,
+        });
+        let text = "";
+        for await (const delta of result.textStream) {
+          text += delta;
+          request.onText(delta);
+        }
+        if (!text.trim()) {
+          return { ok: false, code: "malformed_output", retryable: true };
+        }
+        return { ok: true, text };
+      } catch (error) {
+        const failure = failureFrom(error, request.signal, timedOut);
+        // failureFrom always yields a failure branch; guard narrows the union.
+        if (failure.ok) return { ok: false, code: "provider_failure", retryable: true };
+        return { ok: false, code: failure.code, retryable: failure.retryable };
       } finally {
         clearTimeout(timeout);
       }

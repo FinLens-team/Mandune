@@ -4,6 +4,8 @@ export type {
   ModelGatewayFailureCode,
   ModelGatewayRequest,
   ModelGatewayResult,
+  ModelStreamRequest,
+  ModelStreamResult,
 } from "./gateway.js";
 export {
   createOpenAICompatibleModelGateway,

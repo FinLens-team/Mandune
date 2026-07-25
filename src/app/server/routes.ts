@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { getCookie } from "hono/cookie";
+import { streamSSE } from "hono/streaming";
 import type { HistoryService } from "../../history/index.js";
 import {
   INSTRUMENT_DICTIONARY_AS_OF,
@@ -145,6 +146,50 @@ export function createJourneyRoutes(input: {
       source: run.execution.source,
       analysis: run.execution.analysis,
       narrative: run.execution.narrative ?? null,
+      ai_text: run.execution.ai_text ?? null,
+    });
+  });
+
+  // Relaxed Demo mode: incremental free-text model output over SSE.
+  // Same-origin requests carry the workspace cookie automatically; the full
+  // text is also recoverable in one shot from the result endpoint above.
+  app.get("/analyses/:analysisId/stream", async (c) => {
+    const id = await workspaceId(c, input.workspaces);
+    if (!id) return c.json(UNAUTHORIZED, 401);
+    const analysisId = c.req.param("analysisId");
+    if (!validIdentifier(analysisId)) return c.json({ error: "not_found" }, 404);
+    const run = await input.journey.getRun(id, analysisId);
+    if (!run) return c.json({ error: "not_found" }, 404);
+    return streamSSE(c, async (stream) => {
+      if (run.state === "terminal") {
+        const text = run.execution?.ai_text ?? "";
+        if (text) await stream.writeSSE({ event: "delta", data: JSON.stringify({ text }) });
+        await stream.writeSSE({ event: "done", data: "{}" });
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        let chain = Promise.resolve();
+        let finished = false;
+        const finish = (): void => {
+          if (finished) return;
+          finished = true;
+          resolve();
+        };
+        const unsubscribe = input.journey.subscribeStream(analysisId, (event) => {
+          chain = chain
+            .then(() =>
+              event.type === "delta"
+                ? stream.writeSSE({ event: "delta", data: JSON.stringify({ text: event.text }) })
+                : stream.writeSSE({ event: "done", data: "{}" }),
+            )
+            .catch(() => undefined);
+          if (event.type === "done") void chain.then(finish);
+        });
+        stream.onAbort(() => {
+          unsubscribe();
+          finish();
+        });
+      });
     });
   });
 

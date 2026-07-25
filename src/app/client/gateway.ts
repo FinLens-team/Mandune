@@ -43,8 +43,8 @@ export interface AnalysisStatusResponse {
 }
 
 export interface AnalysisSourceResponse {
-  kind: "fixture" | "unavailable";
-  is_live: false;
+  kind: "fixture" | "live" | "unavailable";
+  is_live: boolean;
   label: string;
 }
 
@@ -62,6 +62,7 @@ export type AnalysisResultResponse =
       source: AnalysisSourceResponse;
       analysis: AnalysisResult;
       narrative?: ThemeModelOutput;
+      aiText?: string;
     };
 
 export interface JourneyGateway {
@@ -314,20 +315,22 @@ export class FetchJourneyGateway implements JourneyGateway {
     }
     const source = body.source;
     if (
-      (source.kind !== "fixture" && source.kind !== "unavailable") ||
-      source.is_live !== false ||
+      (source.kind !== "fixture" && source.kind !== "live" && source.kind !== "unavailable") ||
+      typeof source.is_live !== "boolean" ||
       typeof source.label !== "string" ||
       source.label.length === 0
     ) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }
     const narrative = validatedNarrative(body.narrative, analysis);
+    const aiText = typeof body.ai_text === "string" && body.ai_text.trim() ? body.ai_text : undefined;
     return {
       status: "ready",
       analysis_id: analysisId,
       source: source as unknown as AnalysisSourceResponse,
       analysis,
       ...(narrative ? { narrative } : {}),
+      ...(aiText ? { aiText } : {}),
     };
   }
 

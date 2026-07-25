@@ -1,5 +1,8 @@
 import { HistoryService, HistoryWorkspaceLifecycle } from "../history/index.js";
 import { JourneyAnalysisService } from "../app/server/index.js";
+import { StreamingAnalysisExecutor } from "../app/server/stream-executor.js";
+import { createOpenAICompatibleModelGateway } from "../model/index.js";
+import { TencentMarketEvidenceSource } from "../providers/tencent-market.js";
 import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
 import { openSqliteDatabase } from "./database.js";
@@ -17,7 +20,26 @@ export function createDurableServices(config: ServerConfig) {
   const history = new HistoryService(new SqliteHistoryStore(database));
   const journeyStore = new SqliteJourneyStore(database);
   journeyStore.recoverInterruptedRunsNow(new Date().toISOString());
-  const journey = new JourneyAnalysisService(journeyStore, history);
+  // With MODEL_* configured, stream a relaxed free-text model analysis over the
+  // deterministic evidence + coverage shell; otherwise fall back to the
+  // deterministic fixture executor.
+  const executor = config.model
+    ? new StreamingAnalysisExecutor(
+        {
+          modelGateway: createOpenAICompatibleModelGateway({
+            providerName: config.model.providerName,
+            baseURL: config.model.baseURL,
+            apiKey: config.model.apiKey,
+            modelId: config.model.modelId,
+            supportsStructuredOutputs: config.model.supportsStructuredOutputs,
+          }),
+          marketEvidenceSource: new TencentMarketEvidenceSource(),
+        },
+      )
+    : undefined;
+  const journey = executor
+    ? new JourneyAnalysisService(journeyStore, history, executor)
+    : new JourneyAnalysisService(journeyStore, history);
   return {
     database,
     workspaces,
