@@ -38,5 +38,18 @@ licensed under the Apache License, Version 2.0. The corresponding license text
 is included at src/client/assets/theme-previews/NOTO-EMOJI-LICENSE.txt, and
 source URLs are recorded in src/client/assets/theme-previews/README.md.
 
+Dagou Tap
+---------
+
+The About-page rhythm easter egg adapts audio samples and Web Audio behavior
+from MarkCup's "Dagou Tap":
+
+  https://github.com/MarkCup-Official/Dagou-Tap-New
+
+The original author explicitly welcomed derivative works and adaptations with
+author credit ("欢迎二创，改编，标注作者即可"). The adapted feature includes
+visible in-product attribution. These third-party audio samples and the adapted
+rhythm behavior are not relicensed under Mandune's Apache-2.0 license.
+
 Third-party dependencies retain their respective licenses. Their inclusion in
 package metadata or a lockfile does not relicense them under Mandune's license.

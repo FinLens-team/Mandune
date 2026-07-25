@@ -410,11 +410,117 @@
   box-shadow: var(--focus-ring);
 }
 
-.about-easter-egg img {
+.about-easter-game {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.about-easter-game__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.about-easter-game__meta p,
+.about-easter-game__meta span {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.about-easter-game__meta p {
+  color: var(--color-text-secondary);
+}
+
+.about-easter-game__meta span {
+  color: var(--color-theme-accent);
+  font-weight: 600;
+  text-align: right;
+}
+
+.about-easter-game__grid {
   width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  aspect-ratio: 16 / 15;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  overflow: hidden;
+  border: 2px solid var(--color-bg-surface);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  box-shadow: 0 0 0 1px var(--color-border-subtle);
+  touch-action: none;
+  user-select: none;
+}
+
+.about-easter-game__grid button {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background-image: var(--tile-image);
+  background-position: var(--tile-x) var(--tile-y);
+  background-size: 300% 300%;
+  cursor: pointer;
+  transform: translateZ(0) scale(1);
+  transition:
+    filter 140ms ease,
+    transform 160ms var(--about-ease-spring);
+}
+
+.about-easter-game__grid button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  background: rgb(242 193 78 / 0%);
+  pointer-events: none;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.about-easter-game__grid button.is-active {
+  z-index: 1;
+  filter: saturate(1.16) brightness(1.08);
+  transform: translateZ(0) scale(0.94);
+}
+
+.about-easter-game__grid button.is-active::after {
+  border-color: var(--color-theme-accent);
+  background: rgb(242 193 78 / 14%);
+}
+
+.about-easter-game__grid button:focus-visible {
+  z-index: 2;
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+.about-easter-game__footer {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.about-easter-game__footer a {
+  width: fit-content;
+  color: var(--color-text-secondary);
+  text-underline-offset: 3px;
+}
+
+.about-easter-game__footer a:hover {
+  color: var(--color-text-primary);
+}
+
+.about-easter-game__footer a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
 }
 
 @media (min-width: 48rem) {
@@ -440,8 +546,10 @@
   .about-topic[open] .about-topic__body,
   .about-devs > li,
   .about-actions,
-  .about-easter-egg {
+  .about-easter-egg,
+  .about-easter-game__grid button {
     animation: none;
+    transition: none;
   }
 
   .about-topic,

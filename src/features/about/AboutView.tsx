@@ -10,18 +10,20 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import easterEggImage from "../../client/assets/developer-easter-egg.webp";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
+import { DEFAULT_THEME_ID, type ThemeId } from "../../theme/index.js";
 import {
   Badge,
   Button,
 } from "../../client/ui/index.js";
 import type { HistoryAvailability } from "../history-view/HistoryView.js";
+import { AboutEasterEggGame } from "./AboutEasterEggGame.js";
 
 export interface AboutViewProps {
   availability?: HistoryAvailability;
   experienceSource?: string;
   onRequestDeleteWorkspace?: () => void;
+  themeId?: ThemeId;
   workspace: WorkspacePublicStatus | null;
 }
 
@@ -128,6 +130,7 @@ export function AboutView({
   availability = "active",
   experienceSource,
   onRequestDeleteWorkspace,
+  themeId = DEFAULT_THEME_ID,
   workspace,
 }: AboutViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -305,13 +308,7 @@ export function AboutView({
                 <X aria-hidden="true" size={20} />
               </button>
             </div>
-            <img
-              alt="写完提示词后瘫在椅子上的开发者"
-              decoding="async"
-              height={600}
-              src={easterEggImage}
-              width={640}
-            />
+            <AboutEasterEggGame themeId={themeId} />
           </section>
         </div>
       ) : null}

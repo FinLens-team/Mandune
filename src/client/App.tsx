@@ -303,6 +303,7 @@ export function App(props: AppProps = {}) {
                 void controller.deleteWorkspace();
               }
             }}
+            themeId={state.currentThemeId}
             workspace={state.workspace}
           />
         </main>
