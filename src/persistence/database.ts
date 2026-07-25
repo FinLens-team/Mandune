@@ -3,7 +3,11 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { PersistenceError, persistenceError } from "./errors.js";
 
-const MIGRATION_FILES = ["001-initial.sql", "002-journey-backend.sql", "003-atlas.sql"] as const;
+const MIGRATION_FILES = [
+  "001-initial.sql",
+  "002-journey-backend.sql",
+  "003-daily-review-v2-evidence-cache.sql",
+] as const;
 const LATEST_SCHEMA_VERSION = MIGRATION_FILES.length;
 const DATABASE_FILE_MODE = 0o600;
 

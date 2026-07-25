@@ -15,3 +15,10 @@ export {
   type PandaEvidenceRequest,
   type PandaMarketDataResponse,
 } from "./pandaai.js";
+export {
+  PandaBatchClient,
+  type PandaBatchClientOptions,
+  type PandaBatchRequest,
+  type PandaBatchResult,
+  type PandaBatchRow,
+} from "./panda-batch.js";
