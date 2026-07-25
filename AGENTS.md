@@ -24,6 +24,7 @@
 - ADR-0009 已完成 ADR-0008 推迟的耐久私人存储选择；公开部署仍由 #35 决定。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
 - `src/analysis/validation.ts` 接受契约允许的 date-only 市场观察日，只在调用旧共享校验器的副本中规范化为 UTC 零点；最终 `AnalysisResult` 必须保留供应商原始日期精度。
+- `src/atlas/` 是历史保存后的独立非阻塞后置边界：按复盘 ID 稳定选择专业名词或 AI 趣味梗，15 秒硬截止，重复内容只追加复遇；专业名词须绑定分析引用，趣味梗明确为非金融知识的生成娱乐内容。模型生成前消费当前图鉴的最小卡片指纹并遵循版本化生成策略，后端查重仍作为一致性护栏。`SqliteAtlasStore` 持久化卡片、外观种子和轨迹，并随匿名工作区级联删除。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
 
 ## 已接受的技术决策
@@ -118,6 +119,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
 - `src/analysis/`：确定性派生、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。
 - `src/model/`：框架中立 `ModelGateway` 与服务端 OpenAI-compatible AI SDK 适配器；不承载自主 Agent loop、供应商凭据日志或 UI 类型。
+- `src/atlas/` 与 `src/features/atlas/`：图鉴候选校验、确定性抽选/外观、查重复遇、卡片墙和单卡轨迹；客户端只能导入纯类型/校验器，不能通过图鉴 barrel 把服务端 `node:crypto` 带入浏览器包。
 - `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
 - `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。

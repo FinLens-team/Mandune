@@ -25,6 +25,7 @@ interface WorkspaceShellModule {
     onClose: () => void;
     onNavigate: (view: "home" | "portfolio") => void;
     onNavigateHistory: () => void;
+    onNavigateAtlas?: () => void;
     onNavigateAbout: () => void;
     onReduceMotionChange: (enabled: boolean) => void;
   }>;
@@ -142,6 +143,7 @@ describe("S4-S7 workspace shell", () => {
         onClose: vi.fn(),
         onNavigate: vi.fn(),
         onNavigateHistory: vi.fn(),
+        onNavigateAtlas: vi.fn(),
         onNavigateAbout: vi.fn(),
         onReduceMotionChange: vi.fn(),
       }),
@@ -154,6 +156,7 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).toContain("主页");
     expect(markup).toContain("仓位／身份");
     expect(markup).toContain("历史记录");
+    expect(markup).toContain("满懂图鉴");
     expect(markup).toContain("关于项目");
     expect(markup).toContain("最后活动");
     expect(markup).toContain("预计删除");

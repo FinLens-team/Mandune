@@ -264,7 +264,7 @@ export class JourneyController {
     }
   }
 
-  navigate(phase: Extract<JourneyPhase, "home" | "history" | "about">): void {
+  navigate(phase: Extract<JourneyPhase, "home" | "history" | "atlas" | "about">): void {
     const state = this.options.getState();
     if (phase === "home" && state.activeAnalysis?.terminal && state.workspace) {
       this.options.persistence.clearActiveAnalysis(state.workspace.workspace_id);
@@ -499,7 +499,7 @@ export class JourneyController {
     this.options.dispatch({ type: "ANALYSIS_STREAM_UPDATED", analysisId, text });
   }
 
-  async openHistoryRecord(recordId: string): Promise<void> {
+  async openHistoryRecord(recordId: string, returnTo: "history" | "atlas" = "history"): Promise<void> {
     try {
       const replay = await this.options.gateway.replayHistory(recordId);
       if (replay.status !== "replayed") throw new Error("history_not_replayable");
@@ -509,7 +509,7 @@ export class JourneyController {
         this.historyRecordExperienceSource(replay.record),
       );
       if (!journeyLongCardIsDisplayable(input)) throw new Error("history_not_displayable");
-      this.options.dispatch({ type: "RESULT_OPENED", input, returnTo: "history" });
+      this.options.dispatch({ type: "RESULT_OPENED", input, returnTo });
     } catch {
       this.options.dispatch({
         type: "HISTORY_RECORD_FAILED",

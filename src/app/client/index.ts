@@ -8,6 +8,7 @@ export type {
   AnalysisResultResponse,
   AnalysisSourceResponse,
   AnalysisStatusResponse,
+  AtlasGateway,
   JourneyFetch,
   JourneyGateway,
 } from "./gateway.js";

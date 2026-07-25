@@ -10,6 +10,7 @@ export {
   type PersistenceErrorCode,
 } from "./errors.js";
 export { createDurableServices } from "./composition.js";
+export { SqliteAtlasStore } from "./atlas-store.js";
 export { SqliteHistoryStore } from "./history-store.js";
 export { SqliteJourneyStore } from "./journey-store.js";
 export { SqliteWorkspaceStore } from "./workspace-store.js";

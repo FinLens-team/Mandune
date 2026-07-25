@@ -15,6 +15,7 @@ export type JourneyPhase =
   | "analysis"
   | "result"
   | "history"
+  | "atlas"
   | "about"
   | "deleted";
 
@@ -40,7 +41,7 @@ export interface JourneyState {
   phase: JourneyPhase;
   reducedMotion: boolean;
   reviewCoachmarkVisible: boolean;
-  resultReturn: "home" | "history";
+  resultReturn: "home" | "history" | "atlas";
   resumeAnalysisId: string | null;
   resumeAnalysisSource: JourneyExperienceSource | null;
   workspace: WorkspacePublicStatus | null;
@@ -68,7 +69,7 @@ export type JourneyAction =
   | { type: "EXPERIENCE_SOURCE_CHANGED"; source: JourneyExperienceSource }
   | { type: "REDUCED_MOTION_CHANGED"; enabled: boolean }
   | { type: "REVIEW_COACHMARK_DISMISSED" }
-  | { type: "NAVIGATED"; phase: "home" | "history" | "about" }
+  | { type: "NAVIGATED"; phase: "home" | "history" | "atlas" | "about" }
   | { type: "ANALYSIS_STARTING" }
   | {
       type: "ANALYSIS_STARTED";
@@ -96,7 +97,7 @@ export type JourneyAction =
       analysisId: string;
       experienceSource: JourneyExperienceSource;
     }
-  | { type: "RESULT_OPENED"; input: JourneyLongCardRuntimeInput; returnTo: "home" | "history" }
+  | { type: "RESULT_OPENED"; input: JourneyLongCardRuntimeInput; returnTo: "home" | "history" | "atlas" }
   | { type: "TERMINAL_CLEARED" }
   | { type: "HISTORY_RECORD_FAILED"; message: string }
   | { type: "WORKSPACE_DELETED" };

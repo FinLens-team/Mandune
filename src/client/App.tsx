@@ -6,12 +6,14 @@ import {
   getBrowserJourneyStorage,
   initialJourneyState,
   journeyReducer,
+  type AtlasGateway,
   type JourneyGateway,
   type JourneyPersistence,
 } from "../app/client/index.js";
 import { Button, DemoBadge } from "./ui/index.js";
 import { AnalysisProgress } from "../features/analysis-progress/index.js";
 import { HistoryAboutView } from "../features/history-view/index.js";
+import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
 import { WorkspaceShell } from "../features/workspace-shell/index.js";
@@ -19,6 +21,7 @@ import "../app/client/styles.css";
 
 export interface AppProps {
   gateway?: JourneyGateway;
+  atlasGateway?: AtlasGateway;
   persistence?: JourneyPersistence;
 }
 
@@ -34,10 +37,19 @@ function useJourney(props: AppProps) {
   const stateRef = useRef(state);
   stateRef.current = state;
   const gatewayRef = useRef<JourneyGateway | null>(null);
+  const atlasGatewayRef = useRef<AtlasGateway | null>(null);
   const persistenceRef = useRef<JourneyPersistence | null>(null);
   const controllerRef = useRef<JourneyController | null>(null);
 
-  if (!gatewayRef.current) gatewayRef.current = props.gateway ?? new FetchJourneyGateway();
+  if (!gatewayRef.current) {
+    const gateway = props.gateway ?? new FetchJourneyGateway();
+    gatewayRef.current = gateway;
+    atlasGatewayRef.current = props.atlasGateway ?? (
+      "getAtlasOutcome" in gateway && "listAtlasCards" in gateway
+        ? gateway as JourneyGateway & AtlasGateway
+        : null
+    );
+  }
   if (!persistenceRef.current) {
     persistenceRef.current = props.persistence ?? createJourneyPersistence(getBrowserJourneyStorage());
   }
@@ -50,7 +62,7 @@ function useJourney(props: AppProps) {
       prefersReducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
     });
   }
-  return [state, controllerRef.current, gatewayRef.current] as const;
+  return [state, controllerRef.current, gatewayRef.current, atlasGatewayRef.current] as const;
 }
 
 function JourneyStatePage({
@@ -75,7 +87,7 @@ function JourneyStatePage({
 }
 
 export function App(props: AppProps = {}) {
-  const [state, controller, gateway] = useJourney(props);
+  const [state, controller, gateway, atlasGateway] = useJourney(props);
   const bootStarted = useRef(false);
 
   useEffect(() => {
@@ -181,21 +193,44 @@ export function App(props: AppProps = {}) {
   }
 
   if (state.phase === "result" && state.displayedResult) {
+    const returnLabel = state.resultReturn === "history"
+      ? "返回历史记录"
+      : state.resultReturn === "atlas"
+        ? "返回满懂图鉴"
+        : "返回主页";
     return (
       <main className="journey-result" id="main">
         <nav aria-label="结果导航" className="journey-result__actions">
           <Button
-            onClick={() => controller.navigate(state.resultReturn === "history" ? "history" : "home")}
+            onClick={() => controller.navigate(state.resultReturn)}
             variant="secondary"
           >
-            {state.resultReturn === "history" ? "返回历史记录" : "返回主页"}
+            {returnLabel}
           </Button>
           <Button onClick={() => controller.navigate("history")} variant="secondary">
             查看全部历史
           </Button>
         </nav>
         <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
+        {atlasGateway && state.resultReturn === "home" && state.activeAnalysis?.analysisId === state.displayedResult.analysis.analysis_id ? (
+          <AtlasReveal
+            analysisId={state.displayedResult.analysis.analysis_id}
+            gateway={atlasGateway}
+            onOpenAtlas={() => controller.navigate("atlas")}
+          />
+        ) : null}
       </main>
+    );
+  }
+
+  if (state.phase === "atlas" && state.workspace && atlasGateway) {
+    return (
+      <AtlasView
+        gateway={atlasGateway}
+        onNavigateHome={() => controller.navigate("home")}
+        onOpenHistory={(recordId) => void controller.openHistoryRecord(recordId, "atlas")}
+        reducedMotion={state.reducedMotion}
+      />
     );
   }
 
@@ -246,6 +281,7 @@ export function App(props: AppProps = {}) {
           onExperienceSourceChange={(source) => controller.setExperienceSource(source)}
           onNavigateAbout={() => controller.navigate("about")}
           onNavigateHistory={() => controller.navigate("history")}
+          onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
           onReducedMotionChange={(enabled) => controller.setReducedMotion(enabled)}
           onReviewCoachmarkDismiss={() => controller.dismissReviewCoachmark()}
           onResumeAnalysis={(analysisId) => void controller.resumeAnalysis(analysisId)}

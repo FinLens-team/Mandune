@@ -33,6 +33,7 @@ export interface WorkspaceShellProps {
   onResumeAnalysis?: (analysisId: string) => void;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   onNavigateHistory: () => void;
+  onNavigateAtlas?: () => void;
   onNavigateAbout: () => void;
   reducedMotion?: boolean;
   reviewCoachmarkVisible?: boolean;
@@ -89,6 +90,7 @@ export function WorkspaceShell({
   latestCompleteTradingDay,
   onNavigateAbout,
   onNavigateHistory,
+  onNavigateAtlas,
   onDraftChange,
   onExperienceSourceChange,
   onReviewCoachmarkDismiss,
@@ -277,6 +279,7 @@ export function WorkspaceShell({
         onNavigate={navigate}
         onNavigateAbout={onNavigateAbout}
         onNavigateHistory={onNavigateHistory}
+        onNavigateAtlas={onNavigateAtlas}
         onReduceMotionChange={changeReducedMotion}
         open={drawerOpen}
         reduceMotion={reduceMotion}

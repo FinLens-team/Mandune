@@ -18,7 +18,10 @@ function attachLocatorCookie(
   });
 }
 
-export function createWorkspaceRoutes(service: WorkspaceService): Hono {
+export function createWorkspaceRoutes(
+  service: WorkspaceService,
+  options: { onDeleted?: (workspaceId: string) => Promise<void> } = {},
+): Hono {
   const app = new Hono();
 
   app.post("/", async (c) => {
@@ -58,6 +61,7 @@ export function createWorkspaceRoutes(service: WorkspaceService): Hono {
     if (!result.ok) {
       return c.json(UNAUTHORIZED, 401);
     }
+    await options.onDeleted?.(result.result.workspace_id);
     return c.json({ deleted: result.result });
   });
 
