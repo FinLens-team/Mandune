@@ -4,4 +4,4 @@ export {
   type MarketEvidenceRequest,
   type PandaMarketRow,
 } from "./market.js";
-export { unverifiedEventEvidence } from "./events.js";
+export { unverifiedEventEvidence, verifiedEventEvidence } from "./events.js";
