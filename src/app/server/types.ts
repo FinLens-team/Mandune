@@ -84,7 +84,7 @@ export interface AnalysisExecutor {
     snapshot: PortfolioSnapshot;
     emit: (stage: TaskEvent["stage"], state: TaskEvent["state"], extra?: Partial<TaskEvent>) => void;
     now: () => Date;
-    /** Relaxed Demo mode: receives incremental free-text deltas from the model. */
+    /** Relaxed Demo mode: receives safe progress-only Markdown heading deltas. */
     onText?: (delta: string) => void;
   }): Promise<AnalysisExecution>;
 }

@@ -401,18 +401,126 @@
 
 .onboarding-summary__identity {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-4);
   animation: onboarding-summary-crossfade var(--duration-fast) var(--ease-enter) both;
 }
 
-.onboarding-summary__grid {
+/* 双卡切换：持仓数据 / 持仓偏好 分段控制 */
+.onboarding-summary__switch {
+  width: min(100%, 20rem);
+  justify-self: center;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
   display: grid;
-  gap: var(--space-8);
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+  background: var(--color-bg-subtle);
 }
 
-.onboarding-summary__grid > section {
+.onboarding-summary__tab {
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color var(--duration-fast) var(--ease-enter),
+    background-color var(--duration-fast) var(--ease-enter),
+    box-shadow var(--duration-fast) var(--ease-enter);
+}
+
+.onboarding-summary__tab.is-active {
+  color: var(--color-observed);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-paper);
+}
+
+/* 大卡片舞台：两张卡堆叠在同一格，靠 --card-offset 左右平移，主卡居中、副卡在侧边露出一条 */
+.onboarding-summary__stage {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  padding-block: var(--space-2) var(--space-4);
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.onboarding-summary__stage.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.onboarding-summary-card {
+  --card-gap: 16px;
+
+  grid-area: 1 / 1;
+  width: 86%;
   min-width: 0;
+  justify-self: center;
+  padding-bottom: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-paper);
+  opacity: 0.55;
+  cursor: pointer;
+  transform:
+    translateX(calc(var(--card-offset) * 100% + var(--card-offset) * var(--card-gap) + var(--drag-x, 0px)))
+    scale(0.94);
+  transition:
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.onboarding-summary-card.is-active {
+  z-index: 2;
+  opacity: 1;
+  cursor: auto;
+  box-shadow: 0 10px 24px rgb(23 43 36 / 10%);
+  transform:
+    translateX(calc(var(--card-offset) * 100% + var(--card-offset) * var(--card-gap) + var(--drag-x, 0px)))
+    scale(1);
+}
+
+/* 拖拽过程中卡片实时跟手，不做位移过渡 */
+.onboarding-summary__stage.is-dragging .onboarding-summary-card {
+  transition: opacity 300ms ease, box-shadow 300ms ease;
+}
+
+.onboarding-summary__pagination {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.onboarding-summary__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  transition:
+    width 260ms var(--ease-enter),
+    background-color 260ms var(--ease-enter);
+}
+
+.onboarding-summary__dot.is-active {
+  width: 24px;
+  background: var(--color-observed);
+}
+
+.onboarding-summary__hint {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  text-align: center;
 }
 
 .onboarding-section-heading {
@@ -483,12 +591,6 @@
   margin: var(--space-4) 0 0;
   display: grid;
   gap: var(--space-3);
-}
-
-.onboarding-summary__grid > section {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
 }
 
 .onboarding-holding__metrics {
@@ -700,8 +802,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .onboarding-summary__grid {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  .onboarding-summary__stage {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .onboarding-holding dl {
@@ -725,9 +827,8 @@
 }
 
 @media (max-width: 47.999rem) {
-  .onboarding-summary .onboarding-summary__grid {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+  .onboarding-summary .onboarding-summary-card {
+    --card-gap: 10px;
   }
 
   .onboarding-summary .onboarding-constraints {
@@ -1385,6 +1486,8 @@
   .onboarding-theme-card,
   .onboarding-source-option,
   .onboarding-holding,
+  .onboarding-summary-card,
+  .onboarding-summary__dot,
   .onboarding-constraints > div {
     animation: none;
     transition-duration: var(--duration-instant);
@@ -1395,6 +1498,8 @@
 .onboarding--reduced-motion .onboarding-source-option,
 .onboarding--reduced-motion .onboarding-page,
 .onboarding--reduced-motion .onboarding-holding,
+.onboarding--reduced-motion .onboarding-summary-card,
+.onboarding--reduced-motion .onboarding-summary__dot,
 .onboarding--reduced-motion .onboarding-constraints > div {
   animation: none;
   transition-duration: var(--duration-instant);

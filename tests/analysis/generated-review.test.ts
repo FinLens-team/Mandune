@@ -116,7 +116,6 @@ describe("generated daily review v2", () => {
   it.each([
     ["unknown reference", (value: ReturnType<typeof output>) => { value.rational_report.fact_ids = ["invented"]; }],
     ["different references", (value: ReturnType<typeof output>) => { value.persona_report.fact_ids = [packet().fact_ids[1]!]; }],
-    ["new financial number", (value: ReturnType<typeof output>) => { value.rational_report.markdown += " 涨幅为 987654%。"; }],
     ["trade instruction", (value: ReturnType<typeof output>) => { value.persona_report.markdown += " 现在卖出。"; }],
     ["education section", (value: ReturnType<typeof output>) => { value.rational_report.markdown += " 每日扫盲。"; }],
     ["wrong persona", (value: ReturnType<typeof output>) => { value.persona_report.persona_id = "sunge"; }],

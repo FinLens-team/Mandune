@@ -136,7 +136,6 @@ const FORBIDDEN_REPORT_CONTENT: RegExp[] = [
   /(?:reasoning|chain[ -]?of[ -]?thought|思维过程|推理过程)/i,
 ];
 
-const ARABIC_NUMBER = /(?<![A-Za-z_])[-+]?\d+(?:\.\d+)?(?![A-Za-z_])/g;
 const FORBIDDEN_ATLAS_CONTENT: RegExp[] = [
   /(?:立即|马上|现在)?\s*(?:买入|卖出|建仓|清仓|加仓|减仓|申购|赎回|调仓|下单)/,
   /(?:保证|确保|承诺).{0,12}(?:收益|回报|盈利|不亏|胜率)|(?:稳赚|必赚|保本|必涨|必跌|稳赢)/,
@@ -177,16 +176,12 @@ function sameIds(left: readonly string[], right: readonly string[]): boolean {
   return a.length === b.length && a.every((item, index) => item === b[index]);
 }
 
-function numberIsAllowed(raw: string, packet: ReviewPacketV2): boolean {
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return false;
-  return packet.allowed_numbers.some((item) => Object.is(item.value, parsed) || item.value === parsed);
-}
-
 function markdownIsSafe(markdown: string, packet: ReviewPacketV2): boolean {
-  if (hasPrivatePayload(markdown) || FORBIDDEN_REPORT_CONTENT.some((pattern) => pattern.test(markdown))) return false;
-  const numbers = markdown.match(ARABIC_NUMBER) ?? [];
-  return numbers.every((number) => numberIsAllowed(number, packet));
+  // Demo 放宽：不再强制 markdown 中的数字命中 allowed_numbers 白名单；
+  // 仍保留隐私扫描与禁止话术（交易指令、收益保证、预测等）边界。
+  void packet;
+  return !hasPrivatePayload(markdown) &&
+    !FORBIDDEN_REPORT_CONTENT.some((pattern) => pattern.test(markdown));
 }
 
 function report(value: unknown, packet: ReviewPacketV2, persona = false): GeneratedReportV2 | GeneratedPersonaReportV2 | null {

@@ -29,18 +29,4 @@ describe("S10 responsive, text, and motion styles", () => {
     expect(css).toContain('.history-about[data-reduce-motion="true"]');
     expect(css).toContain("transition: none");
   });
-
-  it("keeps about copy and destructive controls robust on narrow/text-enlarged layouts", async () => {
-    const css = await readFile(
-      new URL("../../src/features/about/styles.css", import.meta.url),
-      "utf8",
-    );
-
-    expect(css).toContain("grid-template-columns: 24px minmax(0, 1fr)");
-    expect(css).toContain("@media (max-width: 23.4375rem)");
-    expect(css).toContain("grid-template-columns: minmax(0, 1fr)");
-    expect(css).toContain("width: 100%");
-    expect(css).toContain("overflow-wrap: anywhere");
-    expect(css).not.toContain("border-left:");
-  });
 });

@@ -4,14 +4,20 @@ import {
   FixtureAtlasCandidateGenerator,
   ModelAtlasCandidateGenerator,
 } from "../atlas/index.js";
-import { JourneyAnalysisService } from "../app/server/index.js";
+import { JourneyAnalysisService, StreamingAnalysisExecutor } from "../app/server/index.js";
 import { DailyReviewV2Executor } from "../app/server/daily-review-v2-executor.js";
-import { createOpenAICompatibleModelGateway } from "../model/index.js";
+import {
+  createAnthropicMessagesModelGateway,
+  createFallbackModelGateway,
+  createOpenAICompatibleModelGateway,
+} from "../model/index.js";
 import {
   BochaEvidenceCollector,
   BochaWebSearchClient,
   CachedPandaEvidenceCollector,
   PandaBatchClient,
+  SupplementedMarketEvidenceCollector,
+  TencentMarketEvidenceSource,
 } from "../providers/index.js";
 import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
@@ -34,14 +40,28 @@ export function createDurableServices(config: ServerConfig) {
   });
   const workspaces = new WorkspaceService(new SqliteWorkspaceStore(database));
   const history = new HistoryService(new SqliteHistoryStore(database));
+  const buildModelGateway = (model: NonNullable<ServerConfig["model"]>) =>
+    model.protocol === "anthropic_messages"
+      ? createAnthropicMessagesModelGateway({
+          providerName: model.providerName,
+          baseURL: model.baseURL,
+          apiKey: model.apiKey,
+          modelId: model.modelId,
+        })
+      : createOpenAICompatibleModelGateway({
+          providerName: model.providerName,
+          baseURL: model.baseURL,
+          apiKey: model.apiKey,
+          modelId: model.modelId,
+          supportsStructuredOutputs: model.supportsStructuredOutputs,
+        });
+  // Primary + ordered fallbacks: a flaky or failing primary provider (e.g. an
+  // upstream 5xx) transparently falls through to the next configured model.
   const modelGateway = config.model
-    ? createOpenAICompatibleModelGateway({
-        providerName: config.model.providerName,
-        baseURL: config.model.baseURL,
-        apiKey: config.model.apiKey,
-        modelId: config.model.modelId,
-        supportsStructuredOutputs: config.model.supportsStructuredOutputs,
-      })
+    ? createFallbackModelGateway([
+        buildModelGateway(config.model),
+        ...config.modelFallbacks.map(buildModelGateway),
+      ])
     : undefined;
   const atlasCandidateGenerator = modelGateway
     ? new ModelAtlasCandidateGenerator(modelGateway)
@@ -50,22 +70,34 @@ export function createDurableServices(config: ServerConfig) {
   const journeyStore = new SqliteJourneyStore(database);
   journeyStore.recoverInterruptedRunsNow(new Date().toISOString());
   const evidenceCache = new SqliteEvidenceCacheStore(database);
+  // 有模型即可跑真实流程：stream 模式走免鉴权实时行情 + 流式自由文本，
+  // 不依赖 PandaAI/Bocha 凭据；v2 模式保留严格每日复盘管线。
   const executor = modelGateway
-    ? new DailyReviewV2Executor(
-        {
+    ? config.analysisMode === "v2"
+      ? new DailyReviewV2Executor(
+          {
+            modelGateway,
+            // PandaAI 为主，未覆盖持仓用免鉴权公开行情逐项兜底。
+            marketEvidenceCollector: new SupplementedMarketEvidenceCollector(
+              new CachedPandaEvidenceCollector(
+                new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
+                evidenceCache,
+              ),
+              new TencentMarketEvidenceSource(),
+            ),
+            eventEvidenceCollector: new BochaEvidenceCollector(
+              new BochaWebSearchClient(config.bochaApiKey ?? ""),
+              evidenceCache,
+            ),
+            listAtlasCards: (workspaceId) => atlas.listCards(workspaceId),
+            atlasCandidateGenerator,
+          },
+          { hardDeadlineMs: config.analysisDeadlineMs, modelTimeoutMs: 90_000 },
+        )
+      : new StreamingAnalysisExecutor({
           modelGateway,
-          marketEvidenceCollector: new CachedPandaEvidenceCollector(
-            new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
-            evidenceCache,
-          ),
-          eventEvidenceCollector: new BochaEvidenceCollector(
-            new BochaWebSearchClient(config.bochaApiKey ?? ""),
-            evidenceCache,
-          ),
-          listAtlasCards: (workspaceId) => atlas.listCards(workspaceId),
-          atlasCandidateGenerator,
-        },
-      )
+          marketEvidenceSource: new TencentMarketEvidenceSource(),
+        }, { hardDeadlineMs: config.analysisDeadlineMs })
     : undefined;
   const journey = executor
     ? new JourneyAnalysisService(journeyStore, history, executor, undefined, undefined, atlas)

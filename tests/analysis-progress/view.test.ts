@@ -26,19 +26,19 @@ async function loadProgress(): Promise<ProgressModule> {
   return (await import(MODULE_PATH)) as ProgressModule;
 }
 
-const retryEvent: TaskEvent = {
-  analysis_id: "analysis-31",
-  covered_count: 2,
-  event_id: "analysis-31:event:7",
-  message: "理性分析输出未通过边界校验，执行有限重试。",
-  occurred_at: "2026-07-25T08:00:07.000Z",
-  retry_count: 1,
-  stage: "form_conclusions_and_advice",
-  state: "retrying",
-};
+function stageEvent(index: number, message: string): TaskEvent {
+  return {
+    analysis_id: "analysis-31",
+    event_id: `analysis-31:event:${index}`,
+    message,
+    occurred_at: `2026-07-25T08:00:0${index}.000Z`,
+    stage: "form_conclusions_and_advice",
+    state: "running",
+  };
+}
 
-describe("S8 analysis progress view", () => {
-  it("renders no-event waiting and the complete text-equivalent stage list", async () => {
+describe("S8 analysis progress view (simple version)", () => {
+  it("renders the centered mascot and a waiting placeholder before any event", async () => {
     const { AnalysisProgress } = await loadProgress();
     const markup = renderToStaticMarkup(
       createElement(AnalysisProgress, {
@@ -49,54 +49,46 @@ describe("S8 analysis progress view", () => {
       }),
     );
 
-    expect(markup).toContain("单个分析 agent");
-    expect(markup).toContain("等待首条真实任务事件");
-    expect(markup).toContain('aria-live="polite"');
-    expect(markup).toContain('role="status"');
     expect(markup).toContain("nailong-rest.webp");
     expect(markup).toContain('class="analysis-progress__mascot"');
     expect(markup).toContain('alt=""');
-    expect(markup).not.toContain("<video");
-    expect(markup).toContain("完整阶段列表");
-    expect(markup.match(/data-stage=/g)).toHaveLength(8);
-    expect(markup.match(/尚无任务事件/g)).toHaveLength(8);
-    expect(markup).toContain("冻结快照");
-    expect(markup).toContain("保存结果");
+    expect(markup).toContain('aria-live="polite"');
+    expect(markup).toContain("等待首条真实任务事件");
     expect(markup).toContain("暂时离开");
-    expect(markup).toContain("分析任务不会因此取消");
-    expect(markup).not.toContain("跳过");
-    expect(markup).not.toContain("进度");
-    expect(markup).not.toContain(">奶龙</span>");
+    expect(markup).not.toContain("<video");
   });
 
-  it("shows retry, coverage, disconnect, and reduced-motion states without losing history", async () => {
-    const { AnalysisProgress } = await loadProgress();
-    const markup = renderToStaticMarkup(
-      createElement(AnalysisProgress, {
-        analysisId: "analysis-31",
-        connection: "disconnected",
-        events: [retryEvent],
-        reduceMotion: true,
-      }),
-    );
-
-    expect(markup).toContain('data-animation-active="false"');
-    expect(markup).toContain('data-reduce-motion="true"');
-    expect(markup).toContain("连接中断，状态已保留");
-    expect(markup).toContain("已收到的阶段不会丢失");
-    expect(markup).toContain("第 1 次有限重试");
-    expect(markup).toContain("已覆盖 2 项持仓");
-    expect(markup).toContain("理性分析输出未通过边界校验，执行有限重试。");
-    expect(markup).toContain('data-state="retrying"');
-  });
-
-  it("offers S9 only for displayable terminal results and stops all loop animation", async () => {
+  it("shows at most the last 3 event messages, newest at the bottom", async () => {
     const { AnalysisProgress } = await loadProgress();
     const markup = renderToStaticMarkup(
       createElement(AnalysisProgress, {
         analysisId: "analysis-31",
         connection: "connected",
-        events: [retryEvent],
+        events: [
+          stageEvent(1, "第一条工作信息"),
+          stageEvent(2, "第二条工作信息"),
+          stageEvent(3, "第三条工作信息"),
+          stageEvent(4, "第四条工作信息"),
+        ],
+      }),
+    );
+
+    expect(markup).not.toContain("第一条工作信息");
+    expect(markup).toContain("第二条工作信息");
+    expect(markup).toContain("第三条工作信息");
+    expect(markup).toContain("第四条工作信息");
+    expect(markup.indexOf("第三条工作信息")).toBeGreaterThan(markup.indexOf("第二条工作信息"));
+    expect(markup.indexOf("第四条工作信息")).toBeGreaterThan(markup.indexOf("第三条工作信息"));
+    expect(markup.match(/analysis-progress__log-line/g)).toHaveLength(3);
+  });
+
+  it("offers the result button only for displayable terminal results", async () => {
+    const { AnalysisProgress } = await loadProgress();
+    const markup = renderToStaticMarkup(
+      createElement(AnalysisProgress, {
+        analysisId: "analysis-31",
+        connection: "connected",
+        events: [stageEvent(1, "第一条工作信息")],
         onOpenResult: vi.fn(),
         terminal: {
           analysis_id: "analysis-31",
@@ -108,11 +100,9 @@ describe("S8 analysis progress view", () => {
       }),
     );
 
-    expect(markup).toContain('data-animation-active="false"');
-    expect(markup).toContain('data-status="limited"');
-    expect(markup).toContain("复盘完成，结论受限");
     expect(markup).toContain("查看复盘报告");
     expect(markup).not.toContain("重试本次复盘");
+    expect(markup).not.toContain("暂时离开");
   });
 
   it("keeps unavailable out of S9 and exposes a concrete retry path", async () => {
@@ -121,7 +111,7 @@ describe("S8 analysis progress view", () => {
       createElement(AnalysisProgress, {
         analysisId: "analysis-31",
         connection: "connected",
-        events: [retryEvent],
+        events: [stageEvent(1, "第一条工作信息")],
         onOpenResult: vi.fn(),
         onRetry: vi.fn(),
         terminal: {
@@ -134,20 +124,17 @@ describe("S8 analysis progress view", () => {
       }),
     );
 
-    expect(markup).toContain('data-status="unavailable"');
-    expect(markup).toContain("分析不可用，可重试");
-    expect(markup).toContain("当前证据不足，未生成复盘报告。");
     expect(markup).toContain("重试本次复盘");
     expect(markup).not.toContain("查看复盘报告");
   });
 
-  it("keeps a successful status visible without opening S9 when narrative is not displayable", async () => {
+  it("does not open S9 when a successful result has no displayable narrative", async () => {
     const { AnalysisProgress } = await loadProgress();
     const markup = renderToStaticMarkup(
       createElement(AnalysisProgress, {
         analysisId: "analysis-31",
         connection: "connected",
-        events: [retryEvent],
+        events: [stageEvent(1, "第一条工作信息")],
         onOpenResult: vi.fn(),
         terminal: {
           analysis_id: "analysis-31",
@@ -159,8 +146,6 @@ describe("S8 analysis progress view", () => {
       }),
     );
 
-    expect(markup).toContain('data-status="supported"');
-    expect(markup).toContain("主题叙事尚未通过一致性校验。");
     expect(markup).not.toContain("查看复盘报告");
   });
 });

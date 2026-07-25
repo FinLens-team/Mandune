@@ -7,13 +7,23 @@ const BASE = {
 };
 
 describe("daily review V2 server config", () => {
-  it("accepts only step-explore when a live model is configured", () => {
+  it("accepts any single-token MODEL_ID and defaults to stream mode", () => {
     expect(() => loadServerConfig({
       ...BASE,
       MODEL_BASE_URL: "https://models.example.test/v1",
       MODEL_API_KEY: "test-secret-value",
+      MODEL_ID: "another model",
+    })).toThrow("Invalid MODEL_ID");
+
+    expect(loadServerConfig({
+      ...BASE,
+      MODEL_BASE_URL: "https://models.example.test/v1",
+      MODEL_API_KEY: "test-secret-value",
       MODEL_ID: "another-model",
-    })).toThrow("daily review V2 only permits step-explore");
+    })).toMatchObject({
+      analysisMode: "stream",
+      model: { modelId: "another-model", supportsStructuredOutputs: false },
+    });
 
     expect(loadServerConfig({
       ...BASE,
@@ -21,10 +31,17 @@ describe("daily review V2 server config", () => {
       MODEL_API_KEY: "test-secret-value",
       MODEL_ID: "step-explore",
       BOCHA_API_KEY: "test-bocha-secret",
+      MANDONG_ANALYSIS_MODE: "v2",
     })).toMatchObject({
+      analysisMode: "v2",
       model: { modelId: "step-explore", supportsStructuredOutputs: false },
       bochaApiKey: "test-bocha-secret",
     });
+
+    expect(() => loadServerConfig({
+      ...BASE,
+      MANDONG_ANALYSIS_MODE: "other",
+    })).toThrow("Invalid MANDONG_ANALYSIS_MODE");
   });
 
   it("still starts without model or provider credentials", () => {

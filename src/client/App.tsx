@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import {
   FetchJourneyGateway,
   JourneyController,
@@ -17,7 +17,7 @@ import { HistoryView } from "../features/history-view/index.js";
 import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
-import { WorkspaceShell } from "../features/workspace-shell/index.js";
+import { WorkspaceNav, WorkspaceShell } from "../features/workspace-shell/index.js";
 import "../app/client/styles.css";
 
 export interface AppProps {
@@ -92,6 +92,31 @@ function JourneyStatePage({
 export function App(props: AppProps = {}) {
   const [state, controller, gateway, atlasGateway] = useJourney(props);
   const bootStarted = useRef(false);
+  // Drawer-selected home entry view: 数据管理 from a secondary page
+  // mounts WorkspaceShell directly on the portfolio view.
+  const [homeEntryView, setHomeEntryView] = useState<"home" | "portfolio">("home");
+  const streamingAnalysisId = state.phase === "analysis" && !state.activeAnalysis?.terminal
+    ? state.activeAnalysis?.analysisId
+    : undefined;
+
+  function goHome(view: "home" | "portfolio") {
+    setHomeEntryView(view);
+    controller.navigate("home");
+  }
+
+  function workspaceNav(currentPage: "history" | "atlas" | "about") {
+    return (
+      <WorkspaceNav
+        currentPage={currentPage}
+        onNavigateAbout={() => controller.navigate("about")}
+        onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
+        onNavigateHistory={() => controller.navigate("history")}
+        onNavigateHome={() => goHome("home")}
+        onNavigatePortfolio={() => goHome("portfolio")}
+        reduceMotion={state.reducedMotion}
+      />
+    );
+  }
 
   useEffect(() => {
     if (bootStarted.current) return;
@@ -108,6 +133,13 @@ export function App(props: AppProps = {}) {
     }, gateway.pollIntervalMs);
     return () => window.clearInterval(poll);
   }, [controller, gateway.pollIntervalMs, state.activeAnalysis, state.phase]);
+
+  useEffect(() => {
+    if (!streamingAnalysisId || !gateway.subscribeAnalysisStream) return;
+    return gateway.subscribeAnalysisStream(streamingAnalysisId, (text) => {
+      controller.applyStreamText(streamingAnalysisId, text);
+    });
+  }, [controller, gateway, streamingAnalysisId]);
 
   useEffect(() => {
     if (state.phase === "booting" || state.phase === "onboarding") return;
@@ -174,18 +206,13 @@ export function App(props: AppProps = {}) {
           connection={state.activeAnalysis.connection}
           events={state.activeAnalysis.events}
           onLeave={() => controller.leaveAnalysis()}
+          onNavigateHome={() => goHome("home")}
           onOpenResult={() => controller.openCurrentResult()}
           onRetry={() => state.draft && void controller.startAnalysis(state.draft)}
           reduceMotion={state.reducedMotion}
+          streamText={state.activeAnalysis.streamText}
           terminal={state.activeAnalysis.terminal}
         />
-        {state.activeAnalysis.terminal ? (
-          <nav aria-label="终态恢复" className="journey-analysis__terminal-actions">
-            <Button onClick={() => controller.navigate("home")} variant="secondary">
-              返回主页
-            </Button>
-          </nav>
-        ) : null}
       </div>
     );
   }
@@ -202,7 +229,9 @@ export function App(props: AppProps = {}) {
         <main className="journey-result" id="main">
           <nav aria-label="结果导航" className="journey-result__actions">
           <Button
-            onClick={() => controller.navigate(state.resultReturn)}
+            onClick={() => state.resultReturn === "home"
+              ? goHome("home")
+              : controller.navigate(state.resultReturn)}
             variant="secondary"
           >
             {returnLabel}
@@ -226,46 +255,55 @@ export function App(props: AppProps = {}) {
 
   if (state.phase === "atlas" && state.workspace && atlasGateway) {
     return (
-      <AtlasView
-        gateway={atlasGateway}
-        onNavigateHome={() => controller.navigate("home")}
-        onOpenHistory={(recordId) => void controller.openHistoryRecord(recordId, "atlas")}
-        reducedMotion={state.reducedMotion}
-      />
+      <>
+        <AtlasView
+          gateway={atlasGateway}
+          onNavigateHome={() => goHome("home")}
+          onOpenHistory={(recordId) => void controller.openHistoryRecord(recordId, "atlas")}
+          reducedMotion={state.reducedMotion}
+        />
+        {workspaceNav("atlas")}
+      </>
     );
   }
 
-  if ((state.phase === "history" || state.phase === "about") && state.workspace) {
+  if (state.phase === "history" && state.workspace) {
     return (
       <div className="journey-secondary">
         <BrandBanner />
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <main className="journey-secondary__page" id="main">
-          <header className="journey-secondary__header">
-            <h1>{state.phase === "history" ? "复盘历史" : "关于项目"}</h1>
-            <p>{state.phase === "history" ? "核对已保存复盘的原始快照与证据边界。" : "了解满懂的使用边界、隐私与数据保留方式。"}</p>
-          </header>
-          {state.phase === "history" ? (
-            <HistoryView
-              onNavigateHome={() => controller.navigate("home")}
-              onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
-              reader={gateway}
-              reduceMotion={state.reducedMotion}
-              workspaceId={state.workspace.workspace_id}
-            />
-          ) : (
-            <AboutView
-              experienceSource={state.experienceSource}
-              onNavigateHome={() => controller.navigate("home")}
-              onRequestDeleteWorkspace={() => {
-                if (window.confirm("确认注销当前工作区数据及全部历史？此操作无法恢复。")) {
-                  void controller.deleteWorkspace();
-                }
-              }}
-              workspace={state.workspace}
-            />
-          )}
+          <HistoryView
+            onNavigateHome={() => goHome("home")}
+            onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
+            reader={gateway}
+            reduceMotion={state.reducedMotion}
+            workspaceId={state.workspace.workspace_id}
+          />
         </main>
+        {workspaceNav("history")}
+      </div>
+    );
+  }
+
+  if (state.phase === "about" && state.workspace) {
+    return (
+      <div className="journey-secondary">
+        <BrandBanner />
+        {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
+        <main className="journey-secondary__page" id="main">
+          <AboutView
+            experienceSource={state.experienceSource}
+            onNavigateHome={() => goHome("home")}
+            onRequestDeleteWorkspace={() => {
+              if (window.confirm("确认注销当前工作区数据及全部历史？此操作无法恢复。")) {
+                void controller.deleteWorkspace();
+              }
+            }}
+            workspace={state.workspace}
+          />
+        </main>
+        {workspaceNav("about")}
       </div>
     );
   }
@@ -281,6 +319,7 @@ export function App(props: AppProps = {}) {
           draft={state.draft}
           experienceSource={state.experienceSource}
           lastAnalysisAt={state.lastAnalysisAt}
+          initialView={homeEntryView}
           latestCompleteTradingDay={latestCompleteTradingDay(state.draft)}
           onDraftChange={(draft) => controller.updateDraft(draft)}
           onExperienceSourceChange={(source) => controller.setExperienceSource(source)}

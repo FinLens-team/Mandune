@@ -94,6 +94,10 @@ export interface JourneyGateway {
     experience_source: HistoryExperienceSource;
     reused_active: boolean;
   }>;
+  subscribeAnalysisStream?(
+    analysisId: string,
+    onText: (text: string) => void,
+  ): () => void;
   touchWorkspace(): Promise<WorkspacePublicStatus>;
 }
 
@@ -376,6 +380,23 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
       ...(aiText ? { aiText } : {}),
       ...(aiThemeText ? { aiThemeText } : {}),
     };
+  }
+
+  subscribeAnalysisStream(analysisId: string, onText: (text: string) => void): () => void {
+    if (typeof EventSource === "undefined") return () => undefined;
+    const source = new EventSource(`/api/analyses/${encodeURIComponent(analysisId)}/stream`);
+    const onDelta = (event: Event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data) as { text?: unknown };
+        if (typeof payload.text === "string") onText(payload.text);
+      } catch {
+        // Polling remains the recovery path for malformed or interrupted SSE.
+      }
+    };
+    const close = () => source.close();
+    source.addEventListener("delta", onDelta);
+    source.addEventListener("done", close);
+    return close;
   }
 
   async getAtlasOutcome(analysisId: string): Promise<AtlasOutcome | null> {

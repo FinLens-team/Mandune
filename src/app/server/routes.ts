@@ -174,8 +174,6 @@ export function createJourneyRoutes(input: {
     if (!run) return c.json({ error: "not_found" }, 404);
     return streamSSE(c, async (stream) => {
       if (run.state === "terminal") {
-        const text = run.execution?.ai_text ?? "";
-        if (text) await stream.writeSSE({ event: "delta", data: JSON.stringify({ text }) });
         await stream.writeSSE({ event: "done", data: "{}" });
         return;
       }

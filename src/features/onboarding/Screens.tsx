@@ -6,7 +6,8 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import type { CSSProperties, Ref } from "react";
+import { useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent, Ref } from "react";
 import type { PersonalConstraints } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
 import { Button } from "../../client/ui/index.js";
@@ -320,6 +321,22 @@ export interface ExperienceSummaryScreenProps extends ScreenTitleProps {
   onReroll: () => void;
 }
 
+const SUMMARY_CARDS = [
+  { id: "holdings", label: "持仓数据" },
+  { id: "constraints", label: "持仓偏好" },
+] as const;
+
+/** 横向切换判定阈值（px）：小于该位移视为点击而非滑动 */
+const SWIPE_THRESHOLD = 56;
+const DRAG_AXIS_LOCK = 8;
+
+interface SummaryDragState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  axis: "none" | "x" | "y";
+}
+
 export function ExperienceSummaryScreen({
   identity,
   titleRef,
@@ -327,6 +344,68 @@ export function ExperienceSummaryScreen({
   onConfirm,
   onReroll,
 }: ExperienceSummaryScreenProps) {
+  const [activeCard, setActiveCard] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragState = useRef<SummaryDragState | null>(null);
+  const suppressClick = useRef(false);
+
+  function endDrag(): void {
+    const state = dragState.current;
+    dragState.current = null;
+    setDragging(false);
+    setDragX(0);
+    if (!state || state.axis !== "x") return;
+    suppressClick.current = true;
+    if (dragX <= -SWIPE_THRESHOLD && activeCard < SUMMARY_CARDS.length - 1) {
+      setActiveCard(activeCard + 1);
+    } else if (dragX >= SWIPE_THRESHOLD && activeCard > 0) {
+      setActiveCard(activeCard - 1);
+    }
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>): void {
+    if (!event.isPrimary) return;
+    suppressClick.current = false;
+    dragState.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      axis: "none",
+    };
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>): void {
+    const state = dragState.current;
+    if (!state || state.pointerId !== event.pointerId) return;
+    const dx = event.clientX - state.startX;
+    const dy = event.clientY - state.startY;
+    if (state.axis === "none") {
+      if (Math.abs(dx) < DRAG_AXIS_LOCK && Math.abs(dy) < DRAG_AXIS_LOCK) return;
+      state.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (state.axis === "x") {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+      }
+    }
+    if (state.axis !== "x") return;
+    // 到边缘后加阻尼，提示没有更多卡片
+    const atEdge =
+      (dx > 0 && activeCard === 0) ||
+      (dx < 0 && activeCard === SUMMARY_CARDS.length - 1);
+    setDragX(atEdge ? dx / 3 : dx);
+  }
+
+  function handleRegionKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key === "ArrowLeft" && activeCard > 0) {
+      event.preventDefault();
+      setActiveCard(activeCard - 1);
+    } else if (event.key === "ArrowRight" && activeCard < SUMMARY_CARDS.length - 1) {
+      event.preventDefault();
+      setActiveCard(activeCard + 1);
+    }
+  }
+
   return (
     <section className="onboarding-screen onboarding-summary" aria-labelledby="s3-title">
       <header className="onboarding-heading">
@@ -336,10 +415,51 @@ export function ExperienceSummaryScreen({
         </h1>
       </header>
 
-      <div className="onboarding-summary__identity" key={identity.identity_id}>
-        <div className="onboarding-summary__grid">
-          <section aria-labelledby="holdings-title">
-            <div className="onboarding-section-heading"><h2 id="holdings-title">本次模拟持仓</h2></div>
+      <div
+        className="onboarding-summary__identity"
+        key={identity.identity_id}
+        onKeyDown={handleRegionKeyDown}
+      >
+        <div aria-label="模拟数据分组" className="onboarding-summary__switch" role="tablist">
+          {SUMMARY_CARDS.map((card, index) => (
+            <button
+              aria-controls={`summary-card-${card.id}`}
+              aria-selected={activeCard === index}
+              className={`onboarding-summary__tab${activeCard === index ? " is-active" : ""}`}
+              id={`summary-tab-${card.id}`}
+              key={card.id}
+              onClick={() => setActiveCard(index)}
+              role="tab"
+              type="button"
+            >
+              {card.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className={`onboarding-summary__stage${dragging ? " is-dragging" : ""}`}
+          onPointerCancel={endDrag}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          style={{ "--drag-x": `${dragX}px` } as CSSProperties}
+        >
+          <section
+            aria-hidden={activeCard !== 0}
+            aria-labelledby="summary-tab-holdings"
+            className={`onboarding-summary-card${activeCard === 0 ? " is-active" : ""}`}
+            id="summary-card-holdings"
+            onClick={() => {
+              if (activeCard !== 0 && !suppressClick.current) setActiveCard(0);
+            }}
+            role="tabpanel"
+            style={{ "--card-offset": 0 - activeCard } as CSSProperties}
+          >
+            <div className="onboarding-section-heading">
+              <h2 id="holdings-title">本次模拟持仓</h2>
+              <span>共 {identity.holdings.length} 项</span>
+            </div>
             <div className="onboarding-holdings">
               {identity.holdings.map((holding, index) => (
                 <article
@@ -384,9 +504,20 @@ export function ExperienceSummaryScreen({
             </div>
           </section>
 
-          <section aria-labelledby="constraints-title">
+          <section
+            aria-hidden={activeCard !== 1}
+            aria-labelledby="summary-tab-constraints"
+            className={`onboarding-summary-card${activeCard === 1 ? " is-active" : ""}`}
+            id="summary-card-constraints"
+            onClick={() => {
+              if (activeCard !== 1 && !suppressClick.current) setActiveCard(1);
+            }}
+            role="tabpanel"
+            style={{ "--card-offset": 1 - activeCard } as CSSProperties}
+          >
             <div className="onboarding-section-heading">
               <h2 id="constraints-title">本次模拟偏好</h2>
+              <span>共 {Object.keys(CONSTRAINT_LABELS).length} 项</span>
             </div>
             <dl className="onboarding-constraints">
               {(Object.keys(CONSTRAINT_LABELS) as (keyof PersonalConstraints)[]).map((key, index) => (
@@ -398,6 +529,18 @@ export function ExperienceSummaryScreen({
             </dl>
           </section>
         </div>
+
+        <div className="onboarding-summary__pagination" aria-hidden="true">
+          {SUMMARY_CARDS.map((card, index) => (
+            <span
+              className={`onboarding-summary__dot${activeCard === index ? " is-active" : ""}`}
+              key={card.id}
+            />
+          ))}
+        </div>
+        <p className="onboarding-summary__hint" aria-live="polite">
+          左右滑动或点击旁边的卡片切换 · {activeCard + 1} / {SUMMARY_CARDS.length}
+        </p>
       </div>
 
       <div className="onboarding-sticky-spacer" aria-hidden="true" />

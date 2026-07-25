@@ -58,6 +58,11 @@ export interface AnalysisProgressStageItem {
   stateLabel: string;
 }
 
+export interface AnalysisProgressLogLine {
+  id: string;
+  text: string;
+}
+
 export interface AnalysisProgressViewModel {
   analysisId: string;
   canOpenResult: boolean;
@@ -69,9 +74,35 @@ export interface AnalysisProgressViewModel {
   currentStage?: TaskEventStage;
   isTerminal: boolean;
   latestEventId?: string;
+  /** Last few task-event messages, oldest first, capped at MAX_LOG_LINES. */
+  logLines: AnalysisProgressLogLine[];
   phase: AnalysisProgressPhase;
   stages: AnalysisProgressStageItem[];
   terminal?: AnalysisProgressTerminal;
+}
+
+export const MAX_LOG_LINES = 3;
+
+export function streamHeadingMessages(text: string | undefined): string[] {
+  if (!text) return [];
+  const seen = new Set<string>();
+  const messages: string[] = [];
+  for (const line of text.split(/\r?\n/u)) {
+    const match = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
+    const title = match?.[1]
+      ?.replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+      .replace(/[*_`~#]/gu, "")
+      .replace(/^\s*(?:\d+[.)、]\s*)?/u, "")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .slice(0, 48);
+    if (!title) continue;
+    const message = `正在生成 ${title}`;
+    if (seen.has(message)) continue;
+    seen.add(message);
+    messages.push(message);
+  }
+  return messages;
 }
 
 const STAGE_LABELS: Record<TaskEventStage, string> = {
@@ -268,6 +299,11 @@ export function projectAnalysisProgress({
     }
   }
 
+  const logLines: AnalysisProgressLogLine[] = taskEvents.slice(-MAX_LOG_LINES).map((event) => ({
+    id: event.event_id,
+    text: event.message ?? STAGE_BUBBLES[event.stage][event.state],
+  }));
+
   return {
     analysisId,
     canOpenResult:
@@ -282,6 +318,7 @@ export function projectAnalysisProgress({
     ...(currentStage === undefined ? {} : { currentStage }),
     isTerminal: terminal !== undefined,
     ...(latestEvent === undefined ? {} : { latestEventId: latestEvent.event_id }),
+    logLines,
     phase,
     stages: TASK_EVENT_STAGES.map((stage) => stageItem(stage, latestByStage.get(stage), currentStage)),
     ...(terminal === undefined ? {} : { terminal }),

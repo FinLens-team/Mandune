@@ -207,7 +207,7 @@ export class JourneyAnalysisService {
         now: this.now,
         onText: (delta) => this.pushStreamDelta(run.analysis_id, delta),
       });
-      this.finishStream(run.analysis_id, execution.ai_text);
+      this.finishStream(run.analysis_id);
       await eventWrites;
       emit("persist_or_return", "pending", {
         covered_count: execution.analysis.coverage.covered_line_ids.length,

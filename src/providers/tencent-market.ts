@@ -124,11 +124,9 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
         return [this.failedEvidence(input, scope, "行情响应缺少可用收盘价或观察日期。")];
       }
 
-      const withinCutoff =
-        Date.parse(`${parsed.observedDate}T00:00:00.000Z`) <=
-        Date.parse(`${input.latestCompleteTradingDay}T00:00:00.000Z`);
-      const observationDate = withinCutoff ? parsed.observedDate : input.latestCompleteTradingDay;
-      const isLatest = observationDate === input.latestCompleteTradingDay;
+      const withinCutoff = parsed.observedDate <= input.latestCompleteTradingDay;
+      const observationDate = parsed.observedDate;
+      const isLatest = withinCutoff && observationDate === input.latestCompleteTradingDay;
 
       return [
         {
@@ -146,11 +144,13 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
           // A same-day close on the frozen latest complete trading day is
           // materially usable; anything older is preserved but downgraded by
           // the orchestrator's date normalization.
-          status: isLatest ? "available" : "stale",
+          status: isLatest ? "available" : withinCutoff ? "stale" : "ambiguous",
           limitations: isLatest
             ? ["收盘价来自公开延迟行情，单位按交易所人民币计价。"]
-            : [
+            : withinCutoff ? [
                 "收盘价来自公开延迟行情，观察日不是冻结的最新完整交易日，不得支持物质性结论。",
+              ] : [
+                "行情观察日晚于本次证据截止日，仅记录缺口，不得作为本次分析证据。",
               ],
           provenance: "observed",
         },

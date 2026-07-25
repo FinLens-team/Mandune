@@ -9,11 +9,12 @@ import type { snapshotCurrentDraft } from "../../src/features/review/model.js";
 interface WorkspaceShellModule {
   WorkspaceDrawer: ComponentType<{
     open: boolean;
-    currentView: "home" | "portfolio";
+    currentPage: "home" | "portfolio" | "history" | "atlas" | "about";
     reduceMotion: boolean;
     returnFocus: null;
     onClose: () => void;
-    onNavigate: (view: "home" | "portfolio") => void;
+    onNavigateHome: () => void;
+    onNavigatePortfolio: () => void;
     onNavigateHistory: () => void;
     onNavigateAtlas?: () => void;
     onNavigateAbout: () => void;
@@ -114,11 +115,12 @@ describe("S4-S7 workspace shell", () => {
     const markup = renderToStaticMarkup(
       createElement(WorkspaceDrawer, {
         open: true,
-        currentView: "home",
+        currentPage: "home",
         reduceMotion: false,
         returnFocus: null,
         onClose: vi.fn(),
-        onNavigate: vi.fn(),
+        onNavigateHome: vi.fn(),
+        onNavigatePortfolio: vi.fn(),
         onNavigateHistory: vi.fn(),
         onNavigateAtlas: vi.fn(),
         onNavigateAbout: vi.fn(),

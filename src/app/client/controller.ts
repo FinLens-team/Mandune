@@ -494,7 +494,7 @@ export class JourneyController {
     this.options.dispatch({ type: "RESULT_OPENED", input, returnTo: "home" });
   }
 
-  /** Relaxed Demo mode: record cumulative free-text model output while running. */
+  /** Record cumulative progress-only Markdown headings while analysis runs. */
   applyStreamText(analysisId: string, text: string): void {
     this.options.dispatch({ type: "ANALYSIS_STREAM_UPDATED", analysisId, text });
   }

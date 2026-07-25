@@ -15,9 +15,20 @@
   },
   "poster": {
     "file": "nailong-rest.webp",
-    "size": 20076,
-    "sha256": "50c31056259f6001d91ed335da85eb372a22378b0edf71aff76c8e4fe6979ad9",
+    "source": ".temp/47f81082727228370d8ec7f78636b2c2.mp4 (final motion frame of the pop-in clip, replacing the earlier rest pose so the animation-to-static swap is pixel-identical)",
+    "size": 25208,
+    "sha256": "8b6a19a28cbb4a793804a722ad01501d7ef96c425d9d4c87489e24e85b37d4d7",
+    "codec": "Lossy WebP q92, alpha preserved, 512px",
     "alpha": true
+  },
+  "pop": {
+    "file": "nailong-pop.webp",
+    "source": ".temp/47f81082727228370d8ec7f78636b2c2.mp4 (960px H.264+AAC, 6691637 bytes, baked checkerboard; keyed via border-connected neutral flood fill, audio dropped, static tail frames trimmed)",
+    "size": 1485948,
+    "sha256": "93e25c76c922f5da5d6dbf9c1ea2ab7c28865c28312cd7d21f395d813b61eb96",
+    "codec": "Animated WebP q82 via ffmpeg libwebp_anim (correct per-frame blend/dispose; PIL-encoded alpha WebP flickered), 512px, native 24fps, 83 frames (~3.5s), ANIM loop patched to 1",
+    "alpha": true,
+    "audio": false
   },
   "laugh": {
     "file": "nailong-laugh.webp",

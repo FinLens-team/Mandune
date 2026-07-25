@@ -3,14 +3,10 @@ import { StreamingAnalysisExecutor } from "../../src/app/server/index.js";
 import type { MarketEvidenceSource } from "../../src/analysis/index.js";
 import type { EvidenceRecord, TaskEvent } from "../../src/contracts/index.js";
 import { getFixture } from "../../src/fixtures/index.js";
-import type {
-  ModelGateway,
-  ModelGatewayResult,
-  ModelStreamRequest,
-} from "../../src/model/index.js";
+import type { ModelGateway, ModelGatewayResult, ModelStreamRequest } from "../../src/model/index.js";
 
 const NOW = new Date("2026-07-25T09:00:00.000Z");
-const SAFE_RATIONAL = "当前证据支持继续观察组合变化。部分持仓证据仍有缺口，应等待数据确认，并保留最终判断权。";
+const SAFE_RATIONAL = "# 今日分析\n\n当前证据支持继续观察组合变化。\n\n## 对比分析\n\n部分持仓证据仍有缺口，应等待数据确认，并保留最终判断权。";
 
 function marketEvidence(request: Parameters<MarketEvidenceSource["collectMarketEvidence"]>[0]): EvidenceRecord[] {
   return [{
@@ -50,10 +46,6 @@ function successfulStream(text: string): NonNullable<ModelGateway["streamGenerat
   };
 }
 
-function themeFromPrompt(request: ModelStreamRequest): string {
-  return request.prompt.slice(request.prompt.indexOf("\n") + 1);
-}
-
 async function execute(input: {
   modelGateway: ModelGateway;
   marketEvidenceSource?: MarketEvidenceSource;
@@ -89,28 +81,36 @@ afterEach(() => {
 });
 
 describe("StreamingAnalysisExecutor production safety", () => {
-  it("buffers the complete report, validates it, and emits it once after both model calls", async () => {
+  it("validates one model report while streaming only heading progress", async () => {
     const clientText = vi.fn();
     const requests: ModelStreamRequest[] = [];
     const modelGateway = gateway(async (request) => {
       requests.push(request);
-      const text = requests.length === 1 ? SAFE_RATIONAL : themeFromPrompt(request);
+      const text = SAFE_RATIONAL;
       for (const delta of [text.slice(0, 8), text.slice(8)]) request.onText(delta);
-      expect(clientText).not.toHaveBeenCalled();
       return { ok: true, text };
     });
 
     const { result, events } = await execute({ modelGateway, onText: clientText });
 
-    expect(requests).toHaveLength(2);
-    expect(requests[0]?.signal).toBe(requests[1]?.signal);
-    expect(clientText).toHaveBeenCalledTimes(1);
-    expect(clientText).toHaveBeenCalledWith(SAFE_RATIONAL);
+    expect(requests).toHaveLength(1);
+    expect(clientText).toHaveBeenNthCalledWith(1, "# 今日分析\n");
+    expect(clientText).toHaveBeenNthCalledWith(2, "# 对比分析\n");
     expect(result).toMatchObject({
       ai_text: SAFE_RATIONAL,
       source: { kind: "live", is_live: true },
     });
     expect(result.ai_theme_text).toContain(`<!-- MANDONG_RATIONAL_REPORT_START -->\n${SAFE_RATIONAL}\n<!-- MANDONG_RATIONAL_REPORT_END -->`);
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "form_conclusions_and_advice",
+      state: "running",
+      message: "正在生成 今日分析",
+    }));
+    expect(events).toContainEqual(expect.objectContaining({
+      stage: "form_conclusions_and_advice",
+      state: "running",
+      message: "正在生成 对比分析",
+    }));
     expect(events).toContainEqual(expect.objectContaining({
       stage: "discover_and_verify_events",
       state: "failed",
@@ -120,9 +120,8 @@ describe("StreamingAnalysisExecutor production safety", () => {
   it.each([
     "建议卖出一万元并等待。",
     "建议减仓一百份并等待。",
-    "建议把仓位调整为百分之三十。",
     "建议在目标价三千点执行交易。",
-    "建议下周一开盘操作。",
+    "建议明天卖出。",
     "这样可以保证收益。",
   ])("rejects forbidden generated content without exposing it: %s", async (unsafeText) => {
     const clientText = vi.fn();
@@ -145,28 +144,33 @@ describe("StreamingAnalysisExecutor production safety", () => {
     }));
   });
 
-  it("drops theme output when the rational body is changed while retaining safe rational text", async () => {
-    const clientText = vi.fn();
-    let call = 0;
-    const modelGateway = gateway(async (request) => {
-      call += 1;
-      const text = call === 1
-        ? SAFE_RATIONAL
-        : themeFromPrompt(request).replace("继续观察组合变化", "未来一定上涨");
-      request.onText(text);
-      return { ok: true, text };
+  it.each([
+    "组合约占百分之三十，继续观察即可。",
+    "记录中的收盘价为三千点，仅用于回顾证据。",
+    "未来可能上涨，也可能下跌，仍需结合风险承受能力。",
+    "当前不建议立即加仓。",
+  ])("allows ordinary analysis wording without rejecting the report: %s", async (text) => {
+    const { result } = await execute({
+      modelGateway: gateway(successfulStream(text)),
     });
 
-    const { result, events } = await execute({ modelGateway, onText: clientText });
+    expect(result.ai_text).toBe(text);
+    expect(result.analysis.status).not.toBe("unavailable");
+  });
 
-    expect(result.ai_text).toBe(SAFE_RATIONAL);
-    expect(result.ai_theme_text).toBeUndefined();
-    expect(result.source.kind).toBe("live");
-    expect(clientText).toHaveBeenCalledOnce();
-    expect(events).toContainEqual(expect.objectContaining({
-      stage: "render_theme_and_validate_output",
-      state: "failed",
-    }));
+  it("redacts holding names and symbols from streamed and persisted heading progress", async () => {
+    const clientText = vi.fn();
+    const holding = getFixture("supported_full").snapshot.lines[0]!;
+    const text = `# ${holding.name} ${holding.symbol} 对比\n\n继续观察。`;
+    const { events } = await execute({
+      modelGateway: gateway(successfulStream(text)),
+      onText: clientText,
+    });
+
+    expect(clientText).toHaveBeenCalledWith("# 持仓分析\n");
+    expect(events).toContainEqual(expect.objectContaining({ message: "正在生成 持仓分析" }));
+    expect(JSON.stringify(events)).not.toContain(holding.name);
+    expect(JSON.stringify(events)).not.toContain(holding.symbol);
   });
 
   it("aborts market collection at the whole-run deadline and never starts a model call", async () => {
@@ -195,7 +199,7 @@ describe("StreamingAnalysisExecutor production safety", () => {
     }));
   });
 
-  it("isolates a late rational gateway result and prevents the sequential theme call", async () => {
+  it("isolates a late rational gateway result", async () => {
     vi.useFakeTimers();
     const clientText = vi.fn();
     const signals: AbortSignal[] = [];
@@ -232,48 +236,4 @@ describe("StreamingAnalysisExecutor production safety", () => {
     expect(streamGenerate).toHaveBeenCalledTimes(1);
   });
 
-  it("aborts and isolates a late theme result under the same whole-run signal", async () => {
-    vi.useFakeTimers();
-    const clientText = vi.fn();
-    const signals: AbortSignal[] = [];
-    let call = 0;
-    const streamGenerate = vi.fn((request: ModelStreamRequest) => {
-      call += 1;
-      signals.push(request.signal);
-      if (call === 1) {
-        request.onText(SAFE_RATIONAL);
-        return Promise.resolve({ ok: true as const, text: SAFE_RATIONAL });
-      }
-      const theme = themeFromPrompt(request);
-      return new Promise<Awaited<ReturnType<NonNullable<ModelGateway["streamGenerate"]>>>>((resolve) => {
-        setTimeout(() => {
-          request.onText(theme);
-          resolve({ ok: true, text: theme });
-        }, 100);
-      });
-    });
-
-    const pending = execute({
-      modelGateway: gateway(streamGenerate),
-      hardDeadlineMs: 50,
-      onText: clientText,
-    });
-    await vi.advanceTimersByTimeAsync(50);
-    const { result, events } = await pending;
-
-    expect(streamGenerate).toHaveBeenCalledTimes(2);
-    expect(signals[0]).toBe(signals[1]);
-    expect(signals[1]?.aborted).toBe(true);
-    expect(clientText).not.toHaveBeenCalled();
-    expect(result.ai_text).toBeUndefined();
-    expect(result.ai_theme_text).toBeUndefined();
-    expect(result.analysis.status).toBe("unavailable");
-    expect(events).toContainEqual(expect.objectContaining({
-      stage: "render_theme_and_validate_output",
-      state: "timed_out",
-    }));
-
-    await vi.advanceTimersByTimeAsync(50);
-    expect(clientText).not.toHaveBeenCalled();
-  });
 });

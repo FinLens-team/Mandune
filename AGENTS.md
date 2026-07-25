@@ -34,6 +34,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - `src/server/`：Hono HTTP 边界，静态资源与 SPA fallback。
 - `src/contracts/`：框架中立的版本化契约与纯校验器，不得导入 React、Hono 或供应商 SDK。
 - `src/analysis/`：确定性派生、ReviewPacket、Prompt 编译、结果校验与单 agent 编排。
+- 默认 `stream` 分析只调用一次模型；Markdown 标题实时投影为等待页进度，完整正文校验后才进入结果与历史。固定主题框架在本地确定性包装，不额外调用模型。
 - `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store。
 - `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。
 - `deploy/`：单主机 Nginx/systemd 发布脚本。

@@ -37,12 +37,6 @@ const SYSTEM_INSTRUCTIONS = [
   "行情缺失、过期或不支持时如实说明，不要编造当前价格或净值。避免催促交易。",
 ].join("\n");
 
-const THEME_INSTRUCTIONS = [
-  "你是“满懂”里“我是龙”主题的叙事者，搭档是奶龙。",
-  "只能在理性报告原文外添加指定的固定主题引言与结语；原文边界内必须逐字复制，不得改写、删减或新增任何字符。",
-  "严格按用户给出的完整模板返回，不要输出模板之外的内容。",
-].join("\n");
-
 const THEME_PREFIX = [
   "> 奶龙陪你看看今天的持仓，先读已核验的理性分析。",
   "",
@@ -55,17 +49,14 @@ const THEME_SUFFIX = [
 ].join("\n");
 
 const NUMBER = "(?:\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九十百千万亿]+)";
+const TRADE_ACTION = "(?:买入|卖出|建仓|清仓|加仓|减仓|申购|赎回|调仓|下单)";
 const FORBIDDEN_FREE_TEXT: RegExp[] = [
-  new RegExp(`${NUMBER}\\s*(?:%|％|个百分点|成仓|成)|百分之\\s*${NUMBER}`),
-  new RegExp(`${NUMBER}\\s*(?:元|块|万元|亿元|万|亿|股|份|手)`),
-  /(?:¥|￥|\$)\s*\d/,
-  new RegExp(`(?:目标价|价格|价位|点位|仓位|比例)\\s*(?:为|在|到|约|：|:)?\\s*${NUMBER}`),
-  /(?:买入|卖出|建仓|清仓|加仓|减仓|申购|赎回|调仓|下单)/,
-  /(?:20\d{2}[-/年]\d{1,2}(?:[-/月]\d{1,2}日?)?|\d{1,2}[月/]\d{1,2}日?|下周[一二三四五六日天]|明天|后天)/,
-  /(?:上午|下午|今晚|明早|开盘|收盘)?\s*\d{1,2}\s*(?::|：|时)\s*\d{0,2}/,
+  new RegExp(`${TRADE_ACTION}[^。；\\n]{0,24}(?:${NUMBER}\\s*(?:%|％|元|块|万元|亿元|股|份|手)|百分之\\s*${NUMBER})`),
+  new RegExp(`(?:${NUMBER}\\s*(?:%|％|元|块|万元|亿元|股|份|手)|百分之\\s*${NUMBER})[^。；\\n]{0,24}${TRADE_ACTION}`),
+  new RegExp(`(?:目标价|交易价|买入价|卖出价|价位|点位)\\s*(?:为|在|到|约|：|:)?\\s*${NUMBER}`),
+  new RegExp(`(?:明天|后天|下周[一二三四五六日天]|开盘|收盘|上午|下午|今晚|明早)[^。；\\n]{0,24}${TRADE_ACTION}`),
   /(?:保证|确保|承诺).{0,10}(?:收益|回报|盈利|不亏|胜率)|(?:稳赚|必赚|保本|必涨|必跌|稳赢)/,
   /(?:代客操作|替你下单|自动下单|执行交易|持牌投资建议|专业投资建议)/,
-  /(?:明日|下个交易日|未来).{0,16}(?:上涨|下跌|涨|跌)|(?:一定会|必然).{0,12}(?:上涨|下跌|获利|盈利)/,
   /(?:吉凶|运势|天命|卦象)/,
 ];
 
@@ -77,9 +68,52 @@ function generatedTextIsSafe(text: string): boolean {
     FORBIDDEN_FREE_TEXT.every((pattern) => !pattern.test(trimmed));
 }
 
-function validatedThemeText(value: string, rationalReport: string): string | undefined {
-  const expected = `${THEME_PREFIX}\n${rationalReport}\n${THEME_SUFFIX}`;
-  return value.trim() === expected ? expected : undefined;
+function progressHeading(raw: string): string | undefined {
+  const title = raw
+    .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+    .replace(/[*_`~#]/gu, "")
+    .replace(/^\s*(?:\d+[.)、]\s*)?/u, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return title ? title.slice(0, 48) : undefined;
+}
+
+function createHeadingProgressReporter(
+  report: (message: string) => void,
+  privateTerms: readonly string[],
+): { finish: () => void; push: (delta: string) => void } {
+  let pending = "";
+  const seen = new Set<string>();
+
+  function consume(line: string): void {
+    const match = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
+    const candidate = match?.[1] ? progressHeading(match[1]) : undefined;
+    const title = candidate && privateTerms.some((term) => term && candidate.includes(term))
+      ? "持仓分析"
+      : candidate;
+    if (!title) return;
+    const key = title.toLocaleLowerCase("zh-CN");
+    if (seen.has(key)) return;
+    seen.add(key);
+    report(`正在生成 ${title}`);
+  }
+
+  return {
+    push(delta) {
+      pending += delta;
+      const lines = pending.split(/\r?\n/u);
+      pending = lines.pop() ?? "";
+      for (const line of lines) consume(line);
+    },
+    finish() {
+      if (pending) consume(pending);
+      pending = "";
+    },
+  };
+}
+
+function renderThemeText(rationalReport: string): string {
+  return `${THEME_PREFIX}\n${rationalReport}\n${THEME_SUFFIX}`;
 }
 
 function waitForAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -152,8 +186,9 @@ function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRec
 /**
  * Relaxed Demo executor: it keeps the deterministic evidence, coverage and
  * result-shell pipeline (which still passes the owned-result validators) but
- * replaces the strict, schema-bound rational/theme model calls with a single
- * streaming free-text model call whose deltas are forwarded to the client.
+  * replaces the strict, schema-bound model calls with one free-text model call.
+  * The fixed theme frame is rendered locally so it cannot alter the report or
+  * add a second model round trip.
  */
 export class StreamingAnalysisExecutor implements AnalysisExecutor {
   constructor(
@@ -223,12 +258,18 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
 
       activeStage = "form_conclusions_and_advice";
       input.emit(activeStage, "running", { message: "生成并校验理性分析报告。" });
+      const headings = createHeadingProgressReporter((message) => {
+        input.emit(activeStage, "running", { message });
+        input.onText?.(`# ${message.slice("正在生成 ".length)}\n`);
+      }, snapshot.lines.flatMap((line) => [line.name.trim(), line.symbol.trim()]));
       const aiText = await this.streamModelText(
         snapshot,
         evidence,
         Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
         deadlineController.signal,
+        headings.push,
       );
+      headings.finish();
       if (!generatedTextIsSafe(aiText)) {
         input.emit(activeStage, "failed", { message: "模型文本未通过完整内容边界校验。" });
         input.emit("render_theme_and_validate_output", "failed", { message: "未校验理性报告不生成主题表达。" });
@@ -238,16 +279,9 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       input.emit(activeStage, "succeeded");
 
       activeStage = "render_theme_and_validate_output";
-      input.emit(activeStage, "running", { message: "渲染并校验“我是龙”主题表达。" });
-      const themeCandidate = await this.generateThemeText(
-        aiText,
-        Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
-        deadlineController.signal,
-      );
-      const themeText = validatedThemeText(themeCandidate, aiText);
-      input.emit(activeStage, themeText ? "succeeded" : "failed", {
-        ...(!themeText ? { message: "主题表达改变或遗漏理性原文，已丢弃主题文本。" } : {}),
-      });
+      input.emit(activeStage, "running", { message: "渲染“我是龙”主题表达。" });
+      const themeText = renderThemeText(aiText);
+      input.emit(activeStage, "succeeded");
       if (deadlineController.signal.aborted) throw new HardDeadlineReached();
 
       const analysis = fallbackAnalysis({
@@ -265,17 +299,18 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
         unavailable: false,
       });
       if (analysis.status === "unavailable") return unavailable("现有结构化证据不足以形成可展示报告。");
-      input.onText?.(aiText);
       return {
         analysis,
         ai_text: aiText,
-        ...(themeText ? { ai_theme_text: themeText } : {}),
+        ai_theme_text: themeText,
         rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
         source: { kind: "live", is_live: true, label: "实时行情 + 模型分析" },
       };
     } catch (error) {
       if (!(error instanceof HardDeadlineReached)) throw error;
-      input.emit(activeStage, "timed_out", { message: "复盘达到 180 秒整体硬截止，迟到结果已隔离。" });
+      input.emit(activeStage, "timed_out", {
+        message: `复盘达到 ${Math.ceil(hardDeadlineMs / 1_000)} 秒整体硬截止，迟到结果已隔离。`,
+      });
       return unavailable("复盘达到整体硬截止，所有未完成外部调用与生成文本已终止。");
     } finally {
       clearTimeout(deadlineTimer);
@@ -332,11 +367,11 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
     evidence: readonly EvidenceRecord[],
     timeoutMs: number,
     deadlineSignal: AbortSignal,
+    onDelta: (delta: string) => void,
   ): Promise<string> {
     const gateway = this.dependencies.modelGateway;
     if (!gateway.streamGenerate) return "";
     if (timeoutMs <= 0 || deadlineSignal.aborted) throw new HardDeadlineReached();
-    let buffered = "";
     try {
       const result = await waitForAbort(gateway.streamGenerate({
         instructions: SYSTEM_INSTRUCTIONS,
@@ -344,41 +379,14 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
         signal: deadlineSignal,
         timeoutMs,
         onText: (delta) => {
-          if (!deadlineSignal.aborted) buffered += delta;
+          if (!deadlineSignal.aborted) onDelta(delta);
         },
       }), deadlineSignal);
-      return result.ok && result.text === buffered ? result.text : "";
+      return result.ok ? result.text : "";
     } catch {
       if (deadlineSignal.aborted) throw new HardDeadlineReached();
       return "";
     }
   }
 
-  /** Theme pass: same report, observation-theme expression only. Not streamed. */
-  private async generateThemeText(
-    rationalReport: string,
-    timeoutMs: number,
-    deadlineSignal: AbortSignal,
-  ): Promise<string> {
-    const gateway = this.dependencies.modelGateway;
-    if (!gateway.streamGenerate) return "";
-    if (timeoutMs <= 0 || deadlineSignal.aborted) throw new HardDeadlineReached();
-    let buffered = "";
-    const expected = `${THEME_PREFIX}\n${rationalReport}\n${THEME_SUFFIX}`;
-    try {
-      const result = await waitForAbort(gateway.streamGenerate({
-        instructions: THEME_INSTRUCTIONS,
-        prompt: ["【必须逐字复制的完整返回模板】", expected].join("\n"),
-        signal: deadlineSignal,
-        timeoutMs,
-        onText: (delta) => {
-          if (!deadlineSignal.aborted) buffered += delta;
-        },
-      }), deadlineSignal);
-      return result.ok && result.text === buffered ? result.text : "";
-    } catch {
-      if (deadlineSignal.aborted) throw new HardDeadlineReached();
-      return "";
-    }
-  }
 }

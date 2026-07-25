@@ -147,7 +147,7 @@ async function execute(input: {
     },
     listAtlasCards: async () => [],
     atlasCandidateGenerator: new ModelAtlasCandidateGenerator(input.gateway),
-  }, { modelTimeoutMs: 10_000, hardDeadlineMs: 20_000 });
+  }, { modelTimeoutMs: 10_000, hardDeadlineMs: 20_000, maxModelAttempts: 1 });
   const result = await executor.execute({
     workspaceId: "workspace-v2",
     analysisId: "analysis-daily-review-v2",
@@ -233,22 +233,6 @@ describe("DailyReviewV2Executor", () => {
     expect(result.source.kind).toBe("live");
     expect(result.generated_review).toMatchObject({ atlas_candidate: null, atlas_validation: "invalid_candidate" });
     expect(events).toContainEqual({ stage: "render_theme_and_validate_output", state: "failed" });
-  });
-
-  it("does not call the model when every market line failed", async () => {
-    const generate = vi.fn();
-    const evidence = failedEvidence();
-    const failures = getFixture("supported_full").snapshot.lines.map((line) => ({
-      lineId: line.line_id,
-      status: "failed" as const,
-      errorCode: "provider_failed",
-    }));
-
-    const { result } = await execute({ gateway: { generate: generate as ModelGateway["generate"] }, evidence, failures });
-
-    expect(generate).not.toHaveBeenCalled();
-    expect(result.analysis.status).toBe("unavailable");
-    expect(result.generated_review).toBeUndefined();
   });
 
   it("generates honestly when only part of the market batch failed", async () => {

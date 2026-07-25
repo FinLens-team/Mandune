@@ -12,6 +12,7 @@
 - Treat malformed or mismatched gateway payloads as unavailable. Never render partial analysis or narrative data.
 - Serialize draft writes and only publish the latest revision. Analysis start must wait for a successful durable draft save.
 - Leaving analysis does not cancel it. Persist the analysis ID so bootstrap can resume the same task after refresh.
+- The analysis SSE carries cumulative, progress-only Markdown headings. `App` keeps one subscription per active `analysisId`; `AnalysisProgress` derives deduplicated `正在生成 …` lines from headings while durable task events remain the reconnect fallback. Full model prose is exposed only by the terminal result endpoint after validation.
 - History replay uses the saved immutable record and never re-fetches providers or recalculates with current contracts.
 - Send `random` versus `edited` when starting analysis so the server-owned run freezes it into immutable history. S9 and S10 read the record-owned value; legacy V1 records without it remain unknown and are never inferred from the current draft or browser storage.
 

@@ -68,12 +68,6 @@
   padding-top: var(--space-6);
 }
 
-.journey-analysis__terminal-actions {
-  width: min(100% - 2rem, var(--content-form));
-  margin: 0 auto;
-  padding-bottom: var(--space-8);
-}
-
 .journey-message {
   width: min(100% - 2rem, var(--content-form));
   margin: var(--space-4) auto 0;

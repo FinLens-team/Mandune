@@ -1,13 +1,17 @@
 import {
   ArrowLeft,
   ChevronRight,
-  Clock3,
+  CircleCheck,
+  CircleX,
   Database,
+  Eye,
   FileWarning,
   RefreshCw,
+  TriangleAlert,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { UnknownFieldState } from "../../contracts/index.js";
+import type { AnalysisResultStatus, UnknownFieldState } from "../../contracts/index.js";
 import type {
   HistoryReadResult,
   HistoryRecordV1,
@@ -39,6 +43,8 @@ interface HistoryListProps {
   entries: HistoryListEntry[];
   onNavigateHome: () => void;
   onSelectRecord: (recordId: string) => void;
+  onShowMore?: () => void;
+  visibleCount?: number;
 }
 
 interface HistoryDetailProps {
@@ -60,6 +66,27 @@ const CONSTRAINT_LABELS = {
   near_term_liquidity: "近期流动性需求",
   tolerable_drawdown: "可承受回撤",
 } as const;
+
+/** 列表分批展示的批次大小：避免长历史一次性铺满整页。 */
+export const HISTORY_PAGE_SIZE = 10;
+
+/** 列表只用图标表达结果状态，文字说明留给详情页。 */
+const RESULT_STATUS_ICONS: Record<
+  AnalysisResultStatus,
+  { icon: LucideIcon; label: string; tone: "ok" | "warn" | "risk" }
+> = {
+  supported: { icon: CircleCheck, label: "证据支持", tone: "ok" },
+  limited: { icon: TriangleAlert, label: "有限分析", tone: "warn" },
+  observation_only: { icon: Eye, label: "仅观察", tone: "warn" },
+  unavailable: { icon: CircleX, label: "分析不可用", tone: "risk" },
+};
+
+const BROKEN_DETAIL_LABELS: Record<Exclude<HistoryReadResult["status"], "found">, string> = {
+  not_found: "记录已不存在",
+  unavailable: "记录暂时无法读取",
+  unreadable: "记录完整性校验失败",
+  unsupported_version: "旧版本不可读",
+};
 
 function constraintValue(value: string | UnknownFieldState): string {
   return value === "unknown" || value === "not_decided" ? "未知／尚未决定" : value;
@@ -95,86 +122,67 @@ function SummaryMetadata({ summary }: { summary: HistorySummary }) {
   );
 }
 
-function EntryBoundary({ entry }: { entry: HistoryListEntry }) {
-  if (entry.detail.status === "found") {
-    const boundary = historyRecordBoundary(entry.detail.record);
-    return (
-      <div className="history-entry__badges">
-        {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
-        <EvidenceBoundaryBadge record={entry.detail.record} />
-      </div>
-    );
-  }
-
-  if (entry.detail.status === "unsupported_version") {
-    return <Badge tone="risk">旧版本不可读 · 不会重算</Badge>;
-  }
-  if (entry.detail.status === "unreadable") {
-    return <Badge tone="risk">记录完整性校验失败</Badge>;
-  }
-  if (entry.detail.status === "unavailable") {
-    return <Badge tone="risk">记录暂时无法读取</Badge>;
-  }
-  return <Badge tone="neutral">记录已不存在</Badge>;
-}
-
-export function HistoryList({ entries, onNavigateHome, onSelectRecord }: HistoryListProps) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
-
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, []);
-
+export function HistoryList({
+  entries,
+  onNavigateHome,
+  onSelectRecord,
+  onShowMore,
+  visibleCount,
+}: HistoryListProps) {
   if (entries.length === 0) {
     return (
       <section className="history-state" aria-labelledby="history-empty-heading">
         <Database aria-hidden="true" size={28} />
-        <h2 id="history-empty-heading" ref={headingRef} tabIndex={-1}>这里还没有复盘记录</h2>
+        <h2 id="history-empty-heading" tabIndex={-1}>这里还没有复盘记录</h2>
         <p>完成一次复盘后，它会按时间保存在当前匿名私密工作区，并绑定当时的快照和证据截止时点。</p>
         <Button onClick={onNavigateHome} variant="primary">返回主页发起复盘</Button>
       </section>
     );
   }
 
+  const shownEntries = visibleCount === undefined ? entries : entries.slice(0, visibleCount);
+  const hiddenCount = entries.length - shownEntries.length;
+
   return (
-    <section aria-labelledby="history-list-heading">
-      <div className="history-section-heading">
-        <div>
-          <p className="history-eyebrow">不可变复盘</p>
-          <h2 id="history-list-heading" ref={headingRef} tabIndex={-1}>历史记录</h2>
-        </div>
-        <p>共 {entries.length} 次复盘，按完成时间倒序排列。</p>
-      </div>
+    <section aria-label="复盘记录列表">
+      <p className="history-list__count">共 {entries.length} 次复盘 · 按完成时间倒序</p>
       <ol className="history-list">
-        {entries.map((entry) => (
-          <li key={entry.summary.record_id}>
-            <article className="history-entry">
-              <div className="history-entry__heading">
-                <div>
-                  <p className="history-entry__date">
-                    <Clock3 aria-hidden="true" size={18} />
-                    <time dateTime={entry.summary.analysis_completed_at}>
-                      {formatHistoryDateTime(entry.summary.analysis_completed_at)}
-                    </time>
-                  </p>
-                  <h3>每日持仓复盘</h3>
-                </div>
-                <AnalysisStatus status={entry.summary.result_status} />
-              </div>
-              <EntryBoundary entry={entry} />
-              <SummaryMetadata summary={entry.summary} />
-              <Button
-                className="history-entry__action"
+        {shownEntries.map((entry) => {
+          const broken = entry.detail.status !== "found"
+            ? BROKEN_DETAIL_LABELS[entry.detail.status]
+            : null;
+          const status = RESULT_STATUS_ICONS[entry.summary.result_status];
+          const StatusIcon = broken ? FileWarning : status.icon;
+          return (
+            <li key={entry.summary.record_id}>
+              <button
+                className="history-row"
                 onClick={() => onSelectRecord(entry.summary.record_id)}
-                variant="secondary"
+                type="button"
               >
-                查看本次记录
-                <ChevronRight aria-hidden="true" size={20} />
-              </Button>
-            </article>
-          </li>
-        ))}
+                <StatusIcon
+                  aria-hidden="true"
+                  className={`history-row__status history-row__status--${broken ? "risk" : status.tone}`}
+                  size={20}
+                />
+                <time dateTime={entry.summary.analysis_completed_at}>
+                  {formatHistoryDateTime(entry.summary.analysis_completed_at)}
+                </time>
+                <span className="history-row__sr">{broken ?? status.label}</span>
+                <ChevronRight aria-hidden="true" className="history-row__chevron" size={20} />
+              </button>
+            </li>
+          );
+        })}
       </ol>
+      {hiddenCount > 0 && onShowMore ? (
+        <div className="history-list__more">
+          <p>已显示最近 {shownEntries.length} 条，还有 {hiddenCount} 条更早的记录。</p>
+          <Button onClick={onShowMore} variant="secondary">
+            显示更早的 {Math.min(HISTORY_PAGE_SIZE, hiddenCount)} 条
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -260,14 +268,12 @@ function FoundDetail({
   return (
     <article className="history-detail" aria-labelledby="history-detail-heading">
       <Button className="history-detail__back" onClick={onBack} variant="secondary">
-        <ArrowLeft aria-hidden="true" size={20} />
+        <ArrowLeft aria-hidden="true" size={18} />
         返回历史列表
       </Button>
-      <header className="history-detail__header">
-        <div>
-          <p className="history-eyebrow">不可变历史记录</p>
-          <h2 id="history-detail-heading" ref={headingRef} tabIndex={-1}>本次复盘边界</h2>
-        </div>
+      <header className="history-page__header">
+        <p>不可变复盘存档</p>
+        <h2 id="history-detail-heading" ref={headingRef} tabIndex={-1}>本次复盘边界</h2>
         <div className="history-entry__badges">
           {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
           <EvidenceBoundaryBadge record={record} />
@@ -410,12 +416,16 @@ export function HistoryView({
   const [loadRevision, setLoadRevision] = useState(0);
   const [result, setResult] = useState<HistoryEntriesResult | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const lastSelectedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (availability !== "active") return;
     let active = true;
     setResult(null);
     setSelectedRecordId(null);
+    setVisibleCount(HISTORY_PAGE_SIZE);
     void loadHistoryEntries(reader, workspaceId).then((nextResult) => {
       if (active) setResult(nextResult);
     });
@@ -424,22 +434,46 @@ export function HistoryView({
     };
   }, [availability, loadRevision, reader, workspaceId]);
 
+  // 从详情返回列表时，把焦点交还给页头标题，与进入页面时一致。
+  useEffect(() => {
+    if (lastSelectedRef.current && !selectedRecordId) {
+      headingRef.current?.focus();
+    }
+    lastSelectedRef.current = selectedRecordId;
+  }, [selectedRecordId]);
+
   if (availability !== "active") {
     return <WorkspaceUnavailable availability={availability} onNavigateHome={onNavigateHome} />;
   }
 
-  if (!result) {
+  const selectedEntry = result?.status === "loaded" && selectedRecordId
+    ? result.entries.find((entry) => entry.summary.record_id === selectedRecordId)
+    : undefined;
+
+  if (selectedEntry) {
     return (
+      <div className="history-view" data-reduce-motion={reduceMotion || undefined}>
+        <HistoryDetail
+          detail={selectedEntry.detail}
+          onBack={() => setSelectedRecordId(null)}
+          onNavigateHome={onNavigateHome}
+          onOpenRecord={onOpenRecord}
+        />
+      </div>
+    );
+  }
+
+  let content: React.ReactNode;
+  if (!result) {
+    content = (
       <section className="history-state" aria-live="polite" role="status">
         <Database aria-hidden="true" size={28} />
         <h2>正在读取当前工作区历史</h2>
         <p>只读取已提交的不可变记录，不会重新调用数据供应商。</p>
       </section>
     );
-  }
-
-  if (result.status === "unavailable") {
-    return (
+  } else if (result.status === "unavailable") {
+    content = (
       <section className="history-state" aria-labelledby="history-load-failed-heading">
         <FileWarning aria-hidden="true" size={28} />
         <h2 id="history-load-failed-heading">历史暂时无法读取</h2>
@@ -450,28 +484,30 @@ export function HistoryView({
         </Button>
       </section>
     );
+  } else {
+    content = (
+      <HistoryList
+        entries={result.entries}
+        onNavigateHome={onNavigateHome}
+        onSelectRecord={setSelectedRecordId}
+        onShowMore={() => setVisibleCount((count) => count + HISTORY_PAGE_SIZE)}
+        visibleCount={visibleCount}
+      />
+    );
   }
-
-  const selectedEntry = selectedRecordId
-    ? result.entries.find((entry) => entry.summary.record_id === selectedRecordId)
-    : undefined;
 
   return (
     <div className="history-view" data-reduce-motion={reduceMotion || undefined}>
-      {selectedEntry ? (
-        <HistoryDetail
-          detail={selectedEntry.detail}
-          onBack={() => setSelectedRecordId(null)}
-          onNavigateHome={onNavigateHome}
-          onOpenRecord={onOpenRecord}
-        />
-      ) : (
-        <HistoryList
-          entries={result.entries}
-          onNavigateHome={onNavigateHome}
-          onSelectRecord={setSelectedRecordId}
-        />
-      )}
+      <Button className="history-view__back" onClick={onNavigateHome} variant="secondary">
+        <ArrowLeft aria-hidden="true" size={18} />
+        返回主页
+      </Button>
+      <header className="history-page__header">
+        <p>不可变复盘存档</p>
+        <h1 id="history-list-heading" ref={headingRef} tabIndex={-1}>历史记录</h1>
+        <p>每次复盘完成后按时间保存在当前匿名工作区，只读取当时的快照与证据边界，不重算旧结论。</p>
+      </header>
+      {content}
     </div>
   );
 }

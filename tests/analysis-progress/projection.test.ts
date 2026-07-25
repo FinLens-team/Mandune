@@ -8,6 +8,7 @@ import {
 } from "../../src/contracts/index.js";
 import {
   projectAnalysisProgress,
+  streamHeadingMessages,
   shouldAnimateAnalysisProgress,
   type AnalysisConnectionState,
 } from "../../src/features/analysis-progress/projection.js";
@@ -29,6 +30,17 @@ function event(
 }
 
 describe("analysis progress projection", () => {
+  it("derives unique progress messages from streamed Markdown headings", () => {
+    expect(streamHeadingMessages(
+      "# 今日分析\n正文\n## **对比分析**\n## 对比分析\n### [风险说明](#risk)",
+    )).toEqual([
+      "正在生成 今日分析",
+      "正在生成 对比分析",
+      "正在生成 风险说明",
+    ]);
+    expect(streamHeadingMessages("# 尚未换行")).toEqual(["正在生成 尚未换行"]);
+  });
+
   it.each<AnalysisConnectionState>([
     "connecting",
     "connected",

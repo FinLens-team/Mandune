@@ -25,6 +25,7 @@ export interface ActiveJourneyAnalysis {
   events: TaskEvent[];
   experienceSource: JourneyExperienceSource;
   resultInput?: JourneyLongCardRuntimeInput;
+  /** Cumulative progress-only Markdown headings from the analysis stream. */
   streamText?: string;
   terminal?: AnalysisProgressTerminal;
 }

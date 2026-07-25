@@ -3,12 +3,17 @@ import { A2A_DEEP_REVIEW_MODEL_ID } from "../a2a/types.js";
 
 const ARK_OPENAI_COMPATIBLE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
+/** Wire protocol of the configured model endpoint. */
+export type ModelProtocol = "openai" | "anthropic_messages";
+
 export interface ModelGatewayConfig {
   providerName: string;
   baseURL: string;
   apiKey: string;
   modelId: string;
   supportsStructuredOutputs: boolean;
+  /** openai = Chat Completions; anthropic_messages = /messages (e.g. step-explore). */
+  protocol: ModelProtocol;
 }
 
 export interface A2ADeepAgentConfig {
@@ -19,6 +24,12 @@ export interface A2ADeepAgentConfig {
   publicBaseUrl?: string;
 }
 
+/**
+ * stream: 放宽模式，真实行情（免鉴权公开源）+ 模型流式自由文本，只需 MODEL_*。
+ * v2: 严格每日复盘 V2 管线，需要 PandaAI Python worker 与 Bocha 凭据。
+ */
+export type AnalysisMode = "stream" | "v2";
+
 export interface ServerConfig {
   host: string;
   port: number;
@@ -27,8 +38,14 @@ export interface ServerConfig {
   dbPath: string;
   migrationsDirectory: string;
   dbBusyTimeoutMs: number;
+  /** Executor selection when a model is configured. Defaults to stream. */
+  analysisMode: AnalysisMode;
+  /** Overall per-analysis hard deadline in ms. Demo may relax beyond 180s. */
+  analysisDeadlineMs: number;
   /** Server-only model gateway config. Never exposed by /health or to VITE_*. */
   model?: ModelGatewayConfig;
+  /** Ordered fallback gateways tried when the primary model fails. */
+  modelFallbacks: ModelGatewayConfig[];
   /** Optional server-only Bocha credential. Never exposed by /health. */
   bochaApiKey?: string;
   /** Python 3.12 executable used only by the isolated PandaAI batch worker. */
@@ -63,6 +80,13 @@ export function loadServerConfig(
   }
 
   const model = loadModelConfig(env);
+  const analysisMode = loadAnalysisMode(env);
+  const rawDeadline = env.MANDONG_ANALYSIS_DEADLINE_MS?.trim();
+  const analysisDeadlineMs = rawDeadline ? Number(rawDeadline) : 180_000;
+  if (!Number.isInteger(analysisDeadlineMs) || analysisDeadlineMs < 10_000 || analysisDeadlineMs > 3_600_000) {
+    throw new Error("Invalid MANDONG_ANALYSIS_DEADLINE_MS: expected 10000..3600000.");
+  }
+  const modelFallbacks = model ? loadModelFallbacks(env) : [];
   const bochaApiKey = env.BOCHA_API_KEY?.trim();
   const pandaPythonExecutable = env.PANDA_PYTHON_EXECUTABLE?.trim() || "python3.12";
   const a2a = loadA2AConfig(env);
@@ -77,6 +101,9 @@ export function loadServerConfig(
     dbPath,
     migrationsDirectory,
     dbBusyTimeoutMs,
+    analysisMode,
+    analysisDeadlineMs,
+    modelFallbacks,
     pandaPythonExecutable,
     ...(model ? { model } : {}),
     ...(bochaApiKey ? { bochaApiKey } : {}),
@@ -132,21 +159,49 @@ function loadA2AConfig(env: NodeJS.ProcessEnv): A2ADeepAgentConfig | undefined {
   };
 }
 
+function loadAnalysisMode(env: NodeJS.ProcessEnv): AnalysisMode {
+  const raw = env.MANDONG_ANALYSIS_MODE?.trim();
+  if (!raw || raw === "stream") return "stream";
+  if (raw === "v2") return "v2";
+  throw new Error("Invalid MANDONG_ANALYSIS_MODE: expected stream or v2.");
+}
+
 /**
  * Reads the server-only model gateway configuration. Returns undefined when the
  * required MODEL_* variables are absent so the runtime falls back to fixtures.
  * These values must never enter VITE_*, the browser bundle, logs, or /health.
  */
 function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined {
-  const baseURL = env.MODEL_BASE_URL?.trim();
-  const apiKey = env.MODEL_API_KEY?.trim();
-  const modelId = env.MODEL_ID?.trim();
+  return loadModelConfigWithPrefix(env, "MODEL_");
+}
+
+/**
+ * Reads ordered fallback gateways from MODEL_FALLBACK_1_*, MODEL_FALLBACK_2_*, …
+ * The chain stops at the first index whose variables are entirely absent.
+ */
+function loadModelFallbacks(env: NodeJS.ProcessEnv): ModelGatewayConfig[] {
+  const fallbacks: ModelGatewayConfig[] = [];
+  for (let index = 1; index <= 8; index += 1) {
+    const config = loadModelConfigWithPrefix(env, `MODEL_FALLBACK_${index}_`);
+    if (!config) break;
+    fallbacks.push(config);
+  }
+  return fallbacks;
+}
+
+function loadModelConfigWithPrefix(
+  env: NodeJS.ProcessEnv,
+  prefix: string,
+): ModelGatewayConfig | undefined {
+  const baseURL = env[`${prefix}BASE_URL`]?.trim();
+  const apiKey = env[`${prefix}API_KEY`]?.trim();
+  const modelId = env[`${prefix}ID`]?.trim();
   if (!baseURL && !apiKey && !modelId) return undefined;
   if (!baseURL || !apiKey || !modelId) {
-    throw new Error("Incomplete model config: MODEL_BASE_URL, MODEL_API_KEY and MODEL_ID are all required.");
+    throw new Error(`Incomplete model config: ${prefix}BASE_URL, ${prefix}API_KEY and ${prefix}ID are all required.`);
   }
-  if (modelId !== "step-explore") {
-    throw new Error("Invalid MODEL_ID: daily review V2 only permits step-explore.");
+  if (/[\r\n\0\s]/u.test(modelId)) {
+    throw new Error(`Invalid ${prefix}ID: expected a single token without whitespace.`);
   }
   try {
     const url = new URL(baseURL);
@@ -154,9 +209,14 @@ function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined
       url.protocol === "https:" || url.hostname === "localhost" || url.hostname === "127.0.0.1";
     if (!secure) throw new Error("insecure");
   } catch {
-    throw new Error("Invalid MODEL_BASE_URL: expected an https URL or localhost.");
+    throw new Error(`Invalid ${prefix}BASE_URL: expected an https URL or localhost.`);
   }
-  const providerName = env.MODEL_PROVIDER_NAME?.trim() || "model-gateway";
-  const supportsStructuredOutputs = env.MODEL_SUPPORTS_STRUCTURED_OUTPUTS?.trim() === "true";
-  return { providerName, baseURL, apiKey, modelId, supportsStructuredOutputs };
+  const providerName = env[`${prefix}PROVIDER_NAME`]?.trim() || "model-gateway";
+  const supportsStructuredOutputs = env[`${prefix}SUPPORTS_STRUCTURED_OUTPUTS`]?.trim() === "true";
+  const rawProtocol = env[`${prefix}PROTOCOL`]?.trim();
+  if (rawProtocol && rawProtocol !== "openai" && rawProtocol !== "anthropic_messages") {
+    throw new Error(`Invalid ${prefix}PROTOCOL: expected openai or anthropic_messages.`);
+  }
+  const protocol: ModelProtocol = rawProtocol === "anthropic_messages" ? "anthropic_messages" : "openai";
+  return { providerName, baseURL, apiKey, modelId, supportsStructuredOutputs, protocol };
 }

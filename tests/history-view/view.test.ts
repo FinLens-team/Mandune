@@ -23,7 +23,9 @@ interface HistoryViewModule {
     entries: HistoryListEntry[];
     onNavigateHome: () => void;
     onSelectRecord: (recordId: string) => void;
+    onShowMore?: () => void;
     resolveRecordSource?: (record: HistoryRecordV1) => DemoBadgeSource | undefined;
+    visibleCount?: number;
   }>;
   HistoryView: ComponentType<{
     availability?: "active" | "deleted" | "expired";
@@ -62,7 +64,7 @@ const noopReader: HistoryReader = {
 };
 
 describe("S10 history list and detail", () => {
-  it("shows real snapshot, cutoff, result, example, and fixture boundaries", async () => {
+  it("shows compact rows with result status and time only", async () => {
     const { HistoryList } = await loadHistoryView();
     const markup = renderToStaticMarkup(createElement(HistoryList, {
       entries: [{ detail: { status: "found", record: record() }, summary }],
@@ -70,15 +72,49 @@ describe("S10 history list and detail", () => {
       onSelectRecord: vi.fn(),
     }));
 
-    expect(markup).toContain("历史记录");
     expect(markup).toContain("共 1 次复盘");
     expect(markup).toContain("有限分析");
-    expect(markup).toContain("snapshot-history-1");
-    expect(markup).toContain("证据截止");
+    expect(markup).toContain("history-row");
+    // 快照标识与证据截止只在详情展示，避免列表纵向膨胀。
+    expect(markup).not.toContain("snapshot-history-1");
     expect(markup).not.toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("fixture 证据 · 非实时");
-    expect(markup).toContain("查看本次记录");
     expect(markup).not.toContain("实时行情");
+  });
+
+  it("caps the visible list and loads older records in batches", async () => {
+    const { HistoryList } = await loadHistoryView();
+    const entries: HistoryListEntry[] = Array.from({ length: 12 }, (_, index) => ({
+      detail: { status: "found", record: record() },
+      summary: { ...summary, record_id: `analysis-history-${index + 1}` },
+    }));
+    const markup = renderToStaticMarkup(createElement(HistoryList, {
+      entries,
+      onNavigateHome: vi.fn(),
+      onSelectRecord: vi.fn(),
+      onShowMore: vi.fn(),
+      visibleCount: 10,
+    }));
+
+    expect(markup).toContain("共 12 次复盘");
+    expect(markup.match(/history-row"/g)).toHaveLength(10);
+    expect(markup).toContain("已显示最近 10 条，还有 2 条更早的记录");
+    expect(markup).toContain("显示更早的 2 条");
+  });
+
+  it("keeps one page header and leaves cross-page navigation to the workspace drawer", async () => {
+    const { HistoryView } = await loadHistoryView();
+    const markup = renderToStaticMarkup(createElement(HistoryView, {
+      onNavigateHome: vi.fn(),
+      onOpenRecord: vi.fn(),
+      reader: noopReader,
+      workspaceId: "workspace-history",
+    }));
+
+    expect(markup).toContain("返回主页");
+    expect(markup).toContain("history-page__header");
+    expect(markup).toContain("历史记录");
+    // 单一页头：不再与外层"复盘历史"标题重复。
+    expect(markup).not.toContain("复盘历史");
   });
 
   it("keeps experience-source badges out of the compact history surfaces", async () => {

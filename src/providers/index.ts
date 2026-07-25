@@ -37,3 +37,5 @@ export {
   type CachedPandaEvidenceResult,
   type PandaMarketCache,
 } from "./panda-cache.js";
+export { TencentMarketEvidenceSource } from "./tencent-market.js";
+export { SupplementedMarketEvidenceCollector } from "./market-fallback.js";
