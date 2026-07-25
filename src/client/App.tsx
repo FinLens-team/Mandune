@@ -105,7 +105,7 @@ export function App(props: AppProps = {}) {
     controller.navigate("home");
   }
 
-  function workspaceNav(currentPage: "history" | "atlas" | "theme" | "about") {
+  function workspaceNav(currentPage: "analysis" | "history" | "atlas" | "theme" | "about") {
     return (
       <WorkspaceNav
         currentPage={currentPage}
@@ -210,8 +210,6 @@ export function App(props: AppProps = {}) {
           analysisId={state.activeAnalysis.analysisId}
           connection={state.activeAnalysis.connection}
           events={state.activeAnalysis.events}
-          onLeave={() => controller.leaveAnalysis()}
-          onNavigateHome={() => goHome("home")}
           onOpenResult={() => controller.openCurrentResult()}
           onRetry={() => state.draft && void controller.startAnalysis(state.draft)}
           reduceMotion={state.reducedMotion}
@@ -219,6 +217,7 @@ export function App(props: AppProps = {}) {
           terminal={state.activeAnalysis.terminal}
           themeId={state.activeAnalysis.themeId}
         />
+        {workspaceNav("analysis")}
       </div>
     );
   }

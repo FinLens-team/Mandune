@@ -16,9 +16,8 @@ export interface WorkspaceNavProps {
 }
 
 /**
- * Persistent workspace navigation for the secondary pages (history,
- * atlas, about): the same floating menu button + drawer that the data
- * management view uses, and the single way back to the home stage.
+ * Persistent workspace navigation for analysis and secondary pages: the same
+ * floating menu button + drawer that the data management view uses.
  */
 export function WorkspaceNav({
   currentPage,

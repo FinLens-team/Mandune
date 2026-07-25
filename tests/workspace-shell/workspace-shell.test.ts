@@ -9,7 +9,7 @@ import type { snapshotCurrentDraft } from "../../src/features/review/model.js";
 interface WorkspaceShellModule {
   WorkspaceDrawer: ComponentType<{
     open: boolean;
-    currentPage: "home" | "portfolio" | "history" | "atlas" | "theme" | "about";
+    currentPage: "home" | "portfolio" | "history" | "atlas" | "theme" | "about" | "analysis";
     reduceMotion: boolean;
     returnFocus: null;
     onClose: () => void;
@@ -91,6 +91,28 @@ describe("S4-S7 workspace shell", () => {
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("已保存输入快照");
     expect(markup).not.toContain("登录");
+  });
+
+  it("uses the drawer as the analysis page return path", async () => {
+    const { WorkspaceDrawer } = await loadWorkspaceShell();
+    const markup = renderToStaticMarkup(createElement(WorkspaceDrawer, {
+      currentPage: "analysis",
+      onClose: vi.fn(),
+      onNavigateAbout: vi.fn(),
+      onNavigateAtlas: vi.fn(),
+      onNavigateHistory: vi.fn(),
+      onNavigateHome: vi.fn(),
+      onNavigatePortfolio: vi.fn(),
+      onNavigateTheme: vi.fn(),
+      open: true,
+      reduceMotion: true,
+      returnFocus: null,
+    }));
+
+    expect(markup).toContain("工作区导航");
+    expect(markup).toContain('data-initial-focus="true"');
+    expect(markup).toContain("主页");
+    expect(markup).not.toContain('aria-current="page"');
   });
 
   it("accepts controlled journey state and keeps the mascot as the resume entry", async () => {

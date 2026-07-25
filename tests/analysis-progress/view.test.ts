@@ -12,7 +12,6 @@ interface ProgressModule {
     analysisId: string;
     connection: AnalysisConnectionState;
     events: readonly TaskEvent[];
-    onLeave?: () => void;
     onOpenResult?: () => void;
     onRetry?: () => void;
     reduceMotion?: boolean;
@@ -46,7 +45,6 @@ describe("S8 analysis progress view (simple version)", () => {
         analysisId: "analysis-31",
         connection: "connected",
         events: [],
-        onLeave: vi.fn(),
       }),
     );
 
@@ -55,7 +53,7 @@ describe("S8 analysis progress view (simple version)", () => {
     expect(markup).toContain('alt=""');
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("等待首条真实任务事件");
-    expect(markup).toContain("暂时离开");
+    expect(markup).not.toContain("暂时离开");
     expect(markup).not.toContain("<video");
   });
 
@@ -131,6 +129,9 @@ describe("S8 analysis progress view (simple version)", () => {
     expect(markup).toContain("查看复盘报告");
     expect(markup).not.toContain("重试本次复盘");
     expect(markup).not.toContain("暂时离开");
+    expect(markup).not.toContain("返回主页");
+    expect(markup).toContain('class="analysis-progress__actions"');
+    expect(markup).toContain('class="analysis-status ui-analysis-status ui-analysis-status--limited analysis-progress__outcome"');
   });
 
   it("keeps unavailable out of S9 and exposes a concrete retry path", async () => {

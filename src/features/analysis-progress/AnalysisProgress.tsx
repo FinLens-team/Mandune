@@ -36,8 +36,6 @@ export interface AnalysisProgressProps {
   analysisId: string;
   connection: AnalysisConnectionState;
   events: readonly TaskEvent[];
-  onLeave?: () => void;
-  onNavigateHome?: () => void;
   onOpenResult?: (status: Exclude<AnalysisResultStatus, "unavailable">) => void;
   onRetry?: () => void;
   reduceMotion?: boolean;
@@ -74,8 +72,6 @@ export function AnalysisProgress({
   analysisId,
   connection,
   events,
-  onLeave,
-  onNavigateHome,
   onOpenResult,
   onRetry,
   reduceMotion = false,
@@ -311,19 +307,7 @@ export function AnalysisProgress({
                   重试本次复盘
                 </Button>
               ) : null}
-              {onNavigateHome ? (
-                <Button onClick={onNavigateHome} variant="secondary">
-                  返回主页
-                </Button>
-              ) : null}
             </div>
-          </div>
-        ) : onLeave ? (
-          <div className="analysis-progress__actions analysis-progress__actions--running">
-            <Button onClick={onLeave} variant="secondary">
-              暂时离开
-            </Button>
-            <p className="analysis-progress__leave-note">任务不会取消，返回后继续同一进度。</p>
           </div>
         ) : null}
       </main>
