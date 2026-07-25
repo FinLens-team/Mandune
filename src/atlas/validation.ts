@@ -43,6 +43,7 @@ export function validateAtlasCandidate(
   value: unknown,
   expectedKind: AtlasCardKind,
   analysis: AnalysisResult,
+  additionalReferenceIds: readonly string[] = [],
 ): value is AtlasCandidate {
   if (!object(value) || value.schema_version !== ATLAS_CANDIDATE_SCHEMA_VERSION || value.kind !== expectedKind) {
     return false;
@@ -64,7 +65,10 @@ export function validateAtlasCandidate(
   }
 
   const allowedReferences = new Set(
-    analysis.conclusions.flatMap((item) => item.refs.map((ref) => ref.ref_id)),
+    [
+      ...analysis.conclusions.flatMap((item) => item.refs.map((ref) => ref.ref_id)),
+      ...additionalReferenceIds,
+    ],
   );
   return onlyKeys(value, [
     "schema_version", "kind", "canonical_name", "aliases", "scope_labels",

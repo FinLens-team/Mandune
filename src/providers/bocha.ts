@@ -11,6 +11,16 @@ export const PRIMARY_SOURCE_HOSTS = [
   "efunds.com.cn",
 ] as const;
 
+export const TRUSTED_MEDIA_HOSTS = [
+  "cnstock.com",
+  "stcn.com",
+  "cs.com.cn",
+  "yicai.com",
+  "caixin.com",
+] as const;
+
+export type BochaSourceTier = "official" | "trusted_media" | "other";
+
 export interface BochaCandidate {
   id: string;
   title: string;
@@ -23,6 +33,15 @@ export type BochaSearchResult =
   | { status: "available"; candidates: BochaCandidate[] }
   | { status: "empty"; candidates: [] }
   | { status: "rate_limited" | "failed" | "malformed"; candidates: []; reason: string };
+
+export type BochaSourceDocumentResult =
+  | {
+      status: "available";
+      sourceTier: Exclude<BochaSourceTier, "other">;
+      title?: string;
+      excerpt: string;
+    }
+  | { status: "unavailable"; sourceTier: BochaSourceTier; reason: string };
 
 export interface BochaSearchRequest {
   query: string;
@@ -82,19 +101,49 @@ function businessCode(body: unknown): string | number | undefined {
   return typeof value === "string" || typeof value === "number" ? value : undefined;
 }
 
-export function isPrimarySourceUrl(value: string): boolean {
+function normalizedHost(value: string): string | undefined {
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:") {
-      return false;
-    }
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    return PRIMARY_SOURCE_HOSTS.some(
-      (allowed) => host === allowed || host.endsWith(`.${allowed}`),
-    );
+    if (url.protocol !== "https:") return undefined;
+    return url.hostname.toLowerCase().replace(/^www\./, "");
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+function hostMatches(host: string, allowed: readonly string[]): boolean {
+  return allowed.some((value) => host === value || host.endsWith(`.${value}`));
+}
+
+export function sourceTierForUrl(value: string): BochaSourceTier {
+  const host = normalizedHost(value);
+  if (!host) return "other";
+  if (hostMatches(host, PRIMARY_SOURCE_HOSTS)) return "official";
+  if (hostMatches(host, TRUSTED_MEDIA_HOSTS)) return "trusted_media";
+  return "other";
+}
+
+export function isPrimarySourceUrl(value: string): boolean {
+  return sourceTierForUrl(value) === "official";
+}
+
+function extractDocument(html: string): { title?: string; excerpt: string } | undefined {
+  const withoutNoise = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ");
+  const titleMatch = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(withoutNoise);
+  const text = withoutNoise
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return undefined;
+  const title = titleMatch?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return { ...(title ? { title: title.slice(0, 240) } : {}), excerpt: text.slice(0, 2_000) };
 }
 
 export class BochaWebSearchClient {
@@ -172,6 +221,46 @@ export class BochaWebSearchClient {
       return response.ok ? "located" : "unavailable";
     } catch {
       return "unavailable";
+    }
+  }
+
+  async fetchSourceDocument(candidate: BochaCandidate, signal: AbortSignal): Promise<BochaSourceDocumentResult> {
+    const sourceTier = sourceTierForUrl(candidate.url);
+    if (sourceTier === "other") {
+      return { status: "unavailable", sourceTier, reason: "source_not_allowlisted" };
+    }
+    try {
+      const response = await this.fetchImpl(candidate.url, {
+        method: "GET",
+        redirect: "manual",
+        signal,
+        headers: { Accept: "text/html,text/plain;q=0.9" },
+      });
+      if (!response.ok) {
+        return { status: "unavailable", sourceTier, reason: `http_${response.status}` };
+      }
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (contentType && !contentType.includes("text/html") && !contentType.includes("text/plain")) {
+        return { status: "unavailable", sourceTier, reason: "unsupported_content_type" };
+      }
+      const declaredLength = Number(response.headers.get("content-length"));
+      if (Number.isFinite(declaredLength) && declaredLength > 1_000_000) {
+        return { status: "unavailable", sourceTier, reason: "document_too_large" };
+      }
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength > 1_000_000) {
+        return { status: "unavailable", sourceTier, reason: "document_too_large" };
+      }
+      const document = extractDocument(new TextDecoder().decode(bytes));
+      return document
+        ? { status: "available", sourceTier, ...document }
+        : { status: "unavailable", sourceTier, reason: "document_empty" };
+    } catch (error) {
+      return {
+        status: "unavailable",
+        sourceTier,
+        reason: signal.aborted ? "cancelled" : error instanceof Error ? error.name : "fetch_failed",
+      };
     }
   }
 }

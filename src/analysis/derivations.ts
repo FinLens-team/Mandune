@@ -32,6 +32,12 @@ const CONSTRAINT_KEYS = [
 const STRUCTURED_MARKET_METRICS = new Set(["close", "nav"]);
 const OBSERVABLE_EVIDENCE_STATUSES = new Set(["available", "stale", "ambiguous", "conflicting", "unverified"]);
 
+interface DailyChange {
+  lineId: string;
+  percentage: number;
+  evidenceRefs: [string, string];
+}
+
 function semanticDate(value: string): string | undefined {
   const date = value.includes("T") ? value.slice(0, 10) : value;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
@@ -64,6 +70,45 @@ function declaredPercentage(value: string): number | undefined {
   return Number.isFinite(percentage) && percentage >= 0 && percentage <= 100 ? percentage : undefined;
 }
 
+function rounded(value: number): number {
+  return Number(value.toFixed(6));
+}
+
+function dailyChanges(evidence: readonly EvidenceRecord[], latestTradingDay: string): DailyChange[] {
+  const byLine = new Map<string, EvidenceRecord[]>();
+  for (const item of evidence) {
+    const lineId = assetLineId(item);
+    if (!lineId || typeof item.value !== "number" || !Number.isFinite(item.value)) continue;
+    if (item.metric_or_event_type !== "close" && item.metric_or_event_type !== "nav") continue;
+    const eligible = item.status === "available" ||
+      (item.status === "ambiguous" && item.normalization_note === "unitless_return_eligible:same_provider_method");
+    if (!eligible || !semanticDate(item.observation_or_event_time)) continue;
+    const rows = byLine.get(lineId) ?? [];
+    rows.push(item);
+    byLine.set(lineId, rows);
+  }
+
+  const result: DailyChange[] = [];
+  for (const [lineId, rows] of byLine) {
+    const current = rows.find((item) => semanticDate(item.observation_or_event_time) === latestTradingDay);
+    if (!current || typeof current.value !== "number") continue;
+    const previous = rows
+      .filter((item) =>
+        item.metric_or_event_type === current.metric_or_event_type &&
+        item.source.name === current.source.name &&
+        semanticDate(item.observation_or_event_time)! < latestTradingDay &&
+        typeof item.value === "number")
+      .sort((left, right) => right.observation_or_event_time.localeCompare(left.observation_or_event_time))[0];
+    if (!previous || typeof previous.value !== "number" || previous.value === 0) continue;
+    result.push({
+      lineId,
+      percentage: rounded(((current.value - previous.value) / Math.abs(previous.value)) * 100),
+      evidenceRefs: [previous.id, current.id],
+    });
+  }
+  return result.sort((left, right) => left.lineId.localeCompare(right.lineId));
+}
+
 function deriveStatus(
   lineCount: number,
   coveredCount: number,
@@ -78,12 +123,15 @@ function deriveStatus(
 
 export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivations {
   const evidence = [...input.evidence].sort((left, right) => left.id.localeCompare(right.id));
+  const changes = dailyChanges(evidence, input.latestCompleteTradingDay);
+  const changeByLine = new Map(changes.map((item) => [item.lineId, item]));
   const availableByLine = new Set(
     evidence
       .filter((item) => isMateriallyAvailable(item, input.latestCompleteTradingDay))
       .map(assetLineId)
       .filter((lineId): lineId is string => lineId !== undefined),
   );
+  for (const change of changes) availableByLine.add(change.lineId);
   const unsupportedByLine = new Set(
     evidence
       .filter((item) => item.status === "unsupported")
@@ -129,9 +177,11 @@ export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivation
     value: covered.length,
     unit: "line",
     input_refs: input.snapshot.lines.map((line) => line.line_id),
-    evidence_refs: evidence.filter((item) =>
-      isMateriallyAvailable(item, input.latestCompleteTradingDay)).map((item) => item.id),
-    formula_or_rule: "Count distinct confirmed line ids with available, time-valid, non-candidate evidence.",
+    evidence_refs: [
+      ...evidence.filter((item) => isMateriallyAvailable(item, input.latestCompleteTradingDay)).map((item) => item.id),
+      ...changes.flatMap((item) => item.evidenceRefs),
+    ].sort(),
+    formula_or_rule: "Count confirmed lines with time-valid market evidence or a unit-independent daily return derived from two observations from the same provider method.",
     provenance: "derived",
   };
   const declaredShares = input.snapshot.lines.map((line) => ({
@@ -160,11 +210,117 @@ export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivation
           formula_or_rule: "Sum exact percentages parsed from every user-confirmed size_basis.",
           provenance: "derived",
         },
+        ...[...new Set(input.snapshot.lines.map((line) => line.asset_class))].map<DerivedResult>((assetClass) => ({
+          id: `exposure-asset-class-share-${assetClass}`,
+          label: `${assetClass} 已确认持仓占比`,
+          value: rounded(input.snapshot.lines.reduce((total, line, index) =>
+            line.asset_class === assetClass ? total + declaredShares[index]!.value! : total, 0)),
+          unit: "%",
+          input_refs: input.snapshot.lines.filter((line) => line.asset_class === assetClass).map((line) => line.line_id),
+          evidence_refs: [],
+          formula_or_rule: `Sum exact user-confirmed percentages for lines whose asset_class equals ${assetClass}.`,
+          provenance: "derived",
+        })),
+        {
+          id: "concentration-top-1-share",
+          label: "最大单项持仓占比",
+          value: Math.max(...declaredShares.map((item) => item.value!)),
+          unit: "%",
+          input_refs: declaredShares.map((item) => item.lineId),
+          evidence_refs: [],
+          formula_or_rule: "Take the maximum exact percentage parsed from user-confirmed size_basis values.",
+          provenance: "derived",
+        },
+        {
+          id: "concentration-top-3-share",
+          label: "前三项持仓占比",
+          value: rounded(declaredShares.map((item) => item.value!).sort((left, right) => right - left)
+            .slice(0, 3).reduce((total, value) => total + value, 0)),
+          unit: "%",
+          input_refs: declaredShares.map((item) => item.lineId),
+          evidence_refs: [],
+          formula_or_rule: "Sort exact user-confirmed percentages descending and sum the largest three.",
+          provenance: "derived",
+        },
+        {
+          id: "concentration-hhi",
+          label: "持仓集中度 HHI",
+          value: rounded(declaredShares.reduce((total, item) => total + item.value! ** 2, 0)),
+          unit: "index",
+          input_refs: declaredShares.map((item) => item.lineId),
+          evidence_refs: [],
+          formula_or_rule: "Sum the squares of exact user-confirmed percentage shares.",
+          provenance: "derived",
+        },
+      ]
+    : [];
+  const dailyChangeDerivations = changes.map<DerivedResult>((change) => ({
+    id: `daily-change-pct-${change.lineId}`,
+    label: `${change.lineId} 最新完整交易日涨跌幅`,
+    value: change.percentage,
+    unit: "%",
+    input_refs: [change.lineId],
+    evidence_refs: change.evidenceRefs,
+    formula_or_rule: "(current provider-native observation - previous observation) / abs(previous observation) * 100; both observations use the same provider method and metric.",
+    provenance: "derived",
+  }));
+  const contributionDerivations: DerivedResult[] = declaredShares.every((item) => item.value !== undefined)
+    ? declaredShares.flatMap<DerivedResult>((share) => {
+        const change = changeByLine.get(share.lineId);
+        return change ? [{
+          id: `daily-contribution-pct-point-${share.lineId}`,
+          label: `${share.lineId} 当日组合贡献`,
+          value: rounded((share.value! * change.percentage) / 100),
+          unit: "percentage_point",
+          input_refs: [share.lineId],
+          evidence_refs: change.evidenceRefs,
+          formula_or_rule: "user-confirmed holding percentage * unit-independent daily return / 100.",
+          provenance: "derived",
+        }] : [];
+      })
+    : [];
+  const contributionSummary: DerivedResult[] = contributionDerivations.length > 0
+    ? [
+        {
+          id: "daily-portfolio-change-pct",
+          label: "组合当日估算涨跌幅",
+          value: rounded(contributionDerivations.reduce((total, item) => total + Number(item.value), 0)),
+          unit: "%",
+          input_refs: contributionDerivations.flatMap((item) => item.input_refs),
+          evidence_refs: [...new Set(contributionDerivations.flatMap((item) => item.evidence_refs))].sort(),
+          formula_or_rule: "Sum each line's percentage-point contribution from exact user-confirmed holding percentages.",
+          provenance: "derived",
+        },
+        {
+          id: "daily-largest-contributor-line",
+          label: "当日最大贡献持仓",
+          value: contributionDerivations.reduce((best, item) => Number(item.value) > Number(best.value) ? item : best)
+            .input_refs[0] ?? null,
+          input_refs: contributionDerivations.flatMap((item) => item.input_refs),
+          evidence_refs: contributionDerivations.reduce((best, item) => Number(item.value) > Number(best.value) ? item : best)
+            .evidence_refs,
+          formula_or_rule: "Select the line with the greatest deterministic percentage-point contribution.",
+          provenance: "derived",
+        },
+        {
+          id: "daily-largest-detractor-line",
+          label: "当日最大拖累持仓",
+          value: contributionDerivations.reduce((worst, item) => Number(item.value) < Number(worst.value) ? item : worst)
+            .input_refs[0] ?? null,
+          input_refs: contributionDerivations.flatMap((item) => item.input_refs),
+          evidence_refs: contributionDerivations.reduce((worst, item) => Number(item.value) < Number(worst.value) ? item : worst)
+            .evidence_refs,
+          formula_or_rule: "Select the line with the smallest deterministic percentage-point contribution.",
+          provenance: "derived",
+        },
       ]
     : [];
   const derived: DerivedResult[] = [
     coverageCount,
     ...percentageDerivations,
+    ...dailyChangeDerivations,
+    ...contributionDerivations,
+    ...contributionSummary,
     ...[...classCounts.entries()].map<DerivedResult>(([assetClass, count]) => ({
       id: `exposure-asset-class-count-${assetClass}`,
       label: `${assetClass} 持仓数量`,

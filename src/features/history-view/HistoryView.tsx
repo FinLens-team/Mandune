@@ -250,7 +250,8 @@ function FoundDetail({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const boundary = historyRecordBoundary(record);
-  const canOpenLongCard = record.analysis.status !== "unavailable" && Boolean(record.narrative);
+  const canOpenLongCard = record.analysis.status !== "unavailable" &&
+    (Boolean(record.narrative) || Boolean(record.ai_text?.trim()));
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -331,7 +332,7 @@ function FoundDetail({
           <Button onClick={() => onOpenRecord(record)} variant="primary">打开本次复盘报告</Button>
         ) : (
           <p className="history-detail__no-card">
-            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未生成主题叙事，不能展示不完整的复盘报告。"}
+            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未保存可重放的模型文本或主题叙事。"}
           </p>
         )}
       </div>

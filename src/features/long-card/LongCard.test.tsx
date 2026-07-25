@@ -26,14 +26,9 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).not.toContain("查看证据");
     expect(markup).not.toContain("查看理性分析");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
-    expect(markup.match(/风险与判断边界/g)).toHaveLength(4);
-    for (const note of input.analysis.risk_notes) {
-      expect(markup.match(new RegExp(note.statement, "g"))).toHaveLength(2);
-    }
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
-    expect(markup).toContain("mandong-long-card__back");
-    expect(markup).toContain('aria-hidden="true"');
-    expect(markup).toContain("inert");
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+    expect(markup).toContain("mandong-long-card__front");
+    expect(markup).not.toContain("mandong-long-card__back");
   });
 
   it("accepts provenance fields from existing callers without rendering source badges", () => {
@@ -103,8 +98,6 @@ describe("long-card rendering and interaction boundaries", () => {
       for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
     }
     for (const evidence of fixture.analysis.evidence) {
-      expect(markup).toContain(evidence.value === null ? "未知（原始值为空）" : String(evidence.value));
-      expect(markup).toContain(evidence.unit ?? "未提供");
       expect(markup).toContain(evidence.source.name);
       expect(markup).toContain(evidence.observation_or_event_time);
       expect(markup).toContain(evidence.fetched_at);
@@ -209,26 +202,8 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(longCardRuntimeIsDisplayable(input)).toBe(true);
     expect(markup).toContain("<h2>核心观察</h2>");
     expect(markup).toContain("<strong>保持观察</strong>");
-    expect(markup).toContain(base.snapshot.snapshot_id);
-    expect(markup).toContain(base.analysis.analysis_id);
-    expect(markup).toContain(base.analysis.contracts_version);
-    expect(markup).toContain(base.analysis.evidence_cutoff_at);
-    expect(markup).toContain("结论与引用");
-    expect(markup).toContain("建议与触发依据");
-    expect(markup).toContain("可复算派生关系");
-    expect(markup).toContain("缺口、假设与限制");
-    for (const conclusion of base.analysis.conclusions) {
-      expect(markup).toContain(conclusion.statement);
-      for (const ref of conclusion.refs) expect(markup).toContain(ref.ref_id);
-    }
-    for (const advice of base.analysis.advice) {
-      expect(markup).toContain(advice.statement);
-      for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
-    }
-    for (const note of base.analysis.risk_notes) expect(markup).toContain(note.statement);
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
-    expect(markup).toContain('aria-hidden="true"');
-    expect(markup).toContain("inert");
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+    expect(markup).toContain("mandong-long-card__front");
   });
 
   it("uses aiThemeText only for the themed face while retaining aiText and evidence", () => {
@@ -240,17 +215,21 @@ describe("long-card rendering and interaction boundaries", () => {
       narrative: undefined,
     };
     const markup = renderToStaticMarkup(createElement(LongCard, { input, reducedMotion: true }));
+    const evidenceMarkup = renderToStaticMarkup(createElement(RationalEvidenceBack, {
+      faceId: "evidence-face",
+      input,
+      headingId: "evidence-heading",
+      headingRef: { current: null },
+    }));
 
     expect(markup).toContain("<h2>观象说明</h2>");
     expect(markup).toContain("主题正文");
-    expect(markup).toContain("<h2>理性说明</h2>");
-    expect(markup).toContain("理性正文");
-    expect(markup).toContain("确认输入与覆盖");
-    expect(markup).toContain("观察证据与核验状态");
-    expect(markup).toContain("结论与引用");
-    for (const note of base.analysis.risk_notes) expect(markup).toContain(note.statement);
+    expect(evidenceMarkup).toContain("<h2>理性说明</h2>");
+    expect(evidenceMarkup).toContain("理性正文");
+    expect(evidenceMarkup).toContain("本次分析用到的持仓");
+    expect(evidenceMarkup).toContain("本次分析用到的行情证据");
     expect(markup).toContain('data-reduced-motion="true"');
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

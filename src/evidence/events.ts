@@ -32,3 +32,33 @@ export function unverifiedEventEvidence(input: {
     provenance: "observed",
   };
 }
+
+export function verifiedEventEvidence(input: {
+  lineId: string;
+  symbol: string;
+  candidate: BochaCandidate;
+  acquiredAt: string;
+  excerpt: string;
+  sourceTier: "official" | "trusted_media";
+}): EvidenceRecord {
+  const publishedAt = input.candidate.publishedAt;
+  return {
+    id: `verified-event-${input.lineId}-${input.candidate.id}`,
+    scope: { kind: "asset", line_id: input.lineId, symbol: input.symbol },
+    metric_or_event_type: "verified_event",
+    value: input.excerpt,
+    source: {
+      name: input.candidate.siteName ?? (input.sourceTier === "official" ? "Official source" : "Trusted media"),
+      locator: input.candidate.url,
+    },
+    observation_or_event_time: publishedAt && !Number.isNaN(Date.parse(publishedAt))
+      ? publishedAt
+      : input.acquiredAt,
+    fetched_at: input.acquiredAt,
+    status: "available",
+    limitations: input.sourceTier === "trusted_media"
+      ? ["This event was verified against an allowlisted trusted-media page, not an official primary source."]
+      : [],
+    provenance: "observed",
+  };
+}

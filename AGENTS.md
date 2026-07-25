@@ -20,11 +20,14 @@
 ## 当前仓库状态
 
 - 仓库是单包 pnpm 项目，使用 Node `>=22 <23`、pnpm `10.33.2`、ESM 与严格 TypeScript。应用代码位于 `src/`，构建产物位于 `dist/`；不要创建 pnpm workspace 或 `apps/`、`packages/` 布局。
-- 当前接受的 ADR 为 0004-0009：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时、Vite + React/Hono/Vitest 单包工程基线，以及 Node 22 `node:sqlite` 单机耐久状态。旧 0001-0003 已退出当前契约。
+- 当前接受的 ADR 为 0004-0010：确定性串行分析管线、PandaAI 初始结构化数据上游、OpenAI-compatible `ModelGateway`、Vercel AI SDK Core 初始模型运行时、Vite + React/Hono/Vitest 单包工程基线、Node 22 `node:sqlite` 单机耐久状态，以及独立受限的 A2A 深度复盘 Agent。旧 0001-0003 已退出当前契约。
 - ADR-0009 已完成 ADR-0008 推迟的耐久私人存储选择；公开部署仍由 #35 决定。PandaAI/Bocha 的供应商接入与运行验收仍是 #24 及后续票据的独立范围。
 - PandaAI 已通过脱敏 credentialed spike 验证代表性 A 股和 ETF 历史路径；Bocha 与 PandaAI 的完整方法、资产矩阵、限流、修订和生产运行验收仍需按集成文档完成。方法名、文档示例或申请状态不能替代真实权限与响应证据。
+- 每日复盘 V2 使用 SQLite schema v4 的市场观察、资产资料、事件搜索、候选和来源文档缓存；`CachedPandaEvidenceCollector` 每次复盘最多启动一个隔离 Python 批处理进程，批处理启动失败映射为逐持仓失败。冻结交易日会从候选工作日回退到批次中最近的有效市场观察日。`BochaEvidenceCollector` 只把白名单官方/可信媒体正文中的相关内容升级为已核验事件；搜索候选不能进入事实引用，单位不明的 Panda 原值不能进入模型允许数字清单。
 - `src/analysis/validation.ts` 接受契约允许的 date-only 市场观察日，只在调用旧共享校验器的副本中规范化为 UTC 零点；最终 `AnalysisResult` 必须保留供应商原始日期精度。
-- `src/atlas/` 是历史保存后的独立非阻塞后置边界：按复盘 ID 稳定选择专业名词或 AI 趣味梗，15 秒硬截止，重复内容只追加复遇；专业名词须绑定分析引用，趣味梗明确为非金融知识的生成娱乐内容。模型生成前消费当前图鉴的最小卡片指纹并遵循版本化生成策略，后端查重仍作为一致性护栏。`SqliteAtlasStore` 持久化卡片、外观种子和轨迹，并随匿名工作区级联删除。
+- 每日复盘 V2 在调用前构建 `ReviewPacket v2`，按理性背面、人格正面、Atlas 候选的顺序执行三次 `step-explore` 受约束生成。理性或人格报告失败时不展示或保存部分文本；全部市场数据失败时模型调用次数为零。四份 FINAL skill 原文位于 `src/analysis/skills-v1/`，调用层约束优先，源文件哈希在 Prompt Compiler 中固定。
+- V2 理性或人格生成未通过校验时，`unavailable` 结果仍须保存并可从不可变历史重放；没有成套 `generated_review` 的失败结果不得携带孤立 `review_packet`，否则历史 V2 原子元数据校验会拒绝记录。
+- `src/atlas/` 按复盘 ID 稳定选择专业名词或 AI 趣味梗。V2 实时路径使用第三次独立模型调用生成预选类型候选；后端继续执行类型/引用校验、查重、复遇、确定性外观和工作区持久化。Atlas 子对象失败只产生无卡结果，不能改写已通过校验的报告。
 - 分支 `archive/qoder-interrupted-20260724` 的 commit `8c57fad` 是未验证的中断 Qoder 产物，不得当作已接受实现或完成证据。
 
 ## 已接受的技术决策
@@ -100,26 +103,30 @@ pnpm maintenance:purge
 ./deploy/validate.sh
 ```
 
-`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，`pnpm start` 默认监听 `HOST=127.0.0.1`、`PORT=8787`，并在绑定端口前打开 `MANDONG_DB_PATH`（默认 `/var/lib/mandong/mandong.sqlite3`）和执行迁移；父目录须预先存在且仅服务用户可访问。启动不需要 `MODEL_*` 或供应商凭据；模型和供应商配置只能由后续服务端边界读取，不能进入 `VITE_*`、浏览器包、日志或 `/health`。过期清理使用已编译的 `pnpm maintenance:purge` 入口；生产由无网络、只写状态目录的 `mandong-purge.timer` 每日持久调度，不提供公开 purge route。
+`pnpm dev` 启动 Vite 客户端，`pnpm dev:server` 运行服务端观察进程。`pnpm build` 生成 `dist/client` 和 `dist/server`，并原样复制 FINAL skill 与 Panda Python worker；`pnpm start` 默认监听 `HOST=127.0.0.1`、`PORT=8787`，并在绑定端口前打开 `MANDONG_DB_PATH`（默认 `/var/lib/mandong/mandong.sqlite3`）和执行迁移。父目录须预先存在且仅服务用户可访问。启动不需要 `MODEL_*` 或供应商凭据；实时 V2 只允许 `MODEL_ID=step-explore`，`MODEL_SUPPORTS_STRUCTURED_OUTPUTS` 默认 false，只有 capability-test 后才显式设为 true。模型和供应商配置不能进入 `VITE_*`、浏览器包、日志或 `/health`。过期清理使用已编译的 `pnpm maintenance:purge` 入口；生产由无网络、只写状态目录的 `mandong-purge.timer` 每日持久调度，不提供公开 purge route。
 
 Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确保不早于产品的 180 秒应用级分析截止截断请求；Nginx 的读写和发送 timeout 同为 210 秒，且禁用代理缓存、请求日志和公开 source map。
+
+独立 A2A 深度复盘不改变浏览器 180 秒路径：`/.well-known/agent-card.json` 发布 A2A 1.0 Card，`/a2a/message:send` 使用 Bearer 和 `HTTP+JSON`。它固定使用火山方舟 `DeepSeek-Pro` Endpoint ID `ep-20260708162855-pcf9x`、最多 8 个模型步骤、810 秒循环预算和 900 秒总截止，并由服务端装配 `mandong.a2a.deep-review.v1` 终态；终态固定列出提供商、模型展示名、Endpoint ID、实际 `skills_used`、`data_sources` 和不可由模型覆盖的 `risk_notice`，越界候选总结回退到确定性汇总。A2A 行情只允许明确授权的数据源；当前未接 PandaAI Data Skills 时使用 `UnconfiguredAuthorizedMarketEvidenceSource` 生成类型化 `failed` 证据，不回退腾讯或其它未授权第三方。Nginx 只为 `/a2a/` 使用 930 秒传输 timeout。`ARK_API_KEY` 与 `A2A_BEARER_TOKEN` 必须独立且只存在服务端环境。
 
 ## 模块地图
 
 - `src/client/`：Vite + React 单页壳。必须保持桌面与 375px 触控视口可读、可键盘访问，不用悬停、动画或图片上传作为完成路径。
 - `src/client/ui/`：共享可访问 UI 原语与组件样式；按钮、体验/锁定徽章、图标按钮和分析状态应复用此边界，不在功能页面重复实现。
+- `src/theme/`：前端主题注册表与服务端 prompt 边界；内部兼容 ID `eastern_observation` 当前映射「我是龙」奶龙人格，孙哥与兜兜人格只在对应主题 ID 下改变表达，不能改变理性分析、证据、覆盖、风险或建议。
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
-- `src/history/`：append-only 不可变复盘历史与只读重放；未知版本不会调用当前供应商重算。
-- `src/persistence/`：`node:sqlite` Store 适配器、生产组合与本地维护 CLI。生产数据库失败不得回退 Memory。
+- `src/history/`：append-only 不可变复盘历史与只读重放；V2 记录同时保存 `ReviewPacket`、已校验正反面、模型/prompt/skill/Atlas 策略版本，重放不会调用当前供应商或模型。
+- `src/persistence/`：`node:sqlite` Store、证据缓存、生产组合与本地维护 CLI。生产数据库失败不得回退 Memory；配置完整模型时，生产组合使用 PandaAI/Bocha 和 `DailyReviewV2Executor`。Panda worker 由服务端 `PANDA_PYTHON_EXECUTABLE`（默认 `python3.12`）定位固定 Python 3.12 环境，不假设 systemd 能读取交互式 shell 的用户级 PATH。
 - `migrations/`：按编号执行的 SQLite schema；迁移 SQL 与对应 `PRAGMA user_version` 在同一 `BEGIN IMMEDIATE` 事务提交。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
 - `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
 - `src/extraction/` 与 `src/features/screenshot-import/`：截图知情同意、多模态草稿提取与原图删除保证。
 - `src/server/`：Hono Node HTTP 边界。`GET /health` 只能返回安全 liveness 字段；生产服务从 `dist/client` 提供静态资源并对文档请求执行 SPA fallback。
-- `src/analysis/`：确定性派生、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。
+- `src/analysis/`：确定性派生、`ReviewPacket v2`、Prompt Compiler、`generated-daily-review.v2` 校验、四状态矩阵、八阶段单 agent 编排、真实 `TaskEvent`、有限重试、取消、180 秒硬截止与迟到响应隔离。每日复盘 V2 使用理性、人格、Atlas 三次有序结构化调用；前两次原子失败，Atlas 独立降级。
 - `src/model/`：框架中立 `ModelGateway` 与服务端 OpenAI-compatible AI SDK 适配器；不承载自主 Agent loop、供应商凭据日志或 UI 类型。
 - `src/atlas/` 与 `src/features/atlas/`：图鉴候选校验、确定性抽选/外观、查重复遇、卡片墙和单卡轨迹；客户端只能导入纯类型/校验器，不能通过图鉴 barrel 把服务端 `node:crypto` 带入浏览器包。
+- `src/a2a/`：独立 A2A 1.0 深度复盘 Card、Bearer HTTP 边界、DeepSeek 受控工具循环和版本化终态；不读取浏览器工作区或保存跨请求模型记忆。
 - `src/contracts/`：框架中立的版本化契约与纯校验器（`CONTRACTS_VERSION`）。不得导入 React、Hono、模型 SDK 或供应商 SDK。
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
 - `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。

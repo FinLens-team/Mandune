@@ -24,6 +24,7 @@ import {
   createWorkspaceRoutes,
 } from "../workspace/index.js";
 import type { ServerConfig } from "./config.js";
+import { createA2ARoutes, type DeepReviewRunner } from "../a2a/index.js";
 
 const startedAt = Date.now();
 
@@ -38,6 +39,11 @@ export function createApp(
     history: HistoryService;
     journey: JourneyAnalysisService;
     atlas?: AtlasService;
+    a2a?: {
+      runner: DeepReviewRunner;
+      bearerToken: string;
+      publicBaseUrl?: string;
+    };
   },
 ): Hono {
   const app = new Hono();
@@ -71,6 +77,10 @@ export function createApp(
     };
     return c.json(body);
   });
+
+  if (backend?.a2a) {
+    app.route("/", createA2ARoutes(backend.a2a));
+  }
 
   app.route("/api/workspaces", createWorkspaceRoutes(workspaceService, {
     onDeleted: async (workspaceId) => { await atlas.eraseWorkspace(workspaceId); },

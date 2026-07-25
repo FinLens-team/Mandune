@@ -187,10 +187,10 @@ describe("ordinary-entry locked placeholders", () => {
     }));
 
     expect(theme.match(/暂未开放/g)).toHaveLength(3);
-    expect(theme).toContain("东方观象");
-    expect(source).toContain("手工录入");
-    expect(source).toContain("截图识别");
-    expect(source.match(/aria-disabled="true"/g)).toHaveLength(2);
-    expect(source).toContain("不会打开表单、相机或文件选择器");
+    expect(theme).toContain("我是龙");
+    expect(source).toContain("手动填写持仓");
+    expect(source).toContain("截图识别持仓");
+    expect(source.match(/即将开放/g)).toHaveLength(2);
+    expect(source).toContain("手动填写与截图识别将在后续版本开放");
   });
 });

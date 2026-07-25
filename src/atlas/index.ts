@@ -4,6 +4,7 @@ export {
   selectAtlasAppearance,
   selectAtlasKind,
   type StartAtlasInput,
+  type ConsumeAtlasInput,
 } from "./service.js";
 export { FixtureAtlasCandidateGenerator, ModelAtlasCandidateGenerator } from "./generator.js";
 export {

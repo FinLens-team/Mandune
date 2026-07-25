@@ -8,6 +8,8 @@ export interface ModelGatewayRequest {
   input: unknown;
   signal: AbortSignal;
   timeoutMs: number;
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 export type ModelGatewayFailureCode =
@@ -19,7 +21,7 @@ export type ModelGatewayFailureCode =
   | "provider_failure";
 
 export type ModelGatewayResult<T> =
-  | { ok: true; value: T }
+  | { ok: true; value: T; finishReason?: string }
   | { ok: false; code: ModelGatewayFailureCode; retryable: boolean };
 
 /**

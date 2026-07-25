@@ -1,5 +1,10 @@
 export { FixtureAnalysisExecutor } from "./fixture-executor.js";
 export { StreamingAnalysisExecutor } from "./stream-executor.js";
+export {
+  DailyReviewV2Executor,
+  type DailyReviewV2ExecutorDependencies,
+  type DailyReviewV2ExecutorOptions,
+} from "./daily-review-v2-executor.js";
 export { createJourneyRoutes } from "./routes.js";
 export { JourneyAnalysisService, JourneyInputError } from "./service.js";
 export type { AnalysisStreamEvent } from "./service.js";

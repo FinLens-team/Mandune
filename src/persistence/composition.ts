@@ -5,13 +5,23 @@ import {
   ModelAtlasCandidateGenerator,
 } from "../atlas/index.js";
 import { JourneyAnalysisService } from "../app/server/index.js";
-import { StreamingAnalysisExecutor } from "../app/server/stream-executor.js";
+import { DailyReviewV2Executor } from "../app/server/daily-review-v2-executor.js";
 import { createOpenAICompatibleModelGateway } from "../model/index.js";
-import { TencentMarketEvidenceSource } from "../providers/tencent-market.js";
+import {
+  BochaEvidenceCollector,
+  BochaWebSearchClient,
+  CachedPandaEvidenceCollector,
+  PandaBatchClient,
+} from "../providers/index.js";
 import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
+import {
+  DeepSeekDeepReviewAgent,
+  UnconfiguredAuthorizedMarketEvidenceSource,
+} from "../a2a/index.js";
 import { openSqliteDatabase } from "./database.js";
 import { SqliteAtlasStore } from "./atlas-store.js";
+import { SqliteEvidenceCacheStore } from "./evidence-cache-store.js";
 import { SqliteHistoryStore } from "./history-store.js";
 import { SqliteJourneyStore } from "./journey-store.js";
 import { SqliteWorkspaceStore } from "./workspace-store.js";
@@ -33,35 +43,54 @@ export function createDurableServices(config: ServerConfig) {
         supportsStructuredOutputs: config.model.supportsStructuredOutputs,
       })
     : undefined;
-  const atlas = new AtlasService(
-    new SqliteAtlasStore(database),
-    modelGateway
-      ? new ModelAtlasCandidateGenerator(modelGateway)
-      : new FixtureAtlasCandidateGenerator(),
-  );
+  const atlasCandidateGenerator = modelGateway
+    ? new ModelAtlasCandidateGenerator(modelGateway)
+    : new FixtureAtlasCandidateGenerator();
+  const atlas = new AtlasService(new SqliteAtlasStore(database), atlasCandidateGenerator);
   const journeyStore = new SqliteJourneyStore(database);
   journeyStore.recoverInterruptedRunsNow(new Date().toISOString());
-  // With MODEL_* configured, stream a relaxed free-text model analysis over the
-  // deterministic evidence + coverage shell; otherwise fall back to the
-  // deterministic fixture executor.
+  const evidenceCache = new SqliteEvidenceCacheStore(database);
   const executor = modelGateway
-    ? new StreamingAnalysisExecutor(
+    ? new DailyReviewV2Executor(
         {
           modelGateway,
-          marketEvidenceSource: new TencentMarketEvidenceSource(),
+          marketEvidenceCollector: new CachedPandaEvidenceCollector(
+            new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
+            evidenceCache,
+          ),
+          eventEvidenceCollector: new BochaEvidenceCollector(
+            new BochaWebSearchClient(config.bochaApiKey ?? ""),
+            evidenceCache,
+          ),
+          listAtlasCards: (workspaceId) => atlas.listCards(workspaceId),
+          atlasCandidateGenerator,
         },
       )
     : undefined;
   const journey = executor
     ? new JourneyAnalysisService(journeyStore, history, executor, undefined, undefined, atlas)
     : new JourneyAnalysisService(journeyStore, history, undefined, undefined, undefined, atlas);
+  const a2a = config.a2a
+    ? {
+        runner: new DeepSeekDeepReviewAgent({
+          baseURL: config.a2a.baseURL,
+          apiKey: config.a2a.apiKey,
+          modelId: config.a2a.modelId,
+          marketEvidenceSource: new UnconfiguredAuthorizedMarketEvidenceSource(),
+        }),
+        bearerToken: config.a2a.bearerToken,
+        ...(config.a2a.publicBaseUrl ? { publicBaseUrl: config.a2a.publicBaseUrl } : {}),
+      }
+    : undefined;
   return {
     database,
     workspaces,
     history,
     atlas,
+    evidenceCache,
     journey,
     journeyStore,
+    ...(a2a ? { a2a } : {}),
     lifecycle: new HistoryWorkspaceLifecycle(workspaces, history),
   };
 }

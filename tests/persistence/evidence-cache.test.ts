@@ -1,8 +1,10 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  SQLITE_SCHEMA_VERSION,
   SqliteEvidenceCacheStore,
   cacheEntryIsFresh,
   openSqliteDatabase,
@@ -17,20 +19,40 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function store(): SqliteEvidenceCacheStore {
+function temporaryPath(): string {
   const root = mkdtempSync(path.join(tmpdir(), "mandong-evidence-cache-"));
   roots.push(root);
+  return path.join(root, "mandong.sqlite3");
+}
+
+function open(dbPath = temporaryPath()): { database: SqliteDatabase; cache: SqliteEvidenceCacheStore } {
   const database = openSqliteDatabase({
-    dbPath: path.join(root, "mandong.sqlite3"),
+    dbPath,
     migrationsDirectory: path.resolve("migrations"),
   });
   databases.push(database);
-  return new SqliteEvidenceCacheStore(database);
+  return { database, cache: new SqliteEvidenceCacheStore(database) };
 }
 
 describe("SQLite daily-review evidence cache", () => {
+  it("upgrades an Atlas v3 database to the evidence-cache v4 schema", () => {
+    const dbPath = temporaryPath();
+    const raw = new DatabaseSync(dbPath);
+    raw.exec("CREATE TABLE preserved_atlas_marker(value TEXT NOT NULL)");
+    raw.exec("INSERT INTO preserved_atlas_marker VALUES ('preserved')");
+    raw.exec("PRAGMA user_version = 3");
+    raw.close();
+
+    const { database } = open(dbPath);
+    expect(SQLITE_SCHEMA_VERSION).toBe(4);
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 4 });
+    expect(database.prepare("SELECT value FROM preserved_atlas_marker").get()).toEqual({ value: "preserved" });
+    expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'market_observations'").get())
+      .toEqual({ name: "market_observations" });
+  });
+
   it("upserts and retrieves a market observation by immutable cache key", () => {
-    const cache = store();
+    const { cache } = open();
     cache.putMarket({
       provider: "pandaai",
       method: "market_daily",
@@ -56,7 +78,7 @@ describe("SQLite daily-review evidence cache", () => {
   });
 
   it("atomically replaces search candidates on refresh", () => {
-    const cache = store();
+    const { cache } = open();
     const base = {
       queryHash: "query-hash",
       query: { symbol: "510300.SH" },
@@ -97,7 +119,7 @@ describe("SQLite daily-review evidence cache", () => {
   });
 
   it("stores source documents and evaluates freshness by explicit boundary", () => {
-    const cache = store();
+    const { cache } = open();
     cache.putSourceDocument({
       url: "https://www.sse.com.cn/disclosure/example",
       sourceTier: "official",
