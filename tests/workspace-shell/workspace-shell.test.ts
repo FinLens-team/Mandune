@@ -68,11 +68,12 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).not.toContain("随机体验身份 · 示例数据");
-    expect(markup).toContain("哈呃呃涨涨");
+    expect(markup).toContain('class="workspace-home__danmaku"');
     expect(markup).toContain("点奶龙，开始今日复盘");
     expect(markup).toContain('aria-label="点击奶龙，确认发起今日复盘"');
     expect(markup).toContain('class="workspace-home__hero"');
     expect(markup).toContain('alt=""');
+    expect(markup).not.toContain("哈呃呃涨涨");
     expect(markup).not.toContain("今日持仓观察");
     expect(markup).not.toContain("随机体验数据");
     expect(markup).not.toContain("看懂一点，安心一点");

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
@@ -45,15 +45,30 @@ export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
   ).length;
 }
 
-const HOME_SPEECH_BUBBLES = [
+/** 主题弹幕库：后续拓展主题文案时只需在此追加一条。 */
+export const THEME_DANMAKU = [
   "我是奶龙！哈哈哈哈哈",
   "看懂一点，安心一点",
   "笑一笑，再稳稳看",
   "先核对，再判断",
 ] as const;
 
-/** One caption cycle above the mascot: fade in, hold, fade out. */
-const HOME_CAPTION_CYCLE_MS = 4800;
+/** 弹幕泳道（距海报顶部的百分比），生成时随机挑选。 */
+const DANMAKU_LANES = [8, 16, 24, 34, 44, 54, 64, 74] as const;
+
+/** 同屏弹幕上限，超出时最旧的一条让位。 */
+const DANMAKU_MAX_CONCURRENT = 8;
+
+interface HomeDanmaku {
+  id: number;
+  text: (typeof THEME_DANMAKU)[number];
+  lane: number;
+  duration: number;
+}
+
+function randomBetween(minimum: number, maximum: number): number {
+  return minimum + Math.random() * (maximum - minimum);
+}
 
 export function WorkspaceShell({
   activeAnalysis,
@@ -85,8 +100,7 @@ export function WorkspaceShell({
   const [pageVisible, setPageVisible] = useState(
     () => typeof document === "undefined" || document.visibilityState !== "hidden",
   );
-  const [speechIndex, setSpeechIndex] = useState(0);
-  const [speechCycle, setSpeechCycle] = useState(0);
+  const [danmaku, setDanmaku] = useState<HomeDanmaku[]>([]);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
   const introPreloadRef = useRef<HTMLImageElement | null>(null);
@@ -124,14 +138,37 @@ export function WorkspaceShell({
   }, [view]);
 
   useEffect(() => {
-    if (reduceMotion || !pageVisible || view !== "home") return;
+    if (reduceMotion || !pageVisible || view !== "home") {
+      setDanmaku([]);
+      return;
+    }
 
-    const timer = window.setInterval(() => {
-      setSpeechIndex((previous) => (previous + 1) % HOME_SPEECH_BUBBLES.length);
-      setSpeechCycle((previous) => previous + 1);
-    }, HOME_CAPTION_CYCLE_MS);
+    let danmakuId = 0;
+    let spawnTimer: number | undefined;
+    const expireTimers = new Set<number>();
 
-    return () => window.clearInterval(timer);
+    function spawn() {
+      const item: HomeDanmaku = {
+        id: danmakuId,
+        text: THEME_DANMAKU[Math.floor(Math.random() * THEME_DANMAKU.length)] ?? THEME_DANMAKU[0],
+        lane: DANMAKU_LANES[Math.floor(Math.random() * DANMAKU_LANES.length)] ?? DANMAKU_LANES[0],
+        duration: randomBetween(8, 12),
+      };
+      danmakuId += 1;
+      setDanmaku((previous) => [...previous.slice(-(DANMAKU_MAX_CONCURRENT - 1)), item]);
+      const expire = window.setTimeout(() => {
+        expireTimers.delete(expire);
+        setDanmaku((previous) => previous.filter((entry) => entry.id !== item.id));
+      }, item.duration * 1000 + 400);
+      expireTimers.add(expire);
+      spawnTimer = window.setTimeout(spawn, randomBetween(2200, 3800));
+    }
+
+    spawn();
+    return () => {
+      if (spawnTimer !== undefined) window.clearTimeout(spawnTimer);
+      for (const timer of expireTimers) window.clearTimeout(timer);
+    };
   }, [pageVisible, reduceMotion, view]);
 
   function activateMascot(trigger: HTMLElement) {
@@ -206,27 +243,33 @@ export function WorkspaceShell({
                   </g>
                 </svg>
 
-                <header className="workspace-home__masthead">
-                  <h1
-                    className="workspace-home__signature"
-                    id="workspace-home-heading"
-                    ref={homeHeadingRef}
-                    tabIndex={-1}
-                  >
-                    哈呃呃涨涨
-                  </h1>
-                </header>
+                <h1
+                  className="workspace-home__sr-only"
+                  id="workspace-home-heading"
+                  ref={homeHeadingRef}
+                  tabIndex={-1}
+                >
+                  满懂 · 每日复盘
+                </h1>
+
+                <div aria-hidden="true" className="workspace-home__danmaku">
+                  {danmaku.map((item) => (
+                    <span
+                      key={item.id}
+                      style={{
+                        "--danmaku-lane": `${item.lane}%`,
+                        "--danmaku-duration": `${item.duration}s`,
+                      } as CSSProperties}
+                    >
+                      {item.text}
+                    </span>
+                  ))}
+                </div>
 
                 <div
                   className="workspace-home__stage"
                   data-coachmark={reviewCoachmarkVisible || undefined}
                 >
-                  <div aria-hidden="true" className="workspace-home__speech">
-                    <span key={speechCycle}>
-                      {HOME_SPEECH_BUBBLES[speechIndex]}
-                    </span>
-                  </div>
-
                   <button
                     aria-label={activeAnalysis
                       ? "点击奶龙，继续查看正在运行的复盘"

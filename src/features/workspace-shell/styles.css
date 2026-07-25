@@ -75,11 +75,23 @@
   padding-inline: max(var(--space-4), env(safe-area-inset-left))
     max(var(--space-4), env(safe-area-inset-right));
   display: grid;
-  grid-template-areas:
-    "masthead"
-    "stage";
-  grid-template-rows: auto 1fr;
+  grid-template-areas: "stage";
+  grid-template-rows: 1fr;
   overflow: clip;
+}
+
+/* Visually hidden, still the page's accessible heading */
+.workspace-home__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ─── Symbolic drifting sparklines (decoration only, not data) ─── */
@@ -145,41 +157,35 @@
   to { transform: translateX(0); }
 }
 
-/* ─── Masthead: theme signature (expression only) ─── */
+/* ─── Danmaku: theme captions flying right → left at constant speed ─── */
 
-.workspace-home__masthead {
-  position: relative;
-  z-index: 5;
-  grid-area: masthead;
-  margin-bottom: var(--space-2);
+.workspace-home__danmaku {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+  overflow: clip;
 }
 
-.workspace-home__signature {
-  margin: 0;
-  color: var(--poster-gold);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: 0.32em;
-  opacity: 0;
-  animation: title-lift 550ms 80ms var(--ease-enter) forwards;
+.workspace-home__danmaku span {
+  position: absolute;
+  top: var(--danmaku-lane);
+  left: 100%;
+  color: var(--poster-ink);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
+  animation: danmaku-fly var(--danmaku-duration) linear both;
 }
 
-@keyframes title-lift {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 16px, 0);
-    filter: blur(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    filter: blur(0);
-  }
+/* Constant linear flight: start fully past the right edge,
+   end fully past the left edge (100vw + own width). */
+@keyframes danmaku-fly {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(-100vw - 100%), 0, 0); }
 }
-
-/* ─── Stage: hero (mascot + CTA) ─── */
 
 .workspace-home__stage {
   position: relative;
@@ -189,51 +195,6 @@
   align-items: center;
   justify-items: center;
   min-height: 0;
-}
-
-/* Caption pinned above the mascot: the only text that moves,
-   and it never leaves the mascot's neighborhood. Text-only so the
-   pill shape stays reserved for real data. */
-.workspace-home__speech {
-  position: absolute;
-  z-index: 3;
-  inset: auto 0 100%;
-  display: grid;
-  justify-items: center;
-  padding-bottom: var(--space-1);
-  pointer-events: none;
-}
-
-.workspace-home__speech span {
-  max-width: 16rem;
-  color: var(--poster-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  line-height: 1.5;
-  text-align: center;
-  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
-  opacity: 0;
-  animation: caption-fade 4800ms var(--ease-enter) both;
-}
-
-/* One full cycle matches HOME_CAPTION_CYCLE_MS in WorkspaceShell */
-@keyframes caption-fade {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0);
-  }
-  10% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  78% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(0, -6px, 0);
-  }
 }
 
 /* ─── Mascot: dominant lower-half focal point, single entry ─── */
@@ -761,7 +722,7 @@
   transition-duration: 1ms !important;
 }
 
-[data-reduce-motion="true"] .workspace-home__speech {
+[data-reduce-motion="true"] .workspace-home__danmaku {
   display: none;
 }
 
@@ -777,10 +738,6 @@
     width: min(100%, 68rem);
     padding-inline: max(var(--space-8), env(safe-area-inset-left))
       max(var(--space-8), env(safe-area-inset-right));
-  }
-
-  .workspace-home__signature {
-    font-size: var(--font-size-base);
   }
 
   .workspace-home__stage {
@@ -830,9 +787,8 @@
     width: min(74vw, 19rem);
   }
 
-  .workspace-home__speech span {
-    font-size: var(--font-size-xs);
-    max-width: 12rem;
+  .workspace-home__danmaku span {
+    font-size: var(--font-size-sm);
   }
 
   .analysis-confirm__actions .ui-button {
@@ -875,7 +831,7 @@
     transition-duration: 1ms !important;
   }
 
-  .workspace-home__speech {
+  .workspace-home__danmaku {
     display: none;
   }
 }
