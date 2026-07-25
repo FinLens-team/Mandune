@@ -54,6 +54,7 @@ SQLite schema v4 新增：
 ## PandaAI 边界
 
 - Node 每次复盘最多启动一个 Python 3.12 批处理子进程。
+- Python 可执行文件由服务端 `PANDA_PYTHON_EXECUTABLE` 配置，默认 `python3.12`；不得依赖交互式 shell 的用户级 PATH。
 - 子进程通过 stdin 接收不含凭据的 JSON，通过 stdout 返回规范化 JSON。
 - 凭据只从子进程环境读取，不进入命令行、日志、fixture 或响应。
 - 每次调用使用隔离认证目录；成功、失败、取消和超时后均删除。

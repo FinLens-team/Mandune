@@ -55,7 +55,7 @@ export function createDurableServices(config: ServerConfig) {
         {
           modelGateway,
           marketEvidenceCollector: new CachedPandaEvidenceCollector(
-            new PandaBatchClient(),
+            new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
             evidenceCache,
           ),
           eventEvidenceCollector: new BochaEvidenceCollector(

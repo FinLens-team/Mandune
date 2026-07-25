@@ -31,6 +31,8 @@ export interface ServerConfig {
   model?: ModelGatewayConfig;
   /** Optional server-only Bocha credential. Never exposed by /health. */
   bochaApiKey?: string;
+  /** Python 3.12 executable used only by the isolated PandaAI batch worker. */
+  pandaPythonExecutable: string;
   /** Independent A2A DeepSeek-Pro-on-Ark agent config. Secrets never enter Card or responses. */
   a2a?: A2ADeepAgentConfig;
 }
@@ -62,7 +64,11 @@ export function loadServerConfig(
 
   const model = loadModelConfig(env);
   const bochaApiKey = env.BOCHA_API_KEY?.trim();
+  const pandaPythonExecutable = env.PANDA_PYTHON_EXECUTABLE?.trim() || "python3.12";
   const a2a = loadA2AConfig(env);
+  if (/\r|\n|\0/u.test(pandaPythonExecutable)) {
+    throw new Error("Invalid PANDA_PYTHON_EXECUTABLE.");
+  }
 
   return {
     host,
@@ -71,6 +77,7 @@ export function loadServerConfig(
     dbPath,
     migrationsDirectory,
     dbBusyTimeoutMs,
+    pandaPythonExecutable,
     ...(model ? { model } : {}),
     ...(bochaApiKey ? { bochaApiKey } : {}),
     ...(a2a ? { a2a } : {}),

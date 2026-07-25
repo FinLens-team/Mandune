@@ -11,6 +11,18 @@ function baseEnv(): NodeJS.ProcessEnv {
 }
 
 describe("A2A server config", () => {
+  it("keeps the PandaAI Python 3.12 command replaceable at the server boundary", () => {
+    expect(loadServerConfig(baseEnv()).pandaPythonExecutable).toBe("python3.12");
+    expect(loadServerConfig({
+      ...baseEnv(),
+      PANDA_PYTHON_EXECUTABLE: "/opt/mandong/panda/bin/python",
+    }).pandaPythonExecutable).toBe("/opt/mandong/panda/bin/python");
+    expect(() => loadServerConfig({
+      ...baseEnv(),
+      PANDA_PYTHON_EXECUTABLE: "python3.12\nmalformed",
+    })).toThrow(/Invalid PANDA_PYTHON_EXECUTABLE/u);
+  });
+
   it("keeps the A2A interface disabled when no A2A variables are present", () => {
     expect(loadServerConfig(baseEnv()).a2a).toBeUndefined();
   });

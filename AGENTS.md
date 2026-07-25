@@ -116,7 +116,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/portfolio/`：草稿、可用性判定、批量确认保护与不可变快照创建。
 - `src/workspace/`：匿名私密工作区生命周期、opaque locator 与 TTL 清理。
 - `src/history/`：append-only 不可变复盘历史与只读重放；V2 记录同时保存 `ReviewPacket`、已校验正反面、模型/prompt/skill/Atlas 策略版本，重放不会调用当前供应商或模型。
-- `src/persistence/`：`node:sqlite` Store、证据缓存、生产组合与本地维护 CLI。生产数据库失败不得回退 Memory；配置完整模型时，生产组合使用 PandaAI/Bocha 和 `DailyReviewV2Executor`。
+- `src/persistence/`：`node:sqlite` Store、证据缓存、生产组合与本地维护 CLI。生产数据库失败不得回退 Memory；配置完整模型时，生产组合使用 PandaAI/Bocha 和 `DailyReviewV2Executor`。Panda worker 由服务端 `PANDA_PYTHON_EXECUTABLE`（默认 `python3.12`）定位固定 Python 3.12 环境，不假设 systemd 能读取交互式 shell 的用户级 PATH。
 - `migrations/`：按编号执行的 SQLite schema；迁移 SQL 与对应 `PRAGMA user_version` 在同一 `BEGIN IMMEDIATE` 事务提交。
 - `src/features/review/` 与 `src/features/constraints/`：单页复核与四项约束 UI。
 - `docs/design/demo-v1-visual-system.md`：S0-S10 的唯一视觉、响应式、动效与无障碍实现基准。
