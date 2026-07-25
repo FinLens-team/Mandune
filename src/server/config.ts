@@ -18,6 +18,8 @@ export interface ServerConfig {
   dbBusyTimeoutMs: number;
   /** Server-only model gateway config. Never exposed by /health or to VITE_*. */
   model?: ModelGatewayConfig;
+  /** Optional server-only Bocha credential. Never exposed by /health. */
+  bochaApiKey?: string;
 }
 
 export function loadServerConfig(
@@ -46,6 +48,7 @@ export function loadServerConfig(
   }
 
   const model = loadModelConfig(env);
+  const bochaApiKey = env.BOCHA_API_KEY?.trim();
 
   return {
     host,
@@ -55,6 +58,7 @@ export function loadServerConfig(
     migrationsDirectory,
     dbBusyTimeoutMs,
     ...(model ? { model } : {}),
+    ...(bochaApiKey ? { bochaApiKey } : {}),
   };
 }
 
@@ -71,6 +75,9 @@ function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined
   if (!baseURL || !apiKey || !modelId) {
     throw new Error("Incomplete model config: MODEL_BASE_URL, MODEL_API_KEY and MODEL_ID are all required.");
   }
+  if (modelId !== "step-explore") {
+    throw new Error("Invalid MODEL_ID: daily review V2 only permits step-explore.");
+  }
   try {
     const url = new URL(baseURL);
     const secure =
@@ -80,6 +87,6 @@ function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined
     throw new Error("Invalid MODEL_BASE_URL: expected an https URL or localhost.");
   }
   const providerName = env.MODEL_PROVIDER_NAME?.trim() || "model-gateway";
-  const supportsStructuredOutputs = env.MODEL_SUPPORTS_STRUCTURED_OUTPUTS?.trim() !== "false";
+  const supportsStructuredOutputs = env.MODEL_SUPPORTS_STRUCTURED_OUTPUTS?.trim() === "true";
   return { providerName, baseURL, apiKey, modelId, supportsStructuredOutputs };
 }

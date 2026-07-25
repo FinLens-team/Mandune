@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AssetClass } from "../contracts/index.js";
 
 export interface PandaBatchRequest {
@@ -103,7 +104,7 @@ export class PandaBatchClient {
 
   constructor(options: PandaBatchClientOptions = {}) {
     this.pythonExecutable = options.pythonExecutable ?? "python3.12";
-    this.workerPath = options.workerPath ?? path.resolve("src/providers/panda-worker.py");
+    this.workerPath = options.workerPath ?? fileURLToPath(new URL("./panda-worker.py", import.meta.url));
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.env = options.env ?? process.env;
     if (!Number.isInteger(this.timeoutMs) || this.timeoutMs <= 0 || this.timeoutMs > 120_000) {

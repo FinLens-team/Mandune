@@ -19,8 +19,8 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.ts",
     "test:smoke": "vitest run src/server/health.test.ts",
     "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json && node scripts/copy-analysis-skills.mjs",
-    "build": "vite build && tsc -p tsconfig.server.json && node scripts/copy-analysis-skills.mjs",
+    "build:server": "tsc -p tsconfig.server.json && node scripts/copy-runtime-assets.mjs",
+    "build": "vite build && tsc -p tsconfig.server.json && node scripts/copy-runtime-assets.mjs",
     "start": "node dist/server/index.js",
     "maintenance:purge": "node --preserve-symlinks-main dist/persistence/maintenance.js purge-expired"
   },

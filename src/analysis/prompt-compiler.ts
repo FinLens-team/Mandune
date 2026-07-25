@@ -36,6 +36,15 @@ const PERSONA_SKILLS: Record<DailyReviewPersonaId, SkillAsset> = {
   },
 };
 
+export const DAILY_REVIEW_SKILL_VERSIONS = {
+  core: `sha256:${CORE_SKILL.sha256}`,
+  personas: {
+    doudou: `sha256:${PERSONA_SKILLS.doudou.sha256}`,
+    nailong: `sha256:${PERSONA_SKILLS.nailong.sha256}`,
+    sunge: `sha256:${PERSONA_SKILLS.sunge.sha256}`,
+  },
+} as const;
+
 const THEME_PERSONAS: Readonly<Record<string, DailyReviewPersonaId>> = {
   eastern_observation: "doudou",
   nailong: "nailong",
@@ -92,8 +101,8 @@ export function compileDailyReviewPrompt(
     model_id: DAILY_REVIEW_MODEL_ID,
     persona_id: personaId,
     skill_versions: {
-      core: `sha256:${CORE_SKILL.sha256}`,
-      persona: `sha256:${personaSkill.sha256}`,
+      core: DAILY_REVIEW_SKILL_VERSIONS.core,
+      persona: DAILY_REVIEW_SKILL_VERSIONS.personas[personaId],
     },
     atlas_policy_version: ATLAS_GENERATION_POLICY_VERSION,
     instructions: [

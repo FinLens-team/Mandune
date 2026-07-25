@@ -2,16 +2,21 @@ import { HistoryService, HistoryWorkspaceLifecycle } from "../history/index.js";
 import {
   AtlasService,
   FixtureAtlasCandidateGenerator,
-  ModelAtlasCandidateGenerator,
 } from "../atlas/index.js";
 import { JourneyAnalysisService } from "../app/server/index.js";
-import { StreamingAnalysisExecutor } from "../app/server/stream-executor.js";
+import { DailyReviewV2Executor } from "../app/server/daily-review-v2-executor.js";
 import { createOpenAICompatibleModelGateway } from "../model/index.js";
-import { TencentMarketEvidenceSource } from "../providers/tencent-market.js";
+import {
+  BochaEvidenceCollector,
+  BochaWebSearchClient,
+  CachedPandaEvidenceCollector,
+  PandaBatchClient,
+} from "../providers/index.js";
 import { WorkspaceService } from "../workspace/index.js";
 import type { ServerConfig } from "../server/config.js";
 import { openSqliteDatabase } from "./database.js";
 import { SqliteAtlasStore } from "./atlas-store.js";
+import { SqliteEvidenceCacheStore } from "./evidence-cache-store.js";
 import { SqliteHistoryStore } from "./history-store.js";
 import { SqliteJourneyStore } from "./journey-store.js";
 import { SqliteWorkspaceStore } from "./workspace-store.js";
@@ -35,20 +40,24 @@ export function createDurableServices(config: ServerConfig) {
     : undefined;
   const atlas = new AtlasService(
     new SqliteAtlasStore(database),
-    modelGateway
-      ? new ModelAtlasCandidateGenerator(modelGateway)
-      : new FixtureAtlasCandidateGenerator(),
+    new FixtureAtlasCandidateGenerator(),
   );
   const journeyStore = new SqliteJourneyStore(database);
   journeyStore.recoverInterruptedRunsNow(new Date().toISOString());
-  // With MODEL_* configured, stream a relaxed free-text model analysis over the
-  // deterministic evidence + coverage shell; otherwise fall back to the
-  // deterministic fixture executor.
+  const evidenceCache = new SqliteEvidenceCacheStore(database);
   const executor = modelGateway
-    ? new StreamingAnalysisExecutor(
+    ? new DailyReviewV2Executor(
         {
           modelGateway,
-          marketEvidenceSource: new TencentMarketEvidenceSource(),
+          marketEvidenceCollector: new CachedPandaEvidenceCollector(
+            new PandaBatchClient(),
+            evidenceCache,
+          ),
+          eventEvidenceCollector: new BochaEvidenceCollector(
+            new BochaWebSearchClient(config.bochaApiKey ?? ""),
+            evidenceCache,
+          ),
+          listAtlasCards: (workspaceId) => atlas.listCards(workspaceId),
         },
       )
     : undefined;
@@ -60,6 +69,7 @@ export function createDurableServices(config: ServerConfig) {
     workspaces,
     history,
     atlas,
+    evidenceCache,
     journey,
     journeyStore,
     lifecycle: new HistoryWorkspaceLifecycle(workspaces, history),

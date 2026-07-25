@@ -17,6 +17,7 @@ import {
 import {
   DAILY_REVIEW_MODEL_ID,
   DAILY_REVIEW_PROMPT_VERSION,
+  DAILY_REVIEW_SKILL_VERSIONS,
 } from "../analysis/prompt-compiler.js";
 import { ATLAS_GENERATION_POLICY_VERSION } from "../atlas/generation-policy.js";
 import {
@@ -165,14 +166,18 @@ function v2RecordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelop
   }
   if (!record.review_packet || !record.generated_review || !record.model_id ||
     !record.prompt_version || !record.skill_versions || !record.atlas_policy_version) return false;
+  const expectedPersonaSkill = (DAILY_REVIEW_SKILL_VERSIONS.personas as Readonly<Record<string, string>>)[
+    record.review_packet.persona_id
+  ];
   if (
     record.review_packet.schema_version !== REVIEW_PACKET_SCHEMA_VERSION ||
     record.generated_review.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
     record.model_id !== DAILY_REVIEW_MODEL_ID ||
     record.prompt_version !== DAILY_REVIEW_PROMPT_VERSION ||
     record.atlas_policy_version !== ATLAS_GENERATION_POLICY_VERSION ||
-    !record.skill_versions.core.startsWith("sha256:") ||
-    !record.skill_versions.persona.startsWith("sha256:") ||
+    record.skill_versions.core !== DAILY_REVIEW_SKILL_VERSIONS.core ||
+    expectedPersonaSkill === undefined ||
+    record.skill_versions.persona !== expectedPersonaSkill ||
     envelope.versions.review_packet !== REVIEW_PACKET_SCHEMA_VERSION ||
     envelope.versions.generated_daily_review !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
     envelope.versions.prompt !== DAILY_REVIEW_PROMPT_VERSION ||
