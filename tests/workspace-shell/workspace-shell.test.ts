@@ -126,7 +126,7 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).toContain('data-reduce-motion="true"');
-    expect(markup).toContain("已有复盘仍在进行，点击兜兜继续查看。");
+    expect(markup).toContain("已有复盘仍在进行，可返回同一任务继续查看。");
   });
 
   it("renders an account-free drawer with workspace retention and accessible controls", async () => {
