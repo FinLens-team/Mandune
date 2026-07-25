@@ -331,6 +331,25 @@ describe("production privacy surface", () => {
       last_active_at: "2026-01-01T00:00:00.000Z",
       expires_at: "2026-01-31T00:00:00.000Z",
     });
+    await new SqliteWorkspaceStore(database).put({
+      workspace_id: "ws_active_analysis",
+      locator: "active-analysis-locator",
+      created_at: "2026-07-25T00:00:00.000Z",
+      last_active_at: "2026-07-25T00:00:00.000Z",
+      expires_at: "2099-07-25T00:00:00.000Z",
+    });
+    database.prepare(`
+      INSERT INTO analysis_runs (
+        workspace_id, analysis_id, snapshot_json, state, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      "ws_active_analysis",
+      "analysis_active",
+      "{}",
+      "queued",
+      "2026-07-25T00:01:00.000Z",
+      "2026-07-25T00:01:00.000Z",
+    );
     close(database);
 
     const stdout: string[] = [];
@@ -345,6 +364,20 @@ describe("production privacy surface", () => {
     expect(exitCode).toBe(0);
     expect(stdout.join("\n")).toContain("purged=1 failed=0");
     expect([...stdout, ...stderr].join("\n")).not.toMatch(/private|locator|ws_private_identifier/);
+
+    const verify = open(dbPath);
+    expect(verify.prepare(`
+      SELECT state, terminal_reason, retryable FROM analysis_runs
+      WHERE workspace_id = ? AND analysis_id = ?
+    `).get("ws_active_analysis", "analysis_active")).toEqual({
+      state: "queued",
+      terminal_reason: null,
+      retryable: 0,
+    });
+    expect(verify.prepare(`
+      SELECT count(*) AS count FROM analysis_events
+      WHERE workspace_id = ? AND analysis_id = ?
+    `).get("ws_active_analysis", "analysis_active")).toEqual({ count: 0 });
   });
 
   it("keeps database and existing sidecars private to the service user", () => {
