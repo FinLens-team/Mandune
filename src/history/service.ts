@@ -21,6 +21,8 @@ import {
   HISTORY_SCHEMA_VERSION,
   HistoryAccessError,
   HistorySaveError,
+  isHistoryExperienceSource,
+  type HistoryExperienceSource,
   type HistoryReadResult,
   type HistoryRecordV1,
   type HistoryReplayResult,
@@ -36,6 +38,7 @@ interface SinkPayload {
   narrative?: ThemeModelOutput;
   ai_text?: string;
   ai_theme_text?: string;
+  experience_source?: HistoryExperienceSource;
 }
 
 function cloneJson<T>(value: T): T {
@@ -118,7 +121,8 @@ function recordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelope)
     record.theme_narrative_version !== envelope.versions.theme_narrative ||
     record.snapshot.contracts_version !== CONTRACTS_VERSION ||
     record.analysis.contracts_version !== CONTRACTS_VERSION ||
-    !isDeepStrictEqual(record.snapshot.constraints, record.analysis.constraints)
+    !isDeepStrictEqual(record.snapshot.constraints, record.analysis.constraints) ||
+    (record.experience_source !== undefined && !isHistoryExperienceSource(record.experience_source))
   ) return false;
 
   if (!validatePortfolioSnapshot(record.snapshot).ok || !validateOwnedAnalysisResult(record.analysis).ok) return false;
@@ -178,6 +182,10 @@ export class HistoryService {
         !isDeepStrictEqual(payloadCopy.analysis.constraints, snapshotCopy.constraints)
       ) throw new HistorySaveError("snapshot_mismatch");
       if (payloadCopy.analysis.theme_id !== snapshotCopy.theme_id) throw new HistorySaveError("theme_mismatch");
+      if (
+        payloadCopy.experience_source !== undefined &&
+        !isHistoryExperienceSource(payloadCopy.experience_source)
+      ) throw new HistorySaveError("invalid_result");
 
       if (payloadCopy.narrative) {
         const rational = rationalView({
@@ -202,6 +210,9 @@ export class HistoryService {
         analysis: payloadCopy.analysis,
         rational_analysis_version: payloadCopy.rational_analysis_version,
         theme_narrative_version: payloadCopy.narrative ? THEME_NARRATIVE_SCHEMA_VERSION : null,
+        ...(payloadCopy.experience_source
+          ? { experience_source: payloadCopy.experience_source }
+          : {}),
         ...(payloadCopy.narrative ? { narrative: payloadCopy.narrative } : {}),
         ...(payloadCopy.ai_text ? { ai_text: payloadCopy.ai_text } : {}),
         ...(payloadCopy.ai_theme_text ? { ai_theme_text: payloadCopy.ai_theme_text } : {}),

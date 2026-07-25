@@ -1,7 +1,10 @@
 import type { PortfolioDraft } from "../../contracts/index.js";
-import type { HistoryRecordV1 } from "../../history/index.js";
+import type {
+  HistoryExperienceSource,
+  HistoryRecordV1,
+} from "../../history/index.js";
 
-export type JourneyExperienceSource = "random" | "edited";
+export type JourneyExperienceSource = HistoryExperienceSource;
 
 export const RANDOM_EXPERIENCE_LABEL = "随机体验身份";
 export const EDITED_EXPERIENCE_LABEL = "体验持仓 · 已编辑";
@@ -27,8 +30,6 @@ export function markDraftExperienceSource(
 
 export function experienceSourceFromHistoryRecord(
   record: HistoryRecordV1,
-): JourneyExperienceSource {
-  return record.snapshot.lines.some((line) => line.entry_method !== "example")
-    ? "edited"
-    : "random";
+): JourneyExperienceSource | undefined {
+  return record.experience_source;
 }

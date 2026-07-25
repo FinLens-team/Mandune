@@ -155,6 +155,7 @@ async function save(
     analysis: result,
     rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
     narrative: narrative(result),
+    experience_source: "edited",
   }, fence);
 }
 
@@ -179,6 +180,7 @@ describe("immutable analysis history", () => {
       expect(detail.record.snapshot.lines[0]!.name).toBe("虚构宽基 ETF a");
       expect(detail.record.analysis.conclusions[0]!.statement).toBe("已核对的结构化观察支持继续关注组合变化。");
       expect(Object.isFrozen(detail.record)).toBe(true);
+      expect(detail.record.experience_source).toBe("edited");
     }
     expect(await history.getDetail("workspace-b", "analysis-a")).toEqual({ status: "not_found", code: "not_found" });
     expect((await history.list("workspace-a")).map((item) => item.analysis_id)).toEqual(["analysis-b", "analysis-a"]);
@@ -236,6 +238,29 @@ describe("immutable analysis history", () => {
       ]);
     }
     expect((await history.replay("workspace-a", "legacy-analysis")).status).toBe("unsupported_version");
+  });
+
+  it("keeps legacy V1 records readable without inventing an experience source", async () => {
+    const store = new MemoryHistoryStore();
+    const history = new HistoryService(store);
+    const snap = snapshot("legacy-v1");
+    const result = analysis(snap, "legacy-v1");
+    await save(history, "workspace-legacy-v1", snap, result);
+    const bytes = store.getBytesForTests("workspace-legacy-v1", result.analysis_id);
+    if (!bytes) throw new Error("missing saved history");
+    const envelope = JSON.parse(bytes) as StoredHistoryEnvelope;
+    const payload = JSON.parse(envelope.payload_json) as Record<string, unknown>;
+    delete payload.experience_source;
+    envelope.payload_json = JSON.stringify(payload);
+
+    const legacyStore = new MemoryHistoryStore();
+    await legacyStore.append(envelope, openFence());
+    const detail = await new HistoryService(legacyStore).getDetail(
+      "workspace-legacy-v1",
+      result.analysis_id,
+    );
+    expect(detail.status).toBe("found");
+    if (detail.status === "found") expect(detail.record.experience_source).toBeUndefined();
   });
 
   it("fences late commits and maps storage failures to privacy-safe errors without partial records", async () => {

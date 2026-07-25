@@ -287,13 +287,8 @@ export class JourneyController {
     );
     if (!saved) return;
     try {
-      const started = await this.options.gateway.startAnalysis();
-      const frozenSource = started.reused_active
-        ? this.options.persistence.getAnalysisExperienceSource(
-            state.workspace.workspace_id,
-            started.analysis_id,
-          ) ?? "random"
-        : experienceSource;
+      const started = await this.options.gateway.startAnalysis(experienceSource);
+      const frozenSource = started.experience_source;
       this.options.persistence.setActiveAnalysis(state.workspace.workspace_id, started.analysis_id);
       this.options.persistence.setAnalysisExperienceSource(
         state.workspace.workspace_id,
@@ -523,18 +518,8 @@ export class JourneyController {
     }
   }
 
-  historyRecordExperienceSource(record: HistoryRecordV1): JourneyExperienceSource {
-    const state = this.options.getState();
-    if (state.activeAnalysis?.analysisId === record.analysis.analysis_id) {
-      return state.activeAnalysis.experienceSource;
-    }
-    const workspaceId = state.workspace?.workspace_id;
-    return this.analysisSources.get(record.analysis.analysis_id) ?? (workspaceId
-      ? this.options.persistence.getAnalysisExperienceSource(
-          workspaceId,
-          record.analysis.analysis_id,
-        )
-      : null) ?? experienceSourceFromHistoryRecord(record);
+  historyRecordExperienceSource(record: HistoryRecordV1): JourneyExperienceSource | undefined {
+    return experienceSourceFromHistoryRecord(record);
   }
 
   async deleteWorkspace(): Promise<void> {

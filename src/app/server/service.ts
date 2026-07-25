@@ -6,7 +6,11 @@ import {
   type PortfolioDraft,
   type TaskEvent,
 } from "../../contracts/index.js";
-import { HistoryService } from "../../history/index.js";
+import {
+  HistoryService,
+  isHistoryExperienceSource,
+  type HistoryExperienceSource,
+} from "../../history/index.js";
 import { createSnapshotFromDraft } from "../../portfolio/index.js";
 import { FixtureAnalysisExecutor } from "./fixture-executor.js";
 import type {
@@ -62,7 +66,11 @@ export class JourneyAnalysisService {
     return structuredClone(draft);
   }
 
-  async start(workspaceId: string): Promise<{ created: boolean; run: StoredAnalysisRun }> {
+  async start(
+    workspaceId: string,
+    experienceSource: HistoryExperienceSource,
+  ): Promise<{ created: boolean; run: StoredAnalysisRun }> {
+    if (!isHistoryExperienceSource(experienceSource)) throw new JourneyInputError("invalid_draft");
     const draft = await this.getDraft(workspaceId);
     if (!draft) throw new JourneyInputError("no_current_draft");
     const snapshotResult = createSnapshotFromDraft(draft);
@@ -74,6 +82,7 @@ export class JourneyAnalysisService {
       workspace_id: workspaceId,
       analysis_id: this.createId(),
       snapshot,
+      experience_source: experienceSource,
       state: "queued",
       created_at: createdAt,
       updated_at: createdAt,
@@ -253,6 +262,7 @@ export class JourneyAnalysisService {
         ...(execution.narrative ? { narrative: execution.narrative } : {}),
         ...(execution.ai_text ? { ai_text: execution.ai_text } : {}),
         ...(execution.ai_theme_text ? { ai_theme_text: execution.ai_theme_text } : {}),
+        ...(run.experience_source ? { experience_source: run.experience_source } : {}),
       }, {
         signal: controller.signal,
         canCommit: () => open && !controller.signal.aborted,

@@ -8,6 +8,7 @@ import {
   RATIONAL_ANALYSIS_SCHEMA_VERSION,
   type ThemeModelOutput,
 } from "../../analysis/index.js";
+import type { HistoryExperienceSource } from "../../history/index.js";
 
 export const FIXTURE_NON_LIVE_LABEL = "示例 fixture（非实时）" as const;
 
@@ -34,6 +35,8 @@ export interface StoredAnalysisRun {
   workspace_id: string;
   analysis_id: string;
   snapshot: PortfolioSnapshot;
+  /** Frozen when this server-owned run is created. */
+  experience_source?: HistoryExperienceSource;
   state: AnalysisRunState;
   created_at: string;
   updated_at: string;

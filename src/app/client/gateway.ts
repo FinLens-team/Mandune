@@ -14,6 +14,7 @@ import {
   type ThemeModelOutput,
 } from "../../analysis/index.js";
 import type {
+  HistoryExperienceSource,
   HistoryReadResult,
   HistoryReplayResult,
   HistorySummary,
@@ -78,7 +79,11 @@ export interface JourneyGateway {
   list(workspaceId: string): Promise<HistorySummary[]>;
   replayHistory(recordId: string): Promise<HistoryReplayResult>;
   saveCurrentDraft(draft: PortfolioDraft): Promise<PortfolioDraft>;
-  startAnalysis(): Promise<{ analysis_id: string; reused_active: boolean }>;
+  startAnalysis(experienceSource: HistoryExperienceSource): Promise<{
+    analysis_id: string;
+    experience_source: HistoryExperienceSource;
+    reused_active: boolean;
+  }>;
   touchWorkspace(): Promise<WorkspacePublicStatus>;
 }
 
@@ -147,7 +152,10 @@ function checkedHistoryRead(value: unknown): HistoryReadResult {
       object(record.analysis) &&
       validatePortfolioSnapshot(record.snapshot).ok &&
       validateOwnedAnalysisResult(record.analysis as unknown as AnalysisResult).ok &&
-      record.analysis.snapshot_id === record.snapshot.snapshot_id
+      record.analysis.snapshot_id === record.snapshot.snapshot_id &&
+      (record.experience_source === undefined ||
+        record.experience_source === "random" ||
+        record.experience_source === "edited")
     ) {
       return value as unknown as HistoryReadResult;
     }
@@ -247,14 +255,30 @@ export class FetchJourneyGateway implements JourneyGateway {
     return checked.value;
   }
 
-  async startAnalysis(): Promise<{ analysis_id: string; reused_active: boolean }> {
-    const response = await this.response("/api/analyses", { method: "POST" });
+  async startAnalysis(experienceSource: HistoryExperienceSource): Promise<{
+    analysis_id: string;
+    experience_source: HistoryExperienceSource;
+    reused_active: boolean;
+  }> {
+    const response = await this.response("/api/analyses", {
+      method: "POST",
+      body: JSON.stringify({ experience_source: experienceSource }),
+    });
     if (!response.ok) this.failure(response);
     const body = await this.json(response);
-    if (!object(body) || !identifier(body.analysis_id) || typeof body.reused_active !== "boolean") {
+    if (
+      !object(body) ||
+      !identifier(body.analysis_id) ||
+      (body.experience_source !== "random" && body.experience_source !== "edited") ||
+      typeof body.reused_active !== "boolean"
+    ) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }
-    return { analysis_id: body.analysis_id, reused_active: body.reused_active };
+    return {
+      analysis_id: body.analysis_id,
+      experience_source: body.experience_source,
+      reused_active: body.reused_active,
+    };
   }
 
   async getAnalysisStatus(analysisId: string): Promise<AnalysisStatusResponse> {

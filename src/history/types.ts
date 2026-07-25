@@ -7,6 +7,12 @@ import type { ThemeModelOutput } from "../analysis/index.js";
 
 export const HISTORY_SCHEMA_VERSION = "analysis-history.v1" as const;
 
+export type HistoryExperienceSource = "random" | "edited";
+
+export function isHistoryExperienceSource(value: unknown): value is HistoryExperienceSource {
+  return value === "random" || value === "edited";
+}
+
 export interface HistoryVersions {
   history_schema: string;
   contracts: string;
@@ -21,6 +27,8 @@ export interface HistoryRecordV1 {
   analysis: AnalysisResult;
   rational_analysis_version: string;
   theme_narrative_version: string | null;
+  /** Analysis-time experience provenance. Missing on records saved before this extension. */
+  experience_source?: HistoryExperienceSource;
   narrative?: ThemeModelOutput;
   /** Relaxed Demo mode: free-form rational report persisted alongside the shell. */
   ai_text?: string;

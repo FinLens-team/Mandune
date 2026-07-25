@@ -66,6 +66,7 @@ function runtimeRecord(scenarioId: FixtureScenarioId, analysisId: string): Histo
     snapshot: structuredClone(fixture.snapshot),
     analysis,
     rational_analysis_version: "rational-analysis.v1",
+    experience_source: "random",
     theme_narrative_version: narrative?.schema_version ?? null,
     ...(narrative ? { narrative } : {}),
   };
@@ -163,9 +164,14 @@ class FakeGateway implements JourneyGateway {
     return structuredClone(draft);
   }
 
-  async startAnalysis() {
+  async startAnalysis(experienceSource: "random" | "edited") {
     this.calls.push("startAnalysis");
-    return { analysis_id: this.status.analysis_id, reused_active: false };
+    this.record.experience_source = experienceSource;
+    return {
+      analysis_id: this.status.analysis_id,
+      experience_source: experienceSource,
+      reused_active: false,
+    };
   }
 
   async getAnalysisStatus(analysisId: string) {
@@ -398,6 +404,17 @@ describe("journey controller analysis status matrix", () => {
     expect(app.state.displayedResult?.experienceSource).toBe("random");
   });
 
+  it("uses only record-owned source when browser storage is unavailable", async () => {
+    const gateway = new FakeGateway("supported_full");
+    gateway.record.experience_source = "edited";
+    const app = harness(gateway, createJourneyPersistence(null));
+    await enterReturning(app);
+
+    expect(app.controller.historyRecordExperienceSource(gateway.record)).toBe("edited");
+    delete gateway.record.experience_source;
+    expect(app.controller.historyRecordExperienceSource(gateway.record)).toBeUndefined();
+  });
+
   it("restores the frozen source for the same active analysis after bootstrap", async () => {
     const gateway = new FakeGateway("supported_full", { running: true });
     const first = harness(gateway);
@@ -576,6 +593,24 @@ describe("journey controller recovery, history, and deletion", () => {
     await app.controller.openHistoryRecord("analysis_old");
     expect(app.state.phase).toBe("history");
     expect(app.state.message).toContain("未使用当前数据重新生成");
+  });
+
+  it("opens an immutable ai_text-only history record through the existing runtime gate", async () => {
+    const gateway = new FakeGateway("supported_full", { withoutNarrative: true });
+    gateway.record.ai_text = "已校验并完整保存的模型复盘文本。";
+    const app = harness(gateway, createJourneyPersistence(null));
+    await enterReturning(app);
+
+    await app.controller.openHistoryRecord(gateway.record.record_id);
+
+    expect(app.state).toMatchObject({
+      phase: "result",
+      resultReturn: "history",
+      displayedResult: {
+        aiText: gateway.record.ai_text,
+        experienceSource: "random",
+      },
+    });
   });
 
   it("deletes the current workspace and clears scoped recovery state", async () => {

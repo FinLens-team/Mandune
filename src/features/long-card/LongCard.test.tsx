@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "../../fixtures/index.js";
 import {
-  AiNarrativeFront,
   LongCard,
   RationalEvidenceBack,
   longCardRuntimeFromFixture,
@@ -26,7 +25,10 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("有限分析");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
-    expect(markup).not.toContain("风险与判断边界");
+    expect(markup.match(/风险与判断边界/g)).toHaveLength(4);
+    for (const note of input.analysis.risk_notes) {
+      expect(markup.match(new RegExp(note.statement, "g"))).toHaveLength(2);
+    }
     expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
     expect(markup).toContain("mandong-long-card__back");
     expect(markup).toContain('aria-hidden="true"');
@@ -202,19 +204,60 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).not.toContain("mandong-long-card__stage");
   });
 
-  it("renders relaxed model text as Markdown on the long-card front", () => {
-    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
-    const markup = renderToStaticMarkup(createElement(AiNarrativeFront, {
-      active: true,
+  it("augments the deterministic two-face shell for an aiText-only result", () => {
+    const base = longCardRuntimeFromFixture(FIXTURES.limited_partial);
+    const input = {
+      ...base,
       aiText: "## 核心观察\n\n- **保持观察**",
-      faceId: "front",
-      headingId: "front-heading",
-      headingRef: { current: null },
-      input,
-    }));
+      narrative: undefined,
+    };
+    const markup = renderToStaticMarkup(createElement(LongCard, { input }));
 
+    expect(longCardRuntimeIsDisplayable(input)).toBe(true);
     expect(markup).toContain("<h2>核心观察</h2>");
     expect(markup).toContain("<strong>保持观察</strong>");
+    expect(markup).toContain(base.snapshot.snapshot_id);
+    expect(markup).toContain(base.analysis.analysis_id);
+    expect(markup).toContain(base.analysis.contracts_version);
+    expect(markup).toContain(base.analysis.evidence_cutoff_at);
+    expect(markup).toContain("结论与引用");
+    expect(markup).toContain("建议与触发依据");
+    expect(markup).toContain("可复算派生关系");
+    expect(markup).toContain("缺口、假设与限制");
+    for (const conclusion of base.analysis.conclusions) {
+      expect(markup).toContain(conclusion.statement);
+      for (const ref of conclusion.refs) expect(markup).toContain(ref.ref_id);
+    }
+    for (const advice of base.analysis.advice) {
+      expect(markup).toContain(advice.statement);
+      for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
+    }
+    for (const note of base.analysis.risk_notes) expect(markup).toContain(note.statement);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain("inert");
+  });
+
+  it("uses aiThemeText only for the themed face while retaining aiText and evidence", () => {
+    const base = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const input = {
+      ...base,
+      aiText: "## 理性说明\n\n理性正文",
+      aiThemeText: "## 观象说明\n\n主题正文",
+      narrative: undefined,
+    };
+    const markup = renderToStaticMarkup(createElement(LongCard, { input, reducedMotion: true }));
+
+    expect(markup).toContain("<h2>观象说明</h2>");
+    expect(markup).toContain("主题正文");
+    expect(markup).toContain("<h2>理性说明</h2>");
+    expect(markup).toContain("理性正文");
+    expect(markup).toContain("确认输入与覆盖");
+    expect(markup).toContain("观察证据与核验状态");
+    expect(markup).toContain("结论与引用");
+    for (const note of base.analysis.risk_notes) expect(markup).toContain(note.statement);
+    expect(markup).toContain('data-reduced-motion="true"');
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

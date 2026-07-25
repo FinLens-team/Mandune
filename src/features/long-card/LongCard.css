@@ -312,6 +312,15 @@
   margin: var(--space-1) 0 0;
 }
 
+.mandong-long-card__risk .mandong-long-card__plain-list {
+  gap: var(--space-2);
+  padding-left: 1.25rem;
+}
+
+.mandong-long-card__risk .mandong-long-card__refs {
+  margin-top: var(--space-2);
+}
+
 .mandong-long-card__risk--footer {
   margin-top: var(--space-8);
 }
