@@ -27,10 +27,16 @@ export interface StreamingAnalysisExecutorOptions {
 }
 
 const SYSTEM_INSTRUCTIONS = [
-  "你是“满懂”里的理性复盘助手，面向普通个人投资者，用简体中文回答。",
-  "根据用户提供的持仓事实、四项个人约束和已获取的行情证据，给出一份口语化、结构清晰的每日复盘与方向性观察。",
+  "你是“满懂”里的理性分析师，面向普通个人投资者，用简体中文撰写一份正式的每日持仓分析报告。",
+  "根据用户提供的持仓事实、四项个人约束和已获取的行情证据，按“整体情况→逐项分析→风险与缺口→方向性观察”的顺序组织内容，语气专业、条理清晰。",
   "只给定性方向（如维持观察、关注集中度、等待数据确认等），不要给出精确买卖金额、份额、比例、价格点位或买卖时点，不做收益保证或代客操作。",
-  "行情缺失、过期或不支持时如实说明，不要编造当前价格或净值。语气平实、可读，避免催促交易。",
+  "行情缺失、过期或不支持时如实说明，不要编造当前价格或净值。避免催促交易。",
+].join("\n");
+
+const THEME_INSTRUCTIONS = [
+  "你是“满懂”里的东方观象叙事者，搭档是小松鼠向导“兜兜”，用简体中文把一份理性分析报告改写成东方观象风格的今日观象长笺。",
+  "只改变表达、意象与环境（如星象、风候、潮汐等比喻），绝对不得改变原报告的事实、数据、风险判断、数据缺口说明和方向性观察，也不得新增或删减结论。",
+  "不要预测吉凶或暗示未来涨跌概率，不给精确交易指令。篇幅与原报告相当，语气温和可读。",
 ].join("\n");
 
 function constraintLabel(value: string): string {
@@ -78,7 +84,7 @@ function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRec
     "【已获取的行情证据】",
     evidenceLines,
     "",
-    "请基于以上信息，用自然的中文给出今天的理性复盘：先概述整体情况，再逐项点评关键持仓，指出数据缺口与需要关注的风险，最后给出定性的方向性观察。不要给出精确交易指令。",
+    "请基于以上信息撰写今天的理性分析报告：先概述整体情况，再逐项分析关键持仓，指出数据缺口与需要关注的风险，最后给出定性的方向性观察。不要给出精确交易指令。",
   ].join("\n");
 }
 
@@ -135,21 +141,35 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       cutoffAt: evidenceCutoffAt,
       evidence,
       derivations,
-      reason: "本次采用放宽模式：结构化外壳保持确定性，方向性解读见模型自由文本。",
+      reason: "本次采用放宽模式：结构化外壳保持确定性，分析报告见模型生成文本。",
       unavailable: false,
     });
 
-    input.emit("form_conclusions_and_advice", "running", { message: "生成理性复盘文本。" });
+    input.emit("form_conclusions_and_advice", "running", { message: "生成理性分析报告。" });
     const aiText = await this.streamModelText(snapshot, evidence, modelTimeoutMs, input.onText);
     input.emit("form_conclusions_and_advice", aiText.trim() ? "succeeded" : "failed", {
       ...(aiText.trim() ? {} : { message: "模型未返回可用文本。" }),
     });
-    input.emit("render_theme_and_validate_output", "succeeded");
+
+    // Second pass rewrites the rational report into the observation-theme front.
+    // It may only change expression and imagery, never facts or advice, so the
+    // rational report itself is the sole model input besides the instructions.
+    let themeText = "";
+    if (aiText.trim()) {
+      input.emit("render_theme_and_validate_output", "running", { message: "渲染东方观象主题表达。" });
+      themeText = await this.generateThemeText(aiText, modelTimeoutMs);
+      input.emit("render_theme_and_validate_output", "succeeded", {
+        ...(themeText.trim() ? {} : { message: "主题表达未生成，正面回退为理性报告。" }),
+      });
+    } else {
+      input.emit("render_theme_and_validate_output", "succeeded");
+    }
 
     const isLive = analysis.status !== "unavailable" && aiText.trim().length > 0;
     return {
       analysis,
       ...(aiText.trim() ? { ai_text: aiText } : {}),
+      ...(themeText.trim() ? { ai_theme_text: themeText } : {}),
       rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
       source: isLive
         ? { kind: "live", is_live: true, label: "实时行情 + 模型分析" }
@@ -203,6 +223,23 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       onText: (delta) => {
         buffered += delta;
         onText?.(delta);
+      },
+    });
+    return result.ok ? result.text : buffered;
+  }
+
+  /** Theme pass: same report, observation-theme expression only. Not streamed. */
+  private async generateThemeText(rationalReport: string, timeoutMs: number): Promise<string> {
+    const gateway = this.dependencies.modelGateway;
+    if (!gateway.streamGenerate) return "";
+    let buffered = "";
+    const result = await gateway.streamGenerate({
+      instructions: THEME_INSTRUCTIONS,
+      prompt: ["【理性分析报告原文】", rationalReport, "", "请把这份报告改写成东方观象风格的今日观象长笺正文。"].join("\n"),
+      signal: new AbortController().signal,
+      timeoutMs,
+      onText: (delta) => {
+        buffered += delta;
       },
     });
     return result.ok ? result.text : buffered;

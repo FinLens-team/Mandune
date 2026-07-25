@@ -76,8 +76,10 @@ export interface AnalysisResultSink {
     analysis: AnalysisResult;
     rational_analysis_version: typeof RATIONAL_ANALYSIS_SCHEMA_VERSION;
     narrative?: ThemeModelOutput;
-    /** Relaxed Demo mode: free-form model narrative streamed to the client. */
+    /** Relaxed Demo mode: free-form rational report streamed to the client. */
     ai_text?: string;
+    /** Relaxed Demo mode: observation-theme rewrite of the same report. */
+    ai_theme_text?: string;
   }, fence: AnalysisCommitFence): Promise<void>;
 }
 

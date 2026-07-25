@@ -22,8 +22,10 @@ export interface HistoryRecordV1 {
   rational_analysis_version: string;
   theme_narrative_version: string | null;
   narrative?: ThemeModelOutput;
-  /** Relaxed Demo mode: free-form model narrative persisted alongside the shell. */
+  /** Relaxed Demo mode: free-form rational report persisted alongside the shell. */
   ai_text?: string;
+  /** Relaxed Demo mode: observation-theme rewrite of the same report. */
+  ai_theme_text?: string;
 }
 
 /**

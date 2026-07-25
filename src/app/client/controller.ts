@@ -86,6 +86,7 @@ function historyInput(
     isExample: record.snapshot.lines.some((line) => line.entry_method === "example"),
     ...(record.narrative ? { narrative: record.narrative } : {}),
     ...(record.ai_text ? { aiText: record.ai_text } : {}),
+    ...(record.ai_theme_text ? { aiThemeText: record.ai_theme_text } : {}),
     snapshot: record.snapshot,
   };
 }

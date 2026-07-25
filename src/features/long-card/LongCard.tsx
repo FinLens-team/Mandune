@@ -55,6 +55,7 @@ export interface LongCardRuntimeInput {
   isExample: boolean;
   narrative?: ThemeModelOutput;
   aiText?: string;
+  aiThemeText?: string;
   snapshot: PortfolioSnapshot;
 }
 
@@ -347,8 +348,8 @@ export function NarrativeFront({
 
 /**
  * Relaxed Demo mode front: renders the model's free-text narrative over the
- * same deterministic shell (date, status, mascot, risk notes, unknowns). It
- * changes only the expression, never the analysis, coverage, or risk judgement.
+ * same deterministic shell (date, status, mascot, risk notes). It changes only
+ * the expression, never the analysis, coverage, or risk judgement.
  */
 export function AiNarrativeFront({
   faceId,
@@ -403,16 +404,6 @@ export function AiNarrativeFront({
         </div>
       </section>
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-unknowns`}>
-        <h3 id={`${headingId}-unknowns`}>未知与限制</h3>
-        {analysis.unknowns.length + analysis.limitations.length > 0 ? (
-          <ul className="mandong-long-card__plain-list">
-            {analysis.unknowns.map((item) => <li key={item.id}>{item.impact}（{item.reason}）</li>)}
-            {analysis.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
-          </ul>
-        ) : <p>当前分析范围内未记录额外未知项。</p>}
-      </section>
-
       <footer className="mandong-long-card__footer">
         <p>用户保留最终判断与操作权。满懂不连接券商，也不代客操作。</p>
       </footer>
@@ -446,31 +437,56 @@ function Constraints({ constraints }: { constraints: PersonalConstraints }) {
 
 export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: FaceProps) {
   const { analysis, snapshot } = input;
+  // Relaxed Demo mode: the back face is the formal rational analysis report
+  // (the model's report text plus the inputs it was given). The placeholder
+  // conclusion/advice shells and derivation bookkeeping stay hidden.
+  const relaxed = Boolean(input.aiText && !input.narrative);
+  const reportParagraphs = relaxed
+    ? (input.aiText ?? "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+    : [];
   return (
     <article className="mandong-long-card__face mandong-long-card__back" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
-          <p>理性证据背面</p>
+          <p>{relaxed ? "理性分析背面" : "理性证据背面"}</p>
           <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
             <p className="mandong-long-card__theme">与正面同一版本</p>
-            <h2 id={headingId} ref={headingRef} tabIndex={-1}>逐项核对这份分析</h2>
+            <h2 id={headingId} ref={headingRef} tabIndex={-1}>{relaxed ? "今日理性分析报告" : "逐项核对这份分析"}</h2>
           </div>
           <BookOpenCheck aria-hidden="true" size={40} strokeWidth={1.5} />
         </div>
         <AnalysisStatus status={analysis.status} />
-        <dl className="mandong-long-card__identity">
-          <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
-          <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
-          <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
-          <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
-        </dl>
+        {!relaxed ? (
+          <dl className="mandong-long-card__identity">
+            <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
+            <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
+            <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
+            <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
+          </dl>
+        ) : null}
       </header>
 
+      {relaxed ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-report`}>
+          <h3 id={`${headingId}-report`}>报告正文</h3>
+          {reportParagraphs.length > 0 ? (
+            <div className="mandong-long-card__statements">
+              {reportParagraphs.map((paragraph, index) => (
+                <p key={`${index}-${paragraph.slice(0, 12)}`}>{paragraph}</p>
+              ))}
+            </div>
+          ) : <p>模型未返回可展示的分析报告。</p>}
+        </section>
+      ) : null}
+
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-inputs`}>
-        <h3 id={`${headingId}-inputs`}>确认输入与覆盖</h3>
+        <h3 id={`${headingId}-inputs`}>{relaxed ? "本次分析用到的持仓" : "确认输入与覆盖"}</h3>
         <CoverageSummary input={input} />
         <ul className="mandong-long-card__evidence-list">
           {snapshot.lines.map((line) => {
@@ -495,8 +511,9 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
         <Constraints constraints={analysis.constraints} />
       </section>
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-conclusions`}>
-        <h3 id={`${headingId}-conclusions`}>结论与引用</h3>
+      {!relaxed ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-conclusions`}>
+          <h3 id={`${headingId}-conclusions`}>结论与引用</h3>
         <ol className="mandong-long-card__evidence-list">
           {analysis.conclusions.map((conclusion) => (
             <li key={conclusion.id}>
@@ -507,9 +524,11 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
           ))}
         </ol>
       </section>
+      ) : null}
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-advice`}>
-        <h3 id={`${headingId}-advice`}>建议与触发依据</h3>
+      {!relaxed ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-advice`}>
+          <h3 id={`${headingId}-advice`}>建议与触发依据</h3>
         {analysis.advice.length > 0 ? (
           <ul className="mandong-long-card__evidence-list">
             {analysis.advice.map((advice) => (
@@ -521,9 +540,10 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
           </ul>
         ) : <p>当前没有证据支持方向性建议。</p>}
       </section>
+      ) : null}
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-evidence`}>
-        <h3 id={`${headingId}-evidence`}>观察证据与核验状态</h3>
+        <h3 id={`${headingId}-evidence`}>{relaxed ? "本次分析用到的行情证据" : "观察证据与核验状态"}</h3>
         <ul className="mandong-long-card__evidence-list">
           {analysis.evidence.map((evidence) => (
             <li key={evidence.id}>
@@ -548,8 +568,9 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
         </ul>
       </section>
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-derived`}>
-        <h3 id={`${headingId}-derived`}>可复算派生关系</h3>
+      {!relaxed ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-derived`}>
+          <h3 id={`${headingId}-derived`}>可复算派生关系</h3>
         {analysis.derived.length > 0 ? (
           <ul className="mandong-long-card__evidence-list">
             {analysis.derived.map((derived) => (
@@ -562,9 +583,11 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
           </ul>
         ) : <p>当前结果未形成可复算派生项。</p>}
       </section>
+      ) : null}
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-gaps`}>
-        <h3 id={`${headingId}-gaps`}>缺口、假设与限制</h3>
+      {!relaxed ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-gaps`}>
+          <h3 id={`${headingId}-gaps`}>缺口、假设与限制</h3>
         <ul className="mandong-long-card__plain-list">
           {analysis.unknowns.map((unknown) => <li key={unknown.id}>{unknown.subject}：{unknown.impact}（{unknown.reason}）</li>)}
           {analysis.coverage.missing_metrics.map((metric) => <li key={metric}>缺失指标：{metric}</li>)}
@@ -573,6 +596,7 @@ export function RationalEvidenceBack({ faceId, headingId, headingRef, input }: F
           {analysis.unknowns.length + analysis.coverage.missing_metrics.length + analysis.assumptions.length + analysis.limitations.length === 0 ? <li>当前分析范围内未记录额外缺口。</li> : null}
         </ul>
       </section>
+      ) : null}
 
       <footer className="mandong-long-card__risk mandong-long-card__risk--footer">
         <ShieldAlert aria-hidden="true" size={22} />
@@ -632,7 +656,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const scrollOffsetsRef = useRef<FaceScrollOffsets>({ evidence: null, narrative: null });
   const pendingScrollRestoreRef = useRef<PendingScrollRestore | null>(null);
   const id = useId();
-  const { analysis, narrative, aiText } = input;
+  const { analysis, narrative, aiText, aiThemeText } = input;
   const narrativeHeadingId = `${id}-narrative-heading`;
   const evidenceHeadingId = `${id}-evidence-heading`;
   const narrativeFaceId = `${id}-narrative-face`;
@@ -708,7 +732,10 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   }
 
   const showEvidence = face === "evidence";
-  const faceLabel = showEvidence ? "理性证据" : "东方观象";
+  // Relaxed Demo mode: the back is the formal rational report, the front is the
+  // theme rendition of the same report.
+  const relaxedMode = Boolean(aiText && !narrative);
+  const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : "东方观象";
   const stageStyle = { "--long-card-drag-x": `${dragOffset}px` } as CSSProperties;
   return (
     <section
@@ -725,7 +752,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
           variant="secondary"
         >
           {showEvidence ? <ArrowLeft aria-hidden="true" size={18} /> : <ScrollText aria-hidden="true" size={18} />}
-          <span>{showEvidence ? "返回观象" : "查看证据"}</span>
+          <span>{showEvidence ? "返回观象" : relaxedMode ? "查看理性分析" : "查看证据"}</span>
         </Button>
       </div>
       <div
@@ -748,7 +775,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
           ) : narrative ? (
             <NarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} narrative={narrative} />
           ) : (
-            <AiNarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiText ?? ""} />
+            <AiNarrativeFront faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiThemeText ?? aiText ?? ""} />
           )}
         </div>
       </div>

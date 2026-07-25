@@ -16,6 +16,7 @@ export interface JourneyLongCardRuntimeInput {
   isExample: boolean;
   narrative?: ThemeModelOutput;
   aiText?: string;
+  aiThemeText?: string;
   snapshot: PortfolioSnapshot;
 }
 

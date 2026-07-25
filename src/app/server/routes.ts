@@ -147,6 +147,7 @@ export function createJourneyRoutes(input: {
       analysis: run.execution.analysis,
       narrative: run.execution.narrative ?? null,
       ai_text: run.execution.ai_text ?? null,
+      ai_theme_text: run.execution.ai_theme_text ?? null,
     });
   });
 

@@ -63,6 +63,7 @@ export type AnalysisResultResponse =
       analysis: AnalysisResult;
       narrative?: ThemeModelOutput;
       aiText?: string;
+      aiThemeText?: string;
     };
 
 export interface JourneyGateway {
@@ -324,6 +325,7 @@ export class FetchJourneyGateway implements JourneyGateway {
     }
     const narrative = validatedNarrative(body.narrative, analysis);
     const aiText = typeof body.ai_text === "string" && body.ai_text.trim() ? body.ai_text : undefined;
+    const aiThemeText = typeof body.ai_theme_text === "string" && body.ai_theme_text.trim() ? body.ai_theme_text : undefined;
     return {
       status: "ready",
       analysis_id: analysisId,
@@ -331,6 +333,7 @@ export class FetchJourneyGateway implements JourneyGateway {
       analysis,
       ...(narrative ? { narrative } : {}),
       ...(aiText ? { aiText } : {}),
+      ...(aiThemeText ? { aiThemeText } : {}),
     };
   }
 

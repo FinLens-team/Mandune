@@ -35,6 +35,7 @@ interface SinkPayload {
   rational_analysis_version: string;
   narrative?: ThemeModelOutput;
   ai_text?: string;
+  ai_theme_text?: string;
 }
 
 function cloneJson<T>(value: T): T {
@@ -203,6 +204,7 @@ export class HistoryService {
         theme_narrative_version: payloadCopy.narrative ? THEME_NARRATIVE_SCHEMA_VERSION : null,
         ...(payloadCopy.narrative ? { narrative: payloadCopy.narrative } : {}),
         ...(payloadCopy.ai_text ? { ai_text: payloadCopy.ai_text } : {}),
+        ...(payloadCopy.ai_theme_text ? { ai_theme_text: payloadCopy.ai_theme_text } : {}),
       };
       const versions: HistoryVersions = {
         history_schema: HISTORY_SCHEMA_VERSION,

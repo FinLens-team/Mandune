@@ -252,6 +252,7 @@ export class JourneyAnalysisService {
         rational_analysis_version: execution.rational_analysis_version,
         ...(execution.narrative ? { narrative: execution.narrative } : {}),
         ...(execution.ai_text ? { ai_text: execution.ai_text } : {}),
+        ...(execution.ai_theme_text ? { ai_theme_text: execution.ai_theme_text } : {}),
       }, {
         signal: controller.signal,
         canCommit: () => open && !controller.signal.aborted,
