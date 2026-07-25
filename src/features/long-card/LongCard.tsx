@@ -10,7 +10,6 @@ import {
 import {
   BookOpenCheck,
   Rotate3D,
-  ScrollText,
 } from "lucide-react";
 import {
   validatePortfolioSnapshot,
@@ -349,6 +348,8 @@ export function NarrativeFront({
             <h2 id={headingId} ref={headingRef} tabIndex={-1}>{narrative.headline}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
+        </div>
+        <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
           <Doudou />
         </div>
         <FrontBoundarySummary input={input} />
@@ -439,7 +440,6 @@ export function AiNarrativeFront({
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
         </div>
-        <FrontBoundarySummary input={input} />
         <div className="mandong-long-card__guide" data-mascot-mood="calm">
           <Doudou />
         </div>
@@ -498,7 +498,7 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
     >
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
-          <p>理性证据背面</p>
+          <p>{relaxed ? "理性分析背面" : "理性证据背面"}</p>
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
@@ -506,12 +506,14 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           </div>
           <BookOpenCheck aria-hidden="true" size={40} strokeWidth={1.5} />
         </div>
-        <dl className="mandong-long-card__identity">
-          <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
-          <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
-          <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
-          <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
-        </dl>
+        {!relaxed ? (
+          <dl className="mandong-long-card__identity">
+            <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
+            <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
+            <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
+            <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
+          </dl>
+        ) : null}
       </header>
 
       {input.aiText?.trim() ? (
@@ -799,6 +801,17 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      switchFace("evidence");
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      switchFace("narrative");
+    }
+  }
+
   const showEvidence = face === "evidence";
   const faceLabel = showEvidence ? "理性证据" : "东方观象";
   const rotation = reducedMotion
@@ -822,6 +835,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={cancelPointer}
         ref={stageRef}
+        style={stageStyle}
         tabIndex={0}
       >
         <div
