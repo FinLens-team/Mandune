@@ -1,7 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadServerConfig } from "../server/config.js";
-import { createDurableServices } from "./composition.js";
+import { WorkspaceService } from "../workspace/index.js";
+import { openSqliteDatabase, type SqliteDatabase } from "./database.js";
+import { SqliteWorkspaceStore } from "./workspace-store.js";
 
 interface MaintenanceIo {
   stdout(message: string): void;
@@ -23,17 +25,23 @@ export async function runMaintenance(
     return 2;
   }
 
-  let services: ReturnType<typeof createDurableServices> | undefined;
+  let database: SqliteDatabase | undefined;
   try {
-    services = createDurableServices(loadServerConfig(env));
-    const result = await services.workspaces.purgeExpired();
+    const config = loadServerConfig(env);
+    database = openSqliteDatabase({
+      dbPath: config.dbPath,
+      migrationsDirectory: config.migrationsDirectory,
+      busyTimeoutMs: config.dbBusyTimeoutMs,
+    });
+    const workspaces = new WorkspaceService(new SqliteWorkspaceStore(database));
+    const result = await workspaces.purgeExpired();
     io.stdout(`Expired workspace purge completed: purged=${result.purged.length} failed=${result.failed.length}`);
     return result.failed.length === 0 ? 0 : 1;
   } catch {
     io.stderr("Expired workspace purge failed.");
     return 1;
   } finally {
-    services?.database.close();
+    database?.close();
   }
 }
 
