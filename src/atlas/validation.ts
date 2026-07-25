@@ -161,11 +161,20 @@ export function validateAtlasOutcome(value: unknown): value is AtlasOutcome {
   if (!text(value.created_at, 40) || Number.isNaN(Date.parse(value.created_at))) return false;
   if (value.completed_at !== undefined && (!text(value.completed_at, 40) || Number.isNaN(Date.parse(value.completed_at)))) return false;
   if (value.card_id !== undefined && !text(value.card_id, 160)) return false;
+  if (value.cards !== undefined && (
+    !Array.isArray(value.cards) ||
+    value.cards.length < 1 ||
+    value.cards.length > 4 ||
+    value.cards.some((item) => !object(item) || !text(item.card_id, 160) ||
+      (item.disposition !== "new_card" && item.disposition !== "encountered")) ||
+    new Set(value.cards.map((item) => item.card_id)).size !== value.cards.length
+  )) return false;
   if (value.reason !== undefined && ![
     "no_candidate", "dedupe_uncertain", "invalid_candidate", "timeout",
     "generation_failed", "storage_failed", "card_deleted",
   ].includes(String(value.reason))) return false;
-  if ((value.status === "new_card" || value.status === "encountered") && !text(value.card_id, 160)) return false;
+  if ((value.status === "new_card" || value.status === "encountered") &&
+    !text(value.card_id, 160) && !Array.isArray(value.cards)) return false;
   return true;
 }
 

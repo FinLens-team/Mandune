@@ -1,6 +1,5 @@
 .atlas-page {
   width: min(100%, 74rem);
-  min-height: 100dvh;
   margin: 0 auto;
   padding: var(--space-4);
   padding-bottom: calc(var(--space-12) + env(safe-area-inset-bottom));
@@ -314,29 +313,233 @@
 .atlas-delete-dialog__confirm { background: var(--color-risk) !important; }
 
 .atlas-reveal {
-  width: min(calc(100% - var(--space-8)), var(--content-reading));
+  width: min(100%, var(--content-reading));
   margin: var(--space-6) auto var(--space-8);
-  padding: var(--space-2) var(--space-3);
-  border-block: 1px solid var(--color-border-strong);
-  background: var(--color-bg-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+}
+
+.atlas-reveal__eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.atlas-reveal__list {
+  display: grid;
   gap: var(--space-2);
 }
 
-.atlas-reveal__message { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-.atlas-reveal__message svg { flex: 0 0 auto; }
-.atlas-reveal strong {
+.atlas-reveal__banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 5.25rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 55%, var(--color-border-strong));
+  border-left: 4px solid var(--theme-accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--theme-surface) 23%, var(--color-bg-letter));
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: atlas-banner-enter 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--atlas-reveal-index) * 65ms);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.atlas-reveal__copy {
+  display: grid;
+  gap: var(--space-1);
   min-width: 0;
+}
+
+.atlas-reveal__copy strong,
+.atlas-reveal__copy > span {
   overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
   text-overflow: ellipsis;
+}
+
+.atlas-reveal__copy strong {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
   white-space: nowrap;
 }
-.atlas-reveal__actions { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
+
+.atlas-reveal__copy > span {
+  display: -webkit-box;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.atlas-reveal__status {
+  min-width: 2.5rem;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--theme-accent);
+  color: var(--theme-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-align: center;
+}
+
+.atlas-reveal__banner > svg {
+  color: var(--color-text-secondary);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.atlas-reveal__banner[aria-expanded="true"] {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-surface) 42%, var(--color-bg-letter));
+  transform: translateX(0.35rem);
+}
+
+.atlas-reveal__banner[aria-expanded="true"] > svg {
+  transform: rotate(90deg);
+}
+
+.atlas-reveal-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  overflow: hidden;
+}
+
+.atlas-reveal-dialog::backdrop {
+  background: color-mix(in srgb, var(--color-overlay) 88%, transparent);
+  animation: atlas-dialog-backdrop-in 260ms ease-out both;
+}
+
+.atlas-reveal-dialog__sheet {
+  position: absolute;
+  inset-inline: max(var(--space-3), env(safe-area-inset-left)) max(var(--space-3), env(safe-area-inset-right));
+  bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: min(calc(100% - var(--space-6)), 42rem);
+  max-height: min(82dvh, 48rem);
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-top: 4px solid var(--theme-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-letter);
+  box-shadow: var(--shadow-overlay);
+  animation: atlas-sheet-in 430ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.atlas-reveal-dialog[data-closing="true"]::backdrop {
+  animation: atlas-dialog-backdrop-out 180ms ease-in both;
+}
+
+.atlas-reveal-dialog[data-closing="true"] .atlas-reveal-dialog__sheet {
+  animation: atlas-sheet-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.atlas-reveal-dialog__handle {
+  width: 2.75rem;
+  height: 0.25rem;
+  margin: var(--space-2) auto 0;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+.atlas-reveal-dialog__sheet > header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.atlas-reveal-dialog__sheet > header > p:first-child {
+  margin: 0 0 var(--space-1);
+  color: var(--theme-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.atlas-reveal-dialog__sheet h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--font-size-xl);
+}
+
+.atlas-reveal-dialog__sheet > header > p:last-child {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.atlas-reveal-dialog__content {
+  min-height: 0;
+  padding: var(--space-2) var(--space-5) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.atlas-reveal-dialog__content section {
+  padding-top: var(--space-4);
+}
+
+.atlas-reveal-dialog__content h3,
+.atlas-reveal-dialog__content p {
+  margin: 0;
+}
+
+.atlas-reveal-dialog__content h3 {
+  font-size: var(--font-size-sm);
+}
+
+.atlas-reveal-dialog__content p {
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+}
+
+.atlas-reveal-dialog__content blockquote {
+  margin: var(--space-4) 0 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--theme-accent);
+  font-family: var(--font-serif);
+  font-size: var(--font-size-lg);
+  line-height: 1.55;
+}
+
+@keyframes atlas-banner-enter {
+  from { opacity: 0; transform: translate3d(-1.25rem, 0.35rem, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes atlas-sheet-in {
+  from { opacity: 0; transform: translate3d(0, 2.5rem, 0) scale(0.94); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes atlas-sheet-out {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 0; transform: translate3d(0, 2rem, 0) scale(0.97); }
+}
+
+@keyframes atlas-dialog-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes atlas-dialog-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 
 .atlas-card[data-reduce-motion="true"] .atlas-card__inner { transition: none; transform: none; }
 .atlas-card[data-reduce-motion="true"] .atlas-card__back { transform: none; }
@@ -350,8 +553,8 @@
 
 @media (max-width: 30rem) {
   .atlas-card { min-height: 29rem; }
-  .atlas-reveal { width: calc(100% - var(--space-4)); }
-  .atlas-reveal__message svg { display: none; }
+  .atlas-reveal { width: 100%; }
+  .atlas-reveal__banner { padding-inline: var(--space-3); }
   .atlas-delete-dialog > div { flex-direction: column-reverse; }
   .atlas-delete-dialog .ui-button { width: 100%; }
 }
@@ -361,4 +564,18 @@
   .atlas-card__back { transform: none; }
   .atlas-card[data-face="front"] .atlas-card__back,
   .atlas-card[data-face="back"] .atlas-card__front { visibility: hidden; }
+
+  .atlas-reveal__banner,
+  .atlas-reveal-dialog::backdrop,
+  .atlas-reveal-dialog__sheet {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.atlas-reveal[data-reduce-motion="true"] .atlas-reveal__banner,
+.atlas-reveal-dialog[data-reduce-motion="true"]::backdrop,
+.atlas-reveal-dialog[data-reduce-motion="true"] .atlas-reveal-dialog__sheet {
+  animation: none !important;
+  transition: none !important;
 }

@@ -8,6 +8,7 @@ const MIGRATION_FILES = [
   "002-journey-backend.sql",
   "003-atlas.sql",
   "004-daily-review-v2-evidence-cache.sql",
+  "005-atlas-multi-card.sql",
 ] as const;
 const LATEST_SCHEMA_VERSION = MIGRATION_FILES.length;
 const DATABASE_FILE_MODE = 0o600;

@@ -96,7 +96,6 @@ export function App(props: AppProps = {}) {
   // Drawer-selected home entry view: 数据管理 from a secondary page
   // mounts WorkspaceShell directly on the portfolio view.
   const [homeEntryView, setHomeEntryView] = useState<"home" | "portfolio">("home");
-  const [historyRecordId, setHistoryRecordId] = useState<string | undefined>();
   const streamingAnalysisId = state.phase === "analysis" && !state.activeAnalysis?.terminal
     ? state.activeAnalysis?.analysisId
     : undefined;
@@ -106,18 +105,13 @@ export function App(props: AppProps = {}) {
     controller.navigate("home");
   }
 
-  function goHistory(recordId?: string) {
-    setHistoryRecordId(recordId);
-    controller.navigate("history");
-  }
-
-  function workspaceNav(currentPage: "analysis" | "history" | "atlas" | "theme" | "about") {
+  function workspaceNav(currentPage: "analysis" | "result" | "history" | "atlas" | "theme" | "about") {
     return (
       <WorkspaceNav
         currentPage={currentPage}
         onNavigateAbout={() => controller.navigate("about")}
         onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
-        onNavigateHistory={() => goHistory()}
+        onNavigateHistory={() => controller.navigate("history")}
         onNavigateTheme={() => controller.navigate("theme")}
         onNavigateHome={() => goHome("home")}
         onNavigatePortfolio={() => goHome("portfolio")}
@@ -229,39 +223,21 @@ export function App(props: AppProps = {}) {
   }
 
   if (state.phase === "result" && state.displayedResult) {
-    const returnLabel = state.resultReturn === "history"
-      ? "返回历史记录"
-      : state.resultReturn === "atlas"
-        ? "返回满懂图鉴"
-        : "返回主页";
     return (
       <div className="journey-result-page" data-reduced-motion={state.reducedMotion || undefined}>
         <BrandBanner />
         <main className="journey-result" id="main">
-          <nav aria-label="结果导航" className="journey-result__actions">
-          <Button
-            onClick={() => state.resultReturn === "home"
-              ? goHome("home")
-              : state.resultReturn === "history"
-                ? goHistory(state.displayedResult?.analysis.analysis_id)
-                : controller.navigate(state.resultReturn)}
-            variant="secondary"
-          >
-            {returnLabel}
-          </Button>
-          <Button onClick={() => goHistory(state.displayedResult?.analysis.analysis_id)} variant="secondary">
-            查看本次历史
-          </Button>
-          </nav>
           <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
-          {atlasGateway && state.resultReturn === "home" && state.activeAnalysis?.analysisId === state.displayedResult.analysis.analysis_id ? (
+          {atlasGateway ? (
             <AtlasReveal
               analysisId={state.displayedResult.analysis.analysis_id}
               gateway={atlasGateway}
-              onOpenAtlas={() => controller.navigate("atlas")}
+              reducedMotion={state.reducedMotion}
+              themeId={state.displayedResult.analysis.theme_id}
             />
           ) : null}
         </main>
+        {workspaceNav("result")}
       </div>
     );
   }
@@ -286,7 +262,6 @@ export function App(props: AppProps = {}) {
         {state.message ? <p className="journey-message" role="status">{state.message}</p> : null}
         <main className="journey-secondary__page" id="main">
           <HistoryView
-            initialRecordId={historyRecordId}
             onOpenRecord={(record) => void controller.openHistoryRecord(record.record_id)}
             reader={gateway}
             reduceMotion={state.reducedMotion}

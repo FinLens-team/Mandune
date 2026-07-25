@@ -101,9 +101,9 @@ function successfulGateway(options: {
     if (!packet) throw new Error("atlas_called_before_reports");
     const value = modelCandidate(packet.atlas.selected_kind, packet.fact_ids[0]!) as unknown as Record<string, unknown>;
     if (options.invalidAtlas) {
-      value.kind = packet.atlas.selected_kind === "meme" ? "professional_term" : "meme";
+      value.generation_mode = "fixture";
     }
-    return { ok: true as const, value: value as T, finishReason: "stop" };
+    return { ok: true as const, value: { candidates: [value] } as T, finishReason: "stop" };
   });
   return {
     gateway: { generate: generate as ModelGateway["generate"] },
@@ -168,7 +168,7 @@ describe("DailyReviewV2Executor", () => {
     expect(requests.map((request) => request.operation)).toEqual([
       "daily_review_rational_v2",
       "daily_review_persona_v2",
-      selectAtlasKind("analysis-daily-review-v2") === "meme" ? "atlas_meme" : "atlas_professional_term",
+      "atlas_multi_candidate",
     ]);
     expect(requests[0]).toMatchObject({
       schemaVersion: GENERATED_RATIONAL_REPORT_SCHEMA_VERSION,
@@ -286,7 +286,7 @@ describe("DailyReviewV2Executor", () => {
         generated_review: { schema_version: GENERATED_DAILY_REVIEW_SCHEMA_VERSION },
         model_id: "step-explore",
         prompt_version: "daily-review-prompt.v3",
-        atlas_policy_version: "atlas-generation-policy.v1",
+        atlas_policy_version: "atlas-generation-policy.v2",
       },
     });
   });

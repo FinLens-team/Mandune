@@ -112,6 +112,55 @@ async function saveHistory(store: SqliteHistoryStore, workspaceId: string, analy
 }
 
 describe("SQLite atlas durability", () => {
+  it("persists multiple cards and encounters for the same analysis run", async () => {
+    const database = open();
+    const workspaces = new WorkspaceService(new SqliteWorkspaceStore(database));
+    const history = new SqliteHistoryStore(database);
+    const atlas = new AtlasService(
+      new SqliteAtlasStore(database),
+      generator,
+      () => new Date("2026-07-25T08:00:00.000Z"),
+      (() => { let id = 0; return () => `sqlite-multi-card-${++id}`; })(),
+    );
+    const workspace = await workspaces.create();
+    const analysisId = idFor("professional_term", "multi");
+    const currentAnalysis = analysis(analysisId);
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    await saveHistory(history, workspace.record.workspace_id, analysisId);
+    const first = candidate({
+      analysis: currentAnalysis,
+      existing_cards: [],
+      snapshot,
+      selected_kind: "professional_term",
+    });
+    if (first.kind !== "professional_term") throw new Error("expected_professional");
+    first.reference_ids = ["multi-reference"];
+    const second = { ...first, canonical_name: "风险暴露", aliases: [] };
+
+    await atlas.consume({
+      workspaceId: workspace.record.workspace_id,
+      analysis: currentAnalysis,
+      snapshot,
+      candidates: [first, second],
+      allowed_reference_ids: ["multi-reference"],
+      reportMarkdown: "本次报告涉及组合集中度和风险暴露。",
+    });
+    await atlas.waitForIdle();
+
+    const cards = await atlas.listCards(workspace.record.workspace_id);
+    expect(cards).toHaveLength(2);
+    expect(await atlas.getOutcome(workspace.record.workspace_id, analysisId)).toMatchObject({
+      status: "new_card",
+      cards: [{ disposition: "new_card" }, { disposition: "new_card" }],
+    });
+    expect(await atlas.deleteCard(workspace.record.workspace_id, cards[0]!.card_id)).toBe(true);
+    expect(await atlas.getOutcome(workspace.record.workspace_id, analysisId)).toMatchObject({
+      status: "new_card",
+      cards: [{ card_id: cards[1]!.card_id }],
+      card_id: cards[1]!.card_id,
+    });
+  });
+
   it("isolates workspaces, preserves history on card deletion, and allows later recollection", async () => {
     const database = open();
     const workspaceStore = new SqliteWorkspaceStore(database);

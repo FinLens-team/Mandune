@@ -3,6 +3,7 @@ import {
   ATLAS_GENERATION_POLICY_VERSION,
   ATLAS_CANDIDATE_SCHEMA_VERSION,
   AtlasService,
+  includeAtlasMeme,
   MemoryAtlasStore,
   ModelAtlasCandidateGenerator,
   decideAtlasDuplicate,
@@ -68,6 +69,7 @@ describe("atlas deterministic selection", () => {
   it("keeps kind and appearance stable with the intended distributions", () => {
     const kindCounts = { professional_term: 0, meme: 0 };
     const appearanceCounts = { regular: 0, holographic: 0, collector: 0 };
+    let memeIncluded = 0;
 
     for (let index = 0; index < 10_000; index += 1) {
       const analysisId = `analysis-distribution-${index}`;
@@ -75,6 +77,7 @@ describe("atlas deterministic selection", () => {
       const appearance = selectAtlasAppearance(analysisId, `key-${index}`);
       kindCounts[kind] += 1;
       appearanceCounts[appearance] += 1;
+      if (includeAtlasMeme(analysisId)) memeIncluded += 1;
       expect(selectAtlasKind(analysisId)).toBe(kind);
       expect(selectAtlasAppearance(analysisId, `key-${index}`)).toBe(appearance);
     }
@@ -87,10 +90,62 @@ describe("atlas deterministic selection", () => {
     expect(appearanceCounts.holographic / 10_000).toBeLessThan(0.28);
     expect(appearanceCounts.collector / 10_000).toBeGreaterThan(0.035);
     expect(appearanceCounts.collector / 10_000).toBeLessThan(0.065);
+    expect(memeIncluded / 10_000).toBeGreaterThan(0.32);
+    expect(memeIncluded / 10_000).toBeLessThan(0.38);
   });
 });
 
 describe("atlas service boundaries", () => {
+  it("persists up to three professional cards plus one optional meme for one analysis", async () => {
+    const store = new MemoryAtlasStore();
+    const service = new AtlasService(
+      store,
+      { generate: async () => null },
+      () => new Date("2026-07-25T08:00:00.000Z"),
+      (() => { let id = 0; return () => `card-multi-${++id}`; })(),
+    );
+    let analysisId = "";
+    for (let index = 0; index < 10_000; index += 1) {
+      const candidate = `analysis-multi-${index}`;
+      if (selectAtlasKind(candidate) === "professional_term") {
+        analysisId = candidate;
+        break;
+      }
+    }
+    const currentAnalysis = analysis(analysisId);
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    const candidates = ["组合集中度", "流动性缓冲", "风险暴露"].map((name) => {
+      const value = candidateFor({
+        analysis: currentAnalysis,
+        existing_cards: [],
+        snapshot,
+        selected_kind: "professional_term",
+      }, name);
+      if (value.kind === "professional_term") value.reference_ids = ["review-packet-fact"];
+      return value;
+    });
+
+    await service.consume({
+      workspaceId: "workspace-multi",
+      analysis: currentAnalysis,
+      snapshot,
+      candidates,
+      allowed_reference_ids: ["review-packet-fact"],
+      reportMarkdown: "本次报告涉及组合集中度、流动性缓冲和风险暴露。",
+    });
+    await service.waitForIdle();
+
+    expect(await service.listCards("workspace-multi")).toHaveLength(3);
+    expect(await service.getOutcome("workspace-multi", analysisId)).toMatchObject({
+      status: "new_card",
+      cards: [
+        { disposition: "new_card" },
+        { disposition: "new_card" },
+        { disposition: "new_card" },
+      ],
+    });
+  });
+
   it("creates at most one card and turns a repeated concept into a silent encounter", async () => {
     const store = new MemoryAtlasStore();
     const generator: AtlasCandidateGenerator = {
@@ -124,6 +179,68 @@ describe("atlas service boundaries", () => {
     });
     const detail = await service.getCard("workspace-a", cards[0]!.card_id);
     expect(detail?.encounters.map((item) => item.analysis_id)).toEqual([firstId, secondId]);
+  });
+
+  it("recomputes a multi-card outcome after one card is deleted", async () => {
+    const store = new MemoryAtlasStore();
+    let cardCounter = 0;
+    const service = new AtlasService(
+      store,
+      { generate: async () => null },
+      () => new Date("2026-07-25T08:00:00.000Z"),
+      () => `card-delete-${++cardCounter}`,
+    );
+    const snapshot = structuredClone(getFixture("supported_full").snapshot);
+    const firstId = idFor("professional_term", "delete-first");
+    const secondId = idFor("professional_term", "delete-second");
+    const firstAnalysis = analysis(firstId);
+    const secondAnalysis = analysis(secondId);
+    const firstCandidate = candidateFor({
+      analysis: firstAnalysis,
+      existing_cards: [],
+      snapshot,
+      selected_kind: "professional_term",
+    });
+    const repeatedCandidate = candidateFor({
+      analysis: secondAnalysis,
+      existing_cards: [],
+      snapshot,
+      selected_kind: "professional_term",
+    });
+    const newCandidate = candidateFor({
+      analysis: secondAnalysis,
+      existing_cards: [],
+      snapshot,
+      selected_kind: "professional_term",
+    }, "风险暴露");
+
+    await service.consume({
+      workspaceId: "workspace-delete",
+      analysis: firstAnalysis,
+      snapshot,
+      candidates: [firstCandidate],
+      allowed_reference_ids: [],
+      reportMarkdown: "组合集中度。",
+    });
+    await service.waitForIdle();
+    await service.consume({
+      workspaceId: "workspace-delete",
+      analysis: secondAnalysis,
+      snapshot,
+      candidates: [repeatedCandidate, newCandidate],
+      allowed_reference_ids: [],
+      reportMarkdown: "组合集中度与风险暴露。",
+    });
+    await service.waitForIdle();
+
+    const cards = await service.listCards("workspace-delete");
+    const newCard = cards.find((card) => card.canonical_name === "风险暴露");
+    expect(newCard).toBeDefined();
+    expect(await service.deleteCard("workspace-delete", newCard!.card_id)).toBe(true);
+    expect(await service.getOutcome("workspace-delete", secondId)).toMatchObject({
+      status: "encountered",
+      cards: [{ disposition: "encountered" }],
+    });
   });
 
   it("does not create a card when semantic dedupe is uncertain", async () => {
@@ -294,7 +411,7 @@ describe("atlas service boundaries", () => {
       workspaceId: "workspace-consume",
       analysis: currentAnalysis,
       snapshot,
-      candidate: consumed,
+      candidates: [consumed],
       allowed_reference_ids: ["review-packet-fact"],
     });
     await service.waitForIdle();
@@ -316,7 +433,7 @@ describe("atlas service boundaries", () => {
       workspaceId: "workspace-consume-invalid",
       analysis: currentAnalysis,
       snapshot,
-      candidate: null,
+      candidates: [],
       allowed_reference_ids: [],
       invalid_candidate: true,
     });

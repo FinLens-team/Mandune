@@ -37,6 +37,8 @@ export class MemoryAtlasStore implements AtlasStore {
     const outcome = this.outcomes.get(workspaceId)?.get(analysisId);
     if (!outcome || outcome.status !== "pending") return false;
     Object.assign(outcome, clone(update));
+    const first = outcome.cards?.[0];
+    outcome.card_id = first?.card_id;
     return true;
   }
 
@@ -55,9 +57,7 @@ export class MemoryAtlasStore implements AtlasStore {
     const byCard = this.encounters.get(record.workspace_id) ?? new Map<string, AtlasEncounter[]>();
     byCard.set(record.card.card_id, [clone(encounter)]);
     this.encounters.set(record.workspace_id, byCard);
-    outcome.status = "new_card";
-    outcome.card_id = record.card.card_id;
-    outcome.completed_at = encounter.occurred_at;
+    outcome.cards = [...(outcome.cards ?? []), { card_id: record.card.card_id, disposition: "new_card" }];
     return "committed";
   }
 
@@ -72,6 +72,7 @@ export class MemoryAtlasStore implements AtlasStore {
     const stored = this.cards.get(workspaceId)?.get(cardId);
     if (!outcome || outcome.status !== "pending") return "run_closed";
     if (!stored) return "conflict";
+    if (outcome.cards?.some((item) => item.card_id === cardId)) return "committed";
     const byCard = this.encounters.get(workspaceId) ?? new Map<string, AtlasEncounter[]>();
     const list = byCard.get(cardId) ?? [];
     if (!list.some((item) => item.analysis_id === analysisId)) list.push(clone(encounter));
@@ -79,9 +80,7 @@ export class MemoryAtlasStore implements AtlasStore {
     this.encounters.set(workspaceId, byCard);
     stored.card.encounter_count = list.length;
     stored.card.last_encountered_at = encounter.occurred_at;
-    outcome.status = "encountered";
-    outcome.card_id = cardId;
-    outcome.completed_at = encounter.occurred_at;
+    outcome.cards = [...(outcome.cards ?? []), { card_id: cardId, disposition: "encountered" }];
     return "committed";
   }
 
@@ -109,10 +108,18 @@ export class MemoryAtlasStore implements AtlasStore {
     this.encounters.get(workspaceId)?.delete(cardId);
     if (deleted) {
       for (const outcome of this.outcomes.get(workspaceId)?.values() ?? []) {
-        if (outcome.card_id !== cardId) continue;
-        outcome.status = "no_card";
-        outcome.card_id = undefined;
-        outcome.reason = "card_deleted";
+        if (!outcome.cards?.some((item) => item.card_id === cardId) && outcome.card_id !== cardId) continue;
+        outcome.cards = outcome.cards?.filter((item) => item.card_id !== cardId);
+        outcome.card_id = outcome.cards?.[0]?.card_id;
+        if (!outcome.card_id) {
+          outcome.status = "no_card";
+          outcome.reason = "card_deleted";
+        } else {
+          outcome.status = outcome.cards?.some((item) => item.disposition === "new_card")
+            ? "new_card"
+            : "encountered";
+          outcome.reason = undefined;
+        }
       }
     }
     return deleted;

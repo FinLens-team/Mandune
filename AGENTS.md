@@ -38,7 +38,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - A2A 采用 HTTP+JSON 绑定与 ProtoJSON 对象形状；协议 `1.0.x` 对外协商值固定为 `1.0`，请求必须携带 `A2A-Version: 1.0`（缺失按 `0.3` 处理并拒绝）。
 - A2A 结构化行情复用隔离的 PandaAI Python worker 与 SQLite 证据缓存；生产凭据只使用 `PANDA_DATA_USERNAME` / `PANDA_DATA_PASSWORD` 服务端环境变量，worker 子进程内再映射为 SDK 变量。
 - `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store。
-- `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。
+- `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。每次成功复盘的图鉴后置任务最多保存 4 张卡（最多 3 张报告相关专业概念，确定性 35% 概率追加 0-1 张场景梗）；新卡与复遇卡都通过 analysis outcome 回放。
 - `src/theme/`：三主题共享目录与 persona 映射；客户端素材映射独立放在 `src/theme/client.ts`，服务端不得导入媒体资源。
 - `deploy/`：单主机 Nginx/systemd 发布脚本。
 

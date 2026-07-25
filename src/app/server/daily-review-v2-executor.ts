@@ -26,6 +26,7 @@ import {
 } from "../../analysis/runtime.js";
 import {
   selectAtlasKind,
+  includeAtlasMeme,
   type AtlasCandidateGenerator,
   type AtlasCardV1,
 } from "../../atlas/index.js";
@@ -357,14 +358,18 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
     }
     if (!personaReport) return null;
 
-    let atlasCandidate: unknown | null = null;
+    let atlasCandidates: unknown[] = [];
     try {
-      atlasCandidate = await waitForAbort(this.dependencies.atlasCandidateGenerator.generate({
+      const generated = await waitForAbort(this.dependencies.atlasCandidateGenerator.generate({
         analysis,
         existing_cards: existingAtlasCards,
+        include_meme: includeAtlasMeme(analysis.analysis_id),
+        max_candidates: 4,
+        report_markdown: personaReport.markdown,
         snapshot,
         selected_kind: packet.atlas.selected_kind,
       }, signal), signal);
+      atlasCandidates = Array.isArray(generated) ? generated : generated ? [generated] : [];
     } catch (error) {
       if (error instanceof HardDeadlineReached) throw error;
     }
@@ -373,7 +378,7 @@ export class DailyReviewV2Executor implements AnalysisExecutor {
       schema_version: GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
       rational_report: rationalReport,
       persona_report: personaReport,
-      atlas_candidate: atlasCandidate,
+      atlas_candidates: atlasCandidates,
     }, packet);
     return checked.ok ? checked.value : null;
   }

@@ -59,9 +59,21 @@ const MEME_SCHEMA = {
   },
 } as const;
 
+const CANDIDATES_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["candidates"],
+  properties: {
+    candidates: {
+      type: "array",
+      maxItems: 4,
+      items: { anyOf: [PROFESSIONAL_SCHEMA, MEME_SCHEMA] },
+    },
+  },
+} as const;
+
 function safeModelInput(input: AtlasGenerationInput): unknown {
   const existingCards = input.existing_cards
-    .filter((card) => card.kind === input.selected_kind)
     .map((card) => ({
       card_id: card.card_id,
       canonical_name: card.canonical_name,
@@ -72,16 +84,12 @@ function safeModelInput(input: AtlasGenerationInput): unknown {
         ? `${card.professional?.plain_explanation ?? ""} ${card.professional?.boundary ?? ""}`.trim()
         : `${card.meme?.meme_text ?? ""} ${card.meme?.plain_explanation ?? ""}`.trim(),
     }));
-  if (input.selected_kind === "meme") {
-    return {
-      existing_cards: existingCards,
-      theme_id: input.analysis.theme_id,
-      language: "zh-CN",
-      request: "生成一个明确属于非金融知识的短名称或短梗，可以虚构，不要写市场事实或投资操作。",
-    };
-  }
   return {
     existing_cards: existingCards,
+    include_meme: input.include_meme === true,
+    max_candidates: Math.min(4, Math.max(0, input.max_candidates ?? 4)),
+    report_markdown: input.report_markdown ?? "",
+    theme_id: input.analysis.theme_id,
     review_status: input.analysis.status,
     portfolio_scope: input.snapshot.lines.map((line) => ({
       line_id: line.line_id,
@@ -103,23 +111,20 @@ export class ModelAtlasCandidateGenerator implements AtlasCandidateGenerator {
   constructor(private readonly gateway: ModelGateway, private readonly timeoutMs = 14_000) {}
 
   async generate(input: AtlasGenerationInput, signal: AbortSignal): Promise<unknown | null> {
-    const professional = input.selected_kind === "professional_term";
-    const response = await this.gateway.generate<AtlasCandidate>({
-      operation: professional ? "atlas_professional_term" : "atlas_meme",
+    const response = await this.gateway.generate<{ candidates: AtlasCandidate[] }>({
+      operation: "atlas_multi_candidate",
       schemaVersion: ATLAS_CANDIDATE_SCHEMA_VERSION,
-      schema: professional ? PROFESSIONAL_SCHEMA : MEME_SCHEMA,
-      instructions: `${ATLAS_GENERATION_POLICY_VERSION}\n${ATLAS_GENERATION_POLICY}\n\n${professional
-        ? "从已给出的结论与允许引用中选择最多一个真正用于解释本次复盘的金融专业名词。"
-        : "生成一个简短、有趣的中文名称或梗。"}`,
+      schema: CANDIDATES_SCHEMA,
+      instructions: `${ATLAS_GENERATION_POLICY_VERSION}\n${ATLAS_GENERATION_POLICY}`,
       input: safeModelInput(input),
       signal,
       timeoutMs: this.timeoutMs,
-      temperature: professional ? 0.3 : 0.8,
-      maxOutputTokens: 1_200,
+      temperature: 0.55,
+      maxOutputTokens: 3_600,
     });
     return response.ok &&
       (response.finishReason === undefined || response.finishReason === "stop")
-      ? response.value
+      ? response.value.candidates
       : null;
   }
 }
@@ -140,26 +145,26 @@ function pickIndex(value: string, modulo: number): number {
 }
 
 export class FixtureAtlasCandidateGenerator implements AtlasCandidateGenerator {
-  async generate(input: AtlasGenerationInput, signal: AbortSignal): Promise<AtlasCandidate | null> {
+  async generate(input: AtlasGenerationInput, signal: AbortSignal): Promise<AtlasCandidate[] | null> {
     if (signal.aborted) return null;
     const scopeLabels = input.snapshot.lines.map((line) => line.name).slice(0, 12);
     if (input.selected_kind === "meme") {
       const memes = [...EASTERN_OBSERVATION_MEMES, ...COMMON_MEMES];
       const selected = memes[pickIndex(`${input.analysis.analysis_id}:${input.snapshot.theme_id}`, memes.length)]!;
-      return {
+      return [{
         schema_version: ATLAS_CANDIDATE_SCHEMA_VERSION,
         kind: "meme",
         domain: null,
         scope_labels: [],
         generation_mode: "fixture",
         ...selected,
-      } satisfies MemeCandidate;
+      } satisfies MemeCandidate];
     }
 
     const conclusion = input.analysis.conclusions.find((item) => item.refs.length > 0);
     if (!conclusion) return null;
     const referenceIds = conclusion.refs.map((ref) => ref.ref_id);
-    return {
+    const candidates: AtlasCandidate[] = [{
       schema_version: ATLAS_CANDIDATE_SCHEMA_VERSION,
       kind: "professional_term",
       canonical_name: "组合集中度",
@@ -173,6 +178,19 @@ export class FixtureAtlasCandidateGenerator implements AtlasCandidateGenerator {
       misconception: "集中不等于一定会亏损，它只说明组合对少数方向更敏感。",
       boundary: "它不能单独判断未来涨跌，也不直接给出买卖时点。",
       reference_ids: referenceIds,
-    } satisfies ProfessionalTermCandidate;
+    } satisfies ProfessionalTermCandidate];
+    if (input.include_meme) {
+      const memes = [...EASTERN_OBSERVATION_MEMES, ...COMMON_MEMES];
+      const selected = memes[pickIndex(`${input.analysis.analysis_id}:${input.snapshot.theme_id}`, memes.length)]!;
+      candidates.push({
+        schema_version: ATLAS_CANDIDATE_SCHEMA_VERSION,
+        kind: "meme",
+        domain: null,
+        scope_labels: [],
+        generation_mode: "fixture",
+        ...selected,
+      });
+    }
+    return candidates.slice(0, input.max_candidates ?? 4);
   }
 }

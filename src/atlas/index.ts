@@ -1,6 +1,7 @@
 export {
   ATLAS_DEADLINE_MS,
   AtlasService,
+  includeAtlasMeme,
   selectAtlasAppearance,
   selectAtlasKind,
   type StartAtlasInput,
@@ -42,6 +43,7 @@ export {
   type AtlasGenerationInput,
   type AtlasGenerationMode,
   type AtlasOutcome,
+  type AtlasOutcomeCard,
   type AtlasOutcomeStatus,
   type AtlasStore,
   type MemeCandidate,

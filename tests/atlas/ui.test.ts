@@ -14,7 +14,8 @@ interface AtlasUiModule {
   AtlasReveal: ComponentType<{
     analysisId: string;
     gateway: AtlasGateway;
-    onOpenAtlas: () => void;
+    reducedMotion: boolean;
+    themeId: string;
   }>;
 }
 
@@ -76,7 +77,7 @@ describe("atlas accessible card UI", () => {
     expect(markup).not.toMatch(/战力|收益率|投资价值/);
   });
 
-  it("keeps the pending reveal skippable and defines lightweight encounter feedback", async () => {
+  it("keeps pending output out of the report and defines multi-card banner details", async () => {
     const { AtlasReveal } = await loadAtlasUi();
     const markup = renderToStaticMarkup(createElement(AtlasReveal, {
       analysisId: "analysis-ui",
@@ -86,14 +87,14 @@ describe("atlas accessible card UI", () => {
         getAtlasCard: async () => null,
         deleteAtlasCard: async () => undefined,
       },
-      onOpenAtlas: () => undefined,
+      reducedMotion: true,
+      themeId: "eastern_observation",
     }));
-    expect(markup).toContain("图鉴正在辨识");
-    expect(markup).toContain("跳过图鉴辨识");
-    expect(markup).not.toContain("再次遇见");
+    expect(markup).toBe("");
     const source = readFileSync("src/features/atlas/AtlasReveal.tsx", "utf8");
-    expect(source).toContain("再次遇见：");
-    expect(source).toContain("成长轨迹已更新");
+    expect(source).toContain("本次图鉴");
+    expect(source).toContain("再次遇见");
+    expect(source).toContain("CLOSE_SWIPE_PX");
   });
 
   it("marks meme cards as generated entertainment rather than financial knowledge", async () => {
@@ -111,5 +112,15 @@ describe("atlas accessible card UI", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain(".atlas-card__disclaimer");
     expect(css).toContain("font-size: var(--font-size-xs)");
+    expect(css).toContain("max-height: min(82dvh, 48rem)");
+    expect(css).not.toContain(".atlas-page {\n  width: min(100%, 74rem);\n  min-height: 100dvh");
+  });
+
+  it("keeps the result page free of the removed inline navigation actions", () => {
+    const source = readFileSync("src/client/App.tsx", "utf8");
+    expect(source).not.toContain("journey-result__actions");
+    expect(source).not.toContain("查看本次历史");
+    expect(source).not.toContain("返回历史记录");
+    expect(source).toContain('workspaceNav("result")');
   });
 });

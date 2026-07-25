@@ -114,6 +114,7 @@ function unsupportedVersions(versions: HistoryVersions): UnsupportedHistoryVersi
     unsupported.push({ component: "prompt", version: versions.prompt });
   }
   if (versions.atlas_policy !== undefined && versions.atlas_policy !== null &&
+    versions.atlas_policy !== "atlas-generation-policy.v1" &&
     versions.atlas_policy !== ATLAS_GENERATION_POLICY_VERSION) {
     unsupported.push({ component: "atlas_policy", version: versions.atlas_policy });
   }
@@ -174,7 +175,8 @@ function v2RecordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelop
     record.generated_review.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
     record.model_id !== DAILY_REVIEW_MODEL_ID ||
     record.prompt_version !== DAILY_REVIEW_PROMPT_VERSION ||
-    record.atlas_policy_version !== ATLAS_GENERATION_POLICY_VERSION ||
+    (record.atlas_policy_version !== "atlas-generation-policy.v1" &&
+      record.atlas_policy_version !== ATLAS_GENERATION_POLICY_VERSION) ||
     record.skill_versions.core !== DAILY_REVIEW_SKILL_VERSIONS.core ||
     expectedPersonaSkill === undefined ||
     record.skill_versions.persona !== expectedPersonaSkill ||

@@ -28,7 +28,12 @@ interface EncounterRow {
   encounter_json: string;
 }
 
-function outcomeFromRow(row: OutcomeRow): StoredAtlasOutcome {
+interface RunCardRow {
+  card_id: string;
+  disposition: "new_card" | "encountered";
+}
+
+function outcomeFromRow(row: OutcomeRow, cards: RunCardRow[] = []): StoredAtlasOutcome {
   return {
     workspace_id: row.workspace_id,
     analysis_id: row.analysis_id,
@@ -36,6 +41,7 @@ function outcomeFromRow(row: OutcomeRow): StoredAtlasOutcome {
     status: row.status,
     created_at: row.created_at,
     ...(row.completed_at ? { completed_at: row.completed_at } : {}),
+    ...(cards.length > 0 ? { cards } : {}),
     ...(row.card_id ? { card_id: row.card_id } : {}),
     ...(row.reason ? { reason: row.reason } : {}),
   };
@@ -47,7 +53,7 @@ export class SqliteAtlasStore implements AtlasStore {
   async beginRun(outcome: StoredAtlasOutcome): Promise<{ created: boolean; outcome: StoredAtlasOutcome }> {
     return this.database.transaction(() => {
       const existing = this.selectOutcome(outcome.workspace_id, outcome.analysis_id);
-      if (existing) return { created: false, outcome: outcomeFromRow(existing) };
+      if (existing) return { created: false, outcome: this.outcomeWithCards(existing) };
       this.database.prepare(`
         INSERT INTO atlas_runs (
           workspace_id, analysis_id, selected_kind, status, created_at,
@@ -65,9 +71,19 @@ export class SqliteAtlasStore implements AtlasStore {
   ): Promise<boolean> {
     return this.database.transaction(() => {
       const result = this.database.prepare(`
-        UPDATE atlas_runs SET status = ?, completed_at = ?, reason = ?, card_id = NULL
+        UPDATE atlas_runs SET status = ?, completed_at = ?, reason = ?,
+          card_id = (SELECT card_id FROM atlas_run_cards
+            WHERE workspace_id = ? AND analysis_id = ? ORDER BY rowid LIMIT 1)
         WHERE workspace_id = ? AND analysis_id = ? AND status = 'pending'
-      `).run(update.status, update.completed_at ?? null, update.reason ?? null, workspaceId, analysisId);
+      `).run(
+        update.status,
+        update.completed_at ?? null,
+        update.reason ?? null,
+        workspaceId,
+        analysisId,
+        workspaceId,
+        analysisId,
+      );
       return Number(result.changes) === 1;
     });
   }
@@ -102,9 +118,9 @@ export class SqliteAtlasStore implements AtlasStore {
       );
       this.insertEncounter(record.workspace_id, encounter);
       this.database.prepare(`
-        UPDATE atlas_runs SET status = 'new_card', completed_at = ?, card_id = ?, reason = NULL
-        WHERE workspace_id = ? AND analysis_id = ? AND status = 'pending'
-      `).run(encounter.occurred_at, record.card.card_id, record.workspace_id, analysisId);
+        INSERT INTO atlas_run_cards (workspace_id, analysis_id, card_id, disposition)
+        VALUES (?, ?, ?, 'new_card')
+      `).run(record.workspace_id, analysisId, record.card.card_id);
       return "committed";
     });
   }
@@ -123,8 +139,9 @@ export class SqliteAtlasStore implements AtlasStore {
       if (!row) return "conflict";
       const card = JSON.parse(row.card_json) as AtlasCardV1;
       const existing = this.database.prepare(`
-        SELECT 1 AS present FROM atlas_encounters WHERE workspace_id = ? AND analysis_id = ?
-      `).get(workspaceId, analysisId);
+        SELECT 1 AS present FROM atlas_encounters
+        WHERE workspace_id = ? AND analysis_id = ? AND card_id = ?
+      `).get(workspaceId, analysisId, cardId);
       if (!existing) this.insertEncounter(workspaceId, encounter);
       const count = this.database.prepare(`
         SELECT COUNT(*) AS count FROM atlas_encounters WHERE workspace_id = ? AND card_id = ?
@@ -136,9 +153,10 @@ export class SqliteAtlasStore implements AtlasStore {
         WHERE workspace_id = ? AND card_id = ?
       `).run(encounter.occurred_at, JSON.stringify(card), workspaceId, cardId);
       this.database.prepare(`
-        UPDATE atlas_runs SET status = 'encountered', completed_at = ?, card_id = ?, reason = NULL
-        WHERE workspace_id = ? AND analysis_id = ? AND status = 'pending'
-      `).run(encounter.occurred_at, cardId, workspaceId, analysisId);
+        INSERT INTO atlas_run_cards (workspace_id, analysis_id, card_id, disposition)
+        VALUES (?, ?, ?, 'encountered')
+        ON CONFLICT(workspace_id, analysis_id, card_id) DO NOTHING
+      `).run(workspaceId, analysisId, cardId);
       return "committed";
     });
   }
@@ -146,7 +164,7 @@ export class SqliteAtlasStore implements AtlasStore {
   async getOutcome(workspaceId: string, analysisId: string): Promise<StoredAtlasOutcome | null> {
     return this.database.read(() => {
       const row = this.selectOutcome(workspaceId, analysisId);
-      return row ? outcomeFromRow(row) : null;
+      return row ? this.outcomeWithCards(row) : null;
     });
   }
 
@@ -188,6 +206,28 @@ export class SqliteAtlasStore implements AtlasStore {
           UPDATE atlas_runs SET status = 'no_card', card_id = NULL, reason = 'card_deleted'
           WHERE workspace_id = ? AND card_id = ?
         `).run(workspaceId, cardId);
+        this.database.prepare(`
+          UPDATE atlas_runs SET
+            card_id = (SELECT card_id FROM atlas_run_cards
+              WHERE workspace_id = ? AND analysis_id = atlas_runs.analysis_id ORDER BY rowid LIMIT 1),
+            status = CASE
+              WHEN EXISTS (
+                SELECT 1 FROM atlas_run_cards
+                WHERE workspace_id = ? AND analysis_id = atlas_runs.analysis_id
+                  AND disposition = 'new_card'
+              ) THEN 'new_card'
+              WHEN EXISTS (
+                SELECT 1 FROM atlas_run_cards
+                WHERE workspace_id = ? AND analysis_id = atlas_runs.analysis_id
+              ) THEN 'encountered'
+              ELSE 'no_card'
+            END,
+            reason = CASE WHEN EXISTS (
+              SELECT 1 FROM atlas_run_cards
+              WHERE workspace_id = ? AND analysis_id = atlas_runs.analysis_id
+            ) THEN NULL ELSE 'card_deleted' END
+          WHERE workspace_id = ?
+        `).run(workspaceId, workspaceId, workspaceId, workspaceId, workspaceId);
       }
       return Number(result.changes) === 1;
     });
@@ -210,6 +250,14 @@ export class SqliteAtlasStore implements AtlasStore {
         completed_at, card_id, reason
       FROM atlas_runs WHERE workspace_id = ? AND analysis_id = ?
     `).get(workspaceId, analysisId) as OutcomeRow | undefined;
+  }
+
+  private outcomeWithCards(row: OutcomeRow): StoredAtlasOutcome {
+    const cards = this.database.prepare(`
+      SELECT card_id, disposition FROM atlas_run_cards
+      WHERE workspace_id = ? AND analysis_id = ? ORDER BY rowid
+    `).all(row.workspace_id, row.analysis_id) as unknown as RunCardRow[];
+    return outcomeFromRow(row, cards);
   }
 
   private pending(workspaceId: string, analysisId: string): boolean {

@@ -238,7 +238,12 @@ export class JourneyAnalysisService {
             workspaceId: run.workspace_id,
             analysis: execution.analysis,
             snapshot: run.snapshot,
-            candidate: execution.generated_review.atlas_candidate,
+            candidates: execution.generated_review.atlas_candidates ?? (
+              execution.generated_review.atlas_candidate
+                ? [execution.generated_review.atlas_candidate]
+                : []
+            ),
+            reportMarkdown: execution.generated_review.persona_report.markdown,
             allowed_reference_ids: [
               ...execution.review_packet.fact_ids,
               ...execution.review_packet.event_ids,
@@ -252,6 +257,7 @@ export class JourneyAnalysisService {
             workspaceId: run.workspace_id,
             analysis: execution.analysis,
             snapshot: run.snapshot,
+            reportMarkdown: execution.ai_theme_text ?? execution.ai_text,
           });
         }
       } catch {

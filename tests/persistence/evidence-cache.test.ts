@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -35,20 +35,25 @@ function open(dbPath = temporaryPath()): { database: SqliteDatabase; cache: Sqli
 }
 
 describe("SQLite daily-review evidence cache", () => {
-  it("upgrades an Atlas v3 database to the evidence-cache v4 schema", () => {
+  it("upgrades an Atlas v3 database through the evidence-cache and multi-card schemas", () => {
     const dbPath = temporaryPath();
     const raw = new DatabaseSync(dbPath);
+    for (const filename of ["001-initial.sql", "002-journey-backend.sql", "003-atlas.sql"]) {
+      raw.exec(readFileSync(path.resolve("migrations", filename), "utf8"));
+    }
     raw.exec("CREATE TABLE preserved_atlas_marker(value TEXT NOT NULL)");
     raw.exec("INSERT INTO preserved_atlas_marker VALUES ('preserved')");
     raw.exec("PRAGMA user_version = 3");
     raw.close();
 
     const { database } = open(dbPath);
-    expect(SQLITE_SCHEMA_VERSION).toBe(4);
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 4 });
+    expect(SQLITE_SCHEMA_VERSION).toBe(5);
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 5 });
     expect(database.prepare("SELECT value FROM preserved_atlas_marker").get()).toEqual({ value: "preserved" });
     expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'market_observations'").get())
       .toEqual({ name: "market_observations" });
+    expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'atlas_run_cards'").get())
+      .toEqual({ name: "atlas_run_cards" });
   });
 
   it("upserts and retrieves a market observation by immutable cache key", () => {

@@ -13,7 +13,7 @@ import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./foc
 export type WorkspaceView = "home" | "portfolio";
 
 /** All destinations reachable from the persistent workspace drawer. */
-export type WorkspacePage = "home" | "portfolio" | "history" | "atlas" | "theme" | "about" | "analysis";
+export type WorkspacePage = "home" | "portfolio" | "history" | "atlas" | "theme" | "about" | "analysis" | "result";
 
 export interface WorkspaceDrawerProps {
   open: boolean;
@@ -106,7 +106,8 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
             <button
               aria-current={props.currentPage === page ? "page" : undefined}
               data-initial-focus={
-                props.currentPage === page || (props.currentPage === "analysis" && page === "home")
+                props.currentPage === page ||
+                  ((props.currentPage === "analysis" || props.currentPage === "result") && page === "home")
                   ? "true"
                   : undefined
               }

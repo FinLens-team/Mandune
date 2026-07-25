@@ -139,4 +139,31 @@ describe("generated daily review v2", () => {
       },
     });
   });
+
+  it("accepts up to four independently validated Atlas candidates", () => {
+    const reviewPacket = packet();
+    const referenceId = reviewPacket.fact_ids[0]!;
+    const value = output(referenceId);
+    const second = { ...candidate(referenceId), canonical_name: "流动性缓冲", aliases: [] };
+    const reports = {
+      schema_version: value.schema_version,
+      rational_report: value.rational_report,
+      persona_report: value.persona_report,
+    };
+
+    expect(validateGeneratedDailyReview({
+      ...reports,
+      atlas_candidates: [candidate(referenceId), second],
+    }, reviewPacket)).toMatchObject({
+      ok: true,
+      value: {
+        atlas_candidate: { canonical_name: "组合集中度" },
+        atlas_candidates: [
+          { canonical_name: "组合集中度" },
+          { canonical_name: "流动性缓冲" },
+        ],
+        atlas_validation: "valid",
+      },
+    });
+  });
 });

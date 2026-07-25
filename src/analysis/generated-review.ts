@@ -27,6 +27,7 @@ export interface ValidatedGeneratedDailyReviewV2 {
   rational_report: GeneratedReportV2;
   persona_report: GeneratedPersonaReportV2;
   atlas_candidate: AtlasCandidate | null;
+  atlas_candidates?: AtlasCandidate[];
   atlas_validation: "valid" | "no_candidate" | "invalid_candidate";
 }
 
@@ -70,7 +71,7 @@ export function generatedDailyReviewSchema(personaId: DailyReviewPersonaId): Jso
   return {
     type: "object",
     additionalProperties: false,
-    required: ["schema_version", "rational_report", "persona_report", "atlas_candidate"],
+    required: ["schema_version", "rational_report", "persona_report", "atlas_candidates"],
     properties: {
       schema_version: { type: "string", const: GENERATED_DAILY_REVIEW_SCHEMA_VERSION },
       rational_report: REPORT_SCHEMA,
@@ -84,11 +85,10 @@ export function generatedDailyReviewSchema(personaId: DailyReviewPersonaId): Jso
       },
       // Atlas validation is deliberately independent so an invalid card cannot
       // discard two otherwise valid reports.
-      atlas_candidate: {
-        anyOf: [
-          { type: "object" },
-          { type: "null" },
-        ],
+      atlas_candidates: {
+        type: "array",
+        maxItems: 4,
+        items: { type: "object" },
       },
     },
   };
@@ -210,7 +210,7 @@ function safeAtlasText(value: unknown, maxLength: number): value is string {
 
 function atlasCandidate(value: unknown, packet: ReviewPacketV2): AtlasCandidate | null {
   if (!object(value) || value.schema_version !== ATLAS_CANDIDATE_SCHEMA_VERSION ||
-    value.kind !== packet.atlas.selected_kind || value.generation_mode !== "model" ||
+    (value.kind !== "professional_term" && value.kind !== "meme") || value.generation_mode !== "model" ||
     !safeAtlasText(value.canonical_name, 40) || !strings(value.aliases, 0, 8, 40) ||
     !strings(value.scope_labels, 0, 12, 60)) return null;
 
@@ -239,9 +239,13 @@ export function validateGeneratedDailyReview(
   packet: ReviewPacketV2,
 ): GeneratedDailyReviewValidation {
   const errors: string[] = [];
-  if (!object(value) || !onlyKeys(value, [
-    "schema_version", "rational_report", "persona_report", "atlas_candidate",
-  ])) return { ok: false, errors: ["invalid_root"] };
+  if (!object(value)) return { ok: false, errors: ["invalid_root"] };
+  const multi = Array.isArray(value.atlas_candidates);
+  if (!onlyKeys(value, multi
+    ? ["schema_version", "rational_report", "persona_report", "atlas_candidates"]
+    : ["schema_version", "rational_report", "persona_report", "atlas_candidate"])) {
+    return { ok: false, errors: ["invalid_root"] };
+  }
   if (value.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION) errors.push("invalid_schema_version");
   const rational = report(value.rational_report, packet);
   const persona = report(value.persona_report, packet, true);
@@ -251,17 +255,24 @@ export function validateGeneratedDailyReview(
     !sameIds(rational.event_ids, persona.event_ids))) errors.push("report_reference_mismatch");
   if (!rational || !persona || errors.length > 0) return { ok: false, errors };
 
-  const candidate = value.atlas_candidate === null ? null : atlasCandidate(value.atlas_candidate, packet);
+  const rawCandidates = multi
+    ? (value.atlas_candidates as unknown[]).slice(0, 4)
+    : value.atlas_candidate === null ? [] : [value.atlas_candidate];
+  const candidates = rawCandidates
+    .map((item) => atlasCandidate(item, packet))
+    .filter((item): item is AtlasCandidate => item !== null);
+  const hadInvalidCandidate = rawCandidates.length !== candidates.length;
   return {
     ok: true,
     value: {
       schema_version: GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
       rational_report: rational,
       persona_report: persona as GeneratedPersonaReportV2,
-      atlas_candidate: candidate,
-      atlas_validation: value.atlas_candidate === null
+      atlas_candidate: candidates[0] ?? null,
+      ...(multi ? { atlas_candidates: candidates } : {}),
+      atlas_validation: rawCandidates.length === 0
         ? "no_candidate"
-        : candidate ? "valid" : "invalid_candidate",
+        : candidates.length > 0 ? "valid" : hadInvalidCandidate ? "invalid_candidate" : "no_candidate",
     },
   };
 }
@@ -291,15 +302,24 @@ export function validateStoredGeneratedDailyReview(
   value: unknown,
   packet: ReviewPacketV2,
 ): value is ValidatedGeneratedDailyReviewV2 {
-  if (!object(value) || !onlyKeys(value, [
-    "schema_version", "rational_report", "persona_report", "atlas_candidate", "atlas_validation",
-  ]) || value.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
+  if (!object(value) || !onlyKeys(value, value.atlas_candidates === undefined
+    ? ["schema_version", "rational_report", "persona_report", "atlas_candidate", "atlas_validation"]
+    : ["schema_version", "rational_report", "persona_report", "atlas_candidate", "atlas_candidates", "atlas_validation"]) ||
+    value.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
     (value.atlas_validation !== "valid" && value.atlas_validation !== "no_candidate" &&
       value.atlas_validation !== "invalid_candidate")) return false;
   const rational = report(value.rational_report, packet);
   const persona = report(value.persona_report, packet, true);
   if (!rational || !persona || !sameIds(rational.fact_ids, persona.fact_ids) ||
     !sameIds(rational.event_ids, persona.event_ids)) return false;
-  if (value.atlas_validation === "valid") return atlasCandidate(value.atlas_candidate, packet) !== null;
-  return value.atlas_candidate === null;
+  if (value.atlas_validation === "valid") {
+    const candidates = value.atlas_candidates === undefined
+      ? [value.atlas_candidate]
+      : value.atlas_candidates;
+    return Array.isArray(candidates) && candidates.length >= 1 && candidates.length <= 4 &&
+      candidates.every((item) => atlasCandidate(item, packet) !== null) &&
+      atlasCandidate(value.atlas_candidate, packet) !== null;
+  }
+  return value.atlas_candidate === null &&
+    (value.atlas_candidates === undefined || (Array.isArray(value.atlas_candidates) && value.atlas_candidates.length === 0));
 }

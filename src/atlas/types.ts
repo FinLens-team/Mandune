@@ -105,12 +105,19 @@ export type AtlasCandidate = ProfessionalTermCandidate | MemeCandidate;
 
 export type AtlasOutcomeStatus = "pending" | "new_card" | "encountered" | "no_card" | "failed";
 
+export interface AtlasOutcomeCard {
+  card_id: string;
+  disposition: "new_card" | "encountered";
+}
+
 export interface AtlasOutcome {
   analysis_id: string;
   selected_kind: AtlasCardKind;
   status: AtlasOutcomeStatus;
   created_at: string;
   completed_at?: string;
+  cards?: AtlasOutcomeCard[];
+  /** First card retained for clients and rows written before multi-card outcomes. */
   card_id?: string;
   reason?: "no_candidate" | "dedupe_uncertain" | "invalid_candidate" | "timeout" | "generation_failed" | "storage_failed" | "card_deleted";
 }
@@ -118,6 +125,9 @@ export interface AtlasOutcome {
 export interface AtlasGenerationInput {
   analysis: AnalysisResult;
   existing_cards: AtlasCardV1[];
+  include_meme?: boolean;
+  max_candidates?: number;
+  report_markdown?: string;
   snapshot: PortfolioSnapshot;
   selected_kind: AtlasCardKind;
 }
