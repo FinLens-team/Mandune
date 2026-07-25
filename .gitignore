@@ -17,6 +17,7 @@ screenshots/
 logs/
 tmp/
 temp/
+.temp/
 *.pid
 *.pid.lock
 
