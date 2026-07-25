@@ -6,7 +6,7 @@
 
 1. **引导流**：S0 已移除；首次访问从 S1 主题 → S2 来源 → S3 随机身份 → S4 主界面 → S7 确认 → S8 分析 → S9 复盘报告；侧边栏承载仓位/历史/关于。
 2. **Demo 主路径**：随机体验持仓；手工与截图为「暂未开放」占位。
-3. **吉祥物**：每主题可不同形象；东方观象 = 兜兜；其余主题占位。
+3. **吉祥物**：每主题可不同形象；我是龙 = 奶龙；其余主题占位。
 4. **分析编排**：单 agent 串行阶段，不是多 agent 编排团队。
 5. **分析表达**：聊天气泡短句 + 真实任务阶段；90s/180s。
 6. **数据**：真实优先 + 同资产缓存/fixture 诚实兜底。
@@ -47,5 +47,4 @@
 - [x] PRODUCT / DESIGN / CONTEXT 吉祥物与主题
 - [x] demo-v1 屏幕流与 Demo 占位
 - [x] analysis-contract 单 agent Demo 编排说明
-- [x] Gemini 设计简报：[`../design/gemini-frontend-design-brief.md`](../design/gemini-frontend-design-brief.md)
 - [x] 前端视觉与动效：[`../design/demo-v1-visual-system.md`](../design/demo-v1-visual-system.md)

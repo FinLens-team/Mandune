@@ -52,6 +52,6 @@
       "sha256": "4ec323e07e79e6baec53a32a65b287b16b290c166539e39b0166036edf15130f"
     }
   ],
-  "derivative_encoding": "ffmpeg libwebp lossy q88 with alpha (yuva420p), same pixel dimensions as the PNG sources. The client imports only the .webp files; the .png files are retained as unreferenced conversion sources and are not emitted by the client build.",
+  "derivative_encoding": "ffmpeg libwebp lossy q88 with alpha (yuva420p), same pixel dimensions as the PNG sources. The client imports only the .webp files; the .png conversion sources were removed from the repository after verification, with provenance preserved via the sha256 entries above.",
   "verification": "Windows and Linux size and SHA-256 matched for all files."
 }
