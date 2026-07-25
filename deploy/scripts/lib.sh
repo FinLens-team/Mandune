@@ -14,7 +14,7 @@ readonly DB_PATH="${STATE_ROOT}/mandong.sqlite3"
 readonly BACKUP_ROOT="/var/backups/mandong"
 readonly METADATA_ROOT="${BACKUP_ROOT}/releases"
 readonly RELEASE_ENV="/etc/mandong/release.env"
-readonly HEALTH_URL="http://127.0.0.1:8787/health"
+readonly HEALTH_URL="http://127.0.0.1:8791/health"
 readonly DEPLOY_LOCK="/run/lock/mandong/maintenance.lock"
 readonly DEPLOY_LOCK_WAIT_SECONDS=30
 

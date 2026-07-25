@@ -15,7 +15,7 @@ EnvironmentFile=/etc/mandong/release.env
 Environment=NODE_ENV=production
 Environment=PATH=/opt/mandong/runtime:/usr/bin:/bin
 Environment=HOST=127.0.0.1
-Environment=PORT=8787
+Environment=PORT=8791
 Environment=MANDONG_DB_PATH=/var/lib/mandong/mandong.sqlite3
 Environment=MANDONG_DB_BUSY_TIMEOUT_MS=1000
 ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/server/index.js

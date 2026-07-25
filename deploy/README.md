@@ -2,7 +2,8 @@
 
 This directory defines the Demo V1 deployment contract: one Node 22 process,
 one local SQLite database, systemd supervision, and an HTTPS Nginx reverse
-proxy. The application always binds `127.0.0.1:8787`; only Nginx is public.
+proxy. The production service binds `127.0.0.1:8791`; only Nginx is public.
+Local development keeps the application default `127.0.0.1:8787`.
 
 ## Host prerequisites
 
@@ -154,15 +155,15 @@ After release, verify both local and public paths without sending a workspace
 Cookie:
 
 ```sh
-curl --fail --silent http://127.0.0.1:8787/health
+curl --fail --silent http://127.0.0.1:8791/health
 curl --fail --silent https://demo.example.com/health
 curl --fail --silent https://demo.example.com/.well-known/agent-card.json
 sudo systemctl is-active mandong.service nginx.service
-sudo ss -ltnp | grep -E ':(443|8787)\b'
+sudo ss -ltnp | grep -E ':(443|8791)\b'
 ```
 
-The Node listener must be `127.0.0.1:8787`, never `0.0.0.0:8787` or
-`[::]:8787`. Public acceptance, browser matrices, and 180-second task cleanup
+The production Node listener must be `127.0.0.1:8791`, never `0.0.0.0:8791` or
+`[::]:8791`. Public acceptance, browser matrices, and 180-second task cleanup
 remain separate release evidence; a successful liveness check does not prove
 those product behaviors.
 

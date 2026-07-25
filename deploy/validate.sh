@@ -53,7 +53,7 @@ NGINX_TEMPLATE="${DEPLOY_ROOT}/nginx/mandong.conf.template"
 for setting in \
   'access_log off;' \
   'error_log /dev/null emerg;' \
-  'proxy_pass http://127.0.0.1:8787;' \
+  'proxy_pass http://127.0.0.1:8791;' \
   'proxy_cache off;' \
   'proxy_request_buffering off;' \
   'proxy_read_timeout 210s;' \
@@ -73,7 +73,7 @@ for setting in \
   'Environment=PATH=/opt/mandong/runtime:/usr/bin:/bin' \
   'ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/server/index.js' \
   'Environment=HOST=127.0.0.1' \
-  'Environment=PORT=8787' \
+  'Environment=PORT=8791' \
   'NoNewPrivileges=yes' \
   'ProtectSystem=strict' \
   'ProtectHome=yes' \
