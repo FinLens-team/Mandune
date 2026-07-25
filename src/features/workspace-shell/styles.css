@@ -597,27 +597,25 @@
 .analysis-confirm-layer {
   z-index: var(--z-dialog);
   display: grid;
-  align-items: end;
+  place-items: center;
 }
 
 .analysis-confirm {
   position: relative;
   z-index: var(--z-dialog);
-  width: 100%;
+  width: min(100% - var(--space-8), 24rem);
   max-height: calc(100dvh - var(--space-8));
   overflow-y: auto;
-  padding: var(--space-6) var(--space-4);
-  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  padding: var(--space-6);
   border: 1px solid var(--poster-line);
-  border-bottom: 0;
-  border-radius: 18px 18px 0 0;
+  border-radius: 18px;
   background: var(--poster-surface);
   color: var(--poster-ink);
   box-shadow:
     inset 0 1px 0 rgb(247 242 233 / 8%),
-    0 -18px 48px rgb(0 0 0 / 45%);
+    0 24px 56px rgb(0 0 0 / 50%);
   opacity: 0;
-  transform: translate3d(0, var(--space-6), 0);
+  transform: translate3d(0, 10px, 0) scale(.96);
   transition:
     opacity 200ms var(--ease-enter),
     transform 200ms var(--ease-enter);
@@ -625,7 +623,7 @@
 
 .analysis-confirm-layer[data-state="open"] .analysis-confirm {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .analysis-confirm-layer[data-state="closing"] {
@@ -739,22 +737,6 @@
 
   .workspace-shell[data-view="portfolio"] {
     padding: var(--space-6) var(--space-8);
-  }
-
-  .analysis-confirm-layer {
-    place-items: center;
-  }
-
-  .analysis-confirm {
-    width: min(100% - var(--space-8), 24rem);
-    padding: var(--space-6);
-    border-bottom: 1px solid var(--poster-line);
-    border-radius: 18px;
-    transform: translate3d(0, 10px, 0) scale(.96);
-  }
-
-  .analysis-confirm-layer[data-state="open"] .analysis-confirm {
-    transform: translate3d(0, 0, 0) scale(1);
   }
 
   .workspace-shell__menu {
