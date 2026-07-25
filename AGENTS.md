@@ -122,7 +122,7 @@ Node 服务关闭 request timeout，并将 headers timeout 设为 210 秒，确�
 - `src/fixtures/`：确定性示例 fixture 与重放/hash 工具；必须标注示例，不得存入真实或完整私人持仓，不得称为供应商缓存。
 - `tests/contracts/`：契约、建议边界、隐私扫描与 fixture 状态矩阵测试。
 - `tests/e2e/` 与 `docs/acceptance/`：目标 URL/候选版本绑定的公开 Playwright 验收，以及不伪造四状态、硬截止、日志和回滚证据的模板。
-- `deploy/`：单主机 Nginx/systemd/SQLite 发布边界。安装时显式校验并固定 Node 22、Corepack 和实际运行的 Nginx/vhost；root 解包前后拒绝危险归档成员，构建前清空整个 `dist`；release 失败才恢复迁移前快照，成功 rollback 保留 live DB，并始终验证精确 `/health.version`。
+- `deploy/`：单主机 Nginx/systemd/SQLite 发布边界。安装时显式校验并固定 Node 22、Corepack 和实际运行的 Nginx/vhost；root 解包前后拒绝危险归档成员，从精确 commit tree 隔离构建并清空整个 `dist`；release、rollback 和 purge 共用 root 管理且服务用户可加锁的维护 lock。release 失败才恢复迁移前快照，成功 rollback 保留 live DB，并始终验证精确 `/health.version`。
 - `pnpm-lock.yaml`、根 `package.json`、`tsconfig*.json`、`vite.config.ts`、`vitest.config.ts`、`eslint.config.js` 与 `.github/workflows/ci.yml`：全局工程边界，后续改动需与当前 Issue owner 协调。
 
 仓库提交信息由 `.githooks/commit-msg` 校验；首次克隆后执行 `git config core.hooksPath .githooks` 启用。主题和正文必须包含中文但允许混用英文术语，正文格式和长度不作限制；主题后使用真实空行，不得使用字面量 `\\n`。PowerShell 执行 `powershell -ExecutionPolicy Bypass -File .githooks/test-commit-msg.ps1`，POSIX shell 执行 `sh .githooks/test-commit-msg.sh`，可离线验证 Hook。
