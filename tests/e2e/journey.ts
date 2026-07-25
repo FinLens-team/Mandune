@@ -25,7 +25,7 @@ export async function completeOnboarding(page: Page): Promise<string> {
     await expect(lockedThemes.nth(index)).toHaveAttribute("aria-disabled", "true");
     await expect(lockedThemes.nth(index)).toContainText("暂未开放");
   }
-  await page.getByRole("radio", { name: /东方观象/ }).check();
+  await page.getByRole("button", { name: "选择东方观象" }).click();
   await page.getByRole("button", { name: "下一步" }).click();
   await checkpoint(page, "S1 theme selection");
 
@@ -75,7 +75,7 @@ export async function verifyDrawerAndEmptySecondaryViews(
   await expect(page.getByRole("heading", { level: 1, name: "历史与关于" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "关于满懂" })).toBeVisible();
   await expect(page.getByText(/不是投资建议，也不替你交易/)).toBeVisible();
-  await expect(page.getByText(/30 天保留与主动删除/)).toBeVisible();
+  await expect(page.getByText(/30 天无活动后自动删除/)).toBeVisible();
   await checkpoint(page, "S10 about");
 
   await page.getByRole("tab", { name: "历史记录" }).click();

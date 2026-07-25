@@ -89,8 +89,9 @@ test("ordinary UI reaches a supported result when all constraints are known", as
   await runAnalysisAndOpenResult(page);
 
   const card = page.getByRole("region", { name: "每日复盘报告" });
-  await expect(card.getByText("体验持仓 · 已编辑").first()).toBeVisible();
-  await expect(card.getByText("证据支持", { exact: true })).toBeVisible();
+  const narrativeFace = card.locator(".mandong-long-card__front");
+  await expect(narrativeFace.getByText("体验持仓 · 已编辑").first()).toBeVisible();
+  await expect(narrativeFace.getByText("证据支持", { exact: true })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
 
@@ -101,14 +102,18 @@ test("ordinary UI reaches a limited result when one constraint stays unknown", a
   await runAnalysisAndOpenResult(page);
 
   const card = page.getByRole("region", { name: "每日复盘报告" });
-  await expect(card.getByText("有限分析", { exact: true })).toBeVisible();
+  await expect(
+    card.locator(".mandong-long-card__front").getByText("有限分析", { exact: true }),
+  ).toBeVisible();
   await expectPublicPrivacySurface(page);
 });
 
 test("ordinary UI fails closed when an edited holding has no same-asset fixture", async ({ page }) => {
   await completeOnboarding(page);
   await openPortfolioEditor(page);
-  await page.locator(".portfolio-line").first().getByLabel("代码").fill("999999.UNKNOWN");
+  const firstHolding = page.locator(".portfolio-line").first();
+  await firstHolding.getByText("核对与编辑完整字段", { exact: true }).click();
+  await firstHolding.getByLabel("代码").fill("999999.UNKNOWN");
   await page.getByRole("button", { name: "保存后续复盘输入" }).click();
   await enableReducedMotion(page);
 

@@ -734,7 +734,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
       face: targetFace,
       offset: nextOffsets[targetFace] ?? currentOffset,
     };
-    setTransitioning(true);
+    setTransitioning(!reducedMotion);
     setFace(targetFace);
   }
 
@@ -776,7 +776,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     gestureIntentRef.current = null;
     setGestureIntent(null);
     setDragDeltaX(0);
-    if (wasHorizontal) setTransitioning(true);
+    if (wasHorizontal) setTransitioning(!reducedMotion);
     if (wasHorizontal && target !== null) {
       switchFace(target ? "evidence" : "narrative");
     }
@@ -791,7 +791,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     gestureIntentRef.current = null;
     setGestureIntent(null);
     setDragDeltaX(0);
-    setTransitioning(true);
+    setTransitioning(!reducedMotion);
   }
 
   const showEvidence = face === "evidence";

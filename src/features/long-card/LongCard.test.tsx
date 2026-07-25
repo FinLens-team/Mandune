@@ -223,7 +223,7 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(stylesheet).toContain("touch-action: pan-y");
     expect(stylesheet).toContain("rotateY(180deg)");
     expect(stylesheet).toContain("pointer-events: none");
-    expect(stylesheet).toContain("opacity var(--duration-fast)");
+    expect(stylesheet).toContain("transition: none");
     expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
     expect(stylesheet).toContain('data-reduced-motion="true"');
     expect(stylesheet).not.toContain("overflow-y: auto");

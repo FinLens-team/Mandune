@@ -261,17 +261,6 @@
     display: block;
   }
 
-  .portfolio-line__details > summary {
-    display: none;
-  }
-
-  .portfolio-line__details:not([open]) > .portfolio-line__fields {
-    display: grid;
-  }
-
-  .portfolio-line__details:not([open]) > .portfolio-line__provenance {
-    display: grid;
-  }
 }
 
 @media (max-width: 30rem) {

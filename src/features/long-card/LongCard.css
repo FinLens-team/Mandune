@@ -584,7 +584,7 @@
 
 .mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face {
   transform: none;
-  transition: opacity var(--duration-fast) linear;
+  transition: none;
 }
 
 .mandong-long-card[data-reduced-motion="true"] .mandong-long-card__face[aria-hidden="true"] {
@@ -603,7 +603,7 @@
 
   .mandong-long-card__face {
     transform: none;
-    transition: opacity var(--duration-fast) linear;
+    transition: none;
   }
 
   .mandong-long-card__face[aria-hidden="true"] {
