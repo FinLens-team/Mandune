@@ -70,34 +70,37 @@ describe("draft edits stay contract-valid on every keystroke", () => {
   });
 });
 
-describe("random experience holdings", () => {
-  it("appends contract-valid usable example lines labeled as experience data", () => {
+describe("random holdings", () => {
+  it("appends one realistic contract-valid line without analysis-polluting labels", () => {
     const base = createEmptyDraft();
-    const next = appendRandomHoldings(base, { random: () => 0.42 });
+    const next = appendRandomHoldings(base, {
+      random: () => 0.42,
+      now: new Date("2026-07-26T12:00:00.000Z"),
+    });
 
-    expect(next.lines.length).toBeGreaterThan(base.lines.length);
-    for (const line of next.lines) {
-      expect(line.entry_method).toBe("example");
-      expect(line.name.startsWith("体验示例 · ")).toBe(true);
-      expect(line.notes).toBe("随机体验数据，非真实持仓");
-      // 方向性规模文本，不出现精确金额/份额数字。
-      expect(line.size_basis).toMatch(/^体验持仓规模：(较小|中等|较大)$/);
-      expect(line.is_usable).toBe(true);
-    }
+    expect(next.lines).toHaveLength(1);
+    const line = next.lines[0]!;
+    expect(line.entry_method).toBe("manual");
+    expect(line.name).not.toMatch(/体验|示例/);
+    expect(line.notes).toBeUndefined();
+    expect(line.size_basis).toMatch(/^(小仓位，约占组合一成以内|中等仓位，约占组合一到两成|核心仓位，约占组合两成以上)$/);
+    expect(line.observation_date).toMatch(/^2026-0[4-7]-\d{2}$/);
+    expect(line.is_usable).toBe(true);
     expect(validatePortfolioDraft(next).ok).toBe(true);
   });
 
-  it("does not repeat the same instrument within one batch and stays a draft until confirmed", () => {
-    const next = appendRandomHoldings(createEmptyDraft(), { random: () => 0.1 });
-    const symbols = next.lines.map((line) => line.symbol);
-    expect(new Set(symbols).size).toBe(symbols.length);
+  it("does not repeat an existing instrument and stays a draft until confirmed", () => {
+    const first = appendRandomHoldings(createEmptyDraft(), { random: () => 0.1 });
+    const next = appendRandomHoldings(first, { random: () => 0.1 });
+    expect(next.lines).toHaveLength(2);
+    expect(next.lines[1]!.symbol).not.toBe(next.lines[0]!.symbol);
 
     // 仍需显式确认：草稿本身不是快照，确认路径与手工持仓一致。
     const result = snapshotCurrentDraft(next);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.snapshot.lines).toHaveLength(next.lines.length);
-      expect(result.snapshot.lines.every((line) => line.entry_method === "example")).toBe(true);
+      expect(result.snapshot.lines.every((line) => line.entry_method === "manual")).toBe(true);
     }
   });
 });

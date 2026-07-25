@@ -92,13 +92,10 @@ export function appendHolding(draft: PortfolioDraft, input: NewHoldingInput): Po
   );
 }
 
-/**
- * One-click experience data: append contract-valid random example holdings.
- * They stay drafts and still require explicit user confirmation to snapshot.
- */
+/** Append one contract-valid random holding that still requires confirmation. */
 export function appendRandomHoldings(
   draft: PortfolioDraft,
-  input?: { count?: number; random?: () => number },
+  input?: { random?: () => number; now?: Date },
 ): PortfolioDraft {
   return appendRandomExampleLines(draft, input);
 }

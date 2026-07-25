@@ -157,7 +157,11 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
     const next = appendRandomHoldings(draft);
     const added = next.lines.length - draft.lines.length;
     onChange(next);
-    setMessage(`已生成 ${added} 条随机体验持仓草稿（标注为体验数据）；确认保存后才会进入快照。`);
+    setMessage(
+      added === 1
+        ? "已新增 1 条随机持仓数据；确认保存后才会进入快照。"
+        : "内置标的均已添加，没有可新增的随机数据。",
+    );
   }
 
   return (

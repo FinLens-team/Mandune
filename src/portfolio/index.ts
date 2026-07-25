@@ -15,7 +15,5 @@ export type { SnapshotResult } from "./snapshot.js";
 export {
   appendRandomExampleLines,
   createRandomExampleLines,
-  RANDOM_EXAMPLE_NAME_PREFIX,
-  RANDOM_EXAMPLE_NOTE,
 } from "./random-example.js";
 export { computeUsability, withUsability } from "./usability.js";
