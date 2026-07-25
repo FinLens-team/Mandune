@@ -36,12 +36,6 @@ command -v corepack >/dev/null 2>&1 || {
   printf 'ERROR: pnpm 10.33.2 is required\n' >&2
   exit 1
 }
-corepack pnpm --dir "${REPO_ROOT}" install --frozen-lockfile
-corepack pnpm --dir "${REPO_ROOT}" build
-if find "${REPO_ROOT}/dist/client" -type f -name '*.map' -print -quit | grep -q .; then
-  printf 'ERROR: client build contains public source maps\n' >&2
-  exit 1
-fi
 
 OUTPUT="$(realpath -m "${OUTPUT}")"
 for archived_directory in "${REPO_ROOT}/dist" "${REPO_ROOT}/migrations"; do
@@ -51,6 +45,14 @@ for archived_directory in "${REPO_ROOT}/dist" "${REPO_ROOT}/migrations"; do
   fi
 done
 install -d "$(dirname -- "${OUTPUT}")"
+corepack pnpm --dir "${REPO_ROOT}" install --frozen-lockfile
+rm -rf -- "${REPO_ROOT}/dist"
+corepack pnpm --dir "${REPO_ROOT}" build
+if find "${REPO_ROOT}/dist/client" -name '*.map' -print -quit | grep -q .; then
+  printf 'ERROR: client build contains public source maps\n' >&2
+  exit 1
+fi
+
 SOURCE_DATE_EPOCH="$(git -C "${REPO_ROOT}" show -s --format=%ct "${COMMIT_SHA}")"
 tar --sort=name --mtime="@${SOURCE_DATE_EPOCH}" --owner=0 --group=0 --numeric-owner \
   -C "${REPO_ROOT}" -czf "${OUTPUT}" dist migrations package.json pnpm-lock.yaml

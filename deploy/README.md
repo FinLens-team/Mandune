@@ -23,6 +23,7 @@ The host layout is fixed:
 | `/var/backups/mandong` | `root:root`, `0700` | Pre-migration and rollback-guard snapshots |
 | `/etc/mandong/mandong.env` | `root:root`, `0600` | Optional server-only secrets/config |
 | `/etc/mandong/release.env` | `root:root`, `0600` | Generated commit SHA and migration path |
+| `/etc/systemd/system/mandong-purge.*` | `root:root`, `0644` | Hardened daily private-workspace expiry job |
 
 Do not put `HOST`, `PORT`, `APP_VERSION`, `MANDONG_DB_PATH`, or
 `MANDONG_MIGRATIONS_DIR` in `mandong.env`; the unit and release transaction own
@@ -38,9 +39,12 @@ Run repository-local validation first:
 ./deploy/validate.sh
 ```
 
-The command always checks shell/config invariants. It prints `NOT RUN` instead
-of claiming success when `systemd-analyze` or the Nginx/OpenSSL rendering tools
-are unavailable. On the target host all checks must run.
+The command always checks shell/config invariants and exercises the release
+archive validator with traversal, control-character, link, FIFO, device,
+duplicate, and required-type faults. Device-fixture construction is mandatory:
+the validation fails rather than silently skipping that case. It prints `NOT
+RUN` instead of claiming success when `systemd-analyze` or the Nginx/OpenSSL
+rendering tools are unavailable. On the target host all checks must run.
 
 Install the unit and Nginx config without starting Mandong:
 
@@ -65,13 +69,21 @@ resolved entrypoints under `/opt/mandong/runtime`; the service never falls back
 to another `node` on the host PATH. It never starts or restarts
 `mandong.service`. The unit uses `--preserve-symlinks-main` so the ESM entrypoint
 guard remains valid while `/opt/mandong/current` is switched atomically between
-immutable release directories.
+immutable release directories. It also installs and runs `systemctl enable
+--now mandong-purge.timer`, so daily expiry cleanup is immediately scheduled.
+The timer is persistent and has a 45-minute randomized delay. Before the first
+release, `ConditionPathExists` makes the oneshot a clean no-op rather than a
+failed unit. The purge service has no network namespace and can only write the
+Mandong state directory.
 
 ## Build a candidate
 
 Use a clean, committed candidate and a full 40-character commit SHA. The build
-script uses the lockfile, rejects public client `.map` files, and creates a
-stable archive plus SHA-256 file.
+script resolves and rejects output paths inside archived source directories,
+uses the lockfile, removes the entire ignored `dist` tree before building,
+rejects public client `.map` paths, and creates a stable archive plus SHA-256
+file. Removing all of `dist` prevents an old server chunk from leaking into a
+new candidate when TypeScript no longer emits that path.
 
 ```sh
 commit_sha="$(git rev-parse HEAD)"
@@ -94,9 +106,14 @@ sudo ./deploy/scripts/release.sh \
   "$expected_sha256"
 ```
 
-The transaction is serialized with `flock`. It validates the archive and
-installs production dependencies before stopping the active service. With the
-service stopped it runs SQLite `integrity_check`, creates a consistent
+The transaction is serialized with `flock`. Before root extraction it reads an
+escaped GNU tar manifest and accepts only unique regular files/directories under
+`dist`, `migrations`, `package.json`, and `pnpm-lock.yaml`. Absolute, dot-segment,
+control/backslash, unexpected, symlink, hardlink, device, FIFO, and wrong
+required-type entries are rejected. A second tree walk repeats type, hardlink,
+required-path, allowlist, and source-map checks after extraction. Only then are
+production dependencies installed and the active service stopped. With the
+service stopped the script runs SQLite `integrity_check`, creates a consistent
 pre-migration `.backup`, switches the `current` symlink, starts the candidate,
 and requires `/health` to return the exact candidate SHA. Any candidate health
 failure stops it, restores the old symlink and its corresponding pre-migration
@@ -127,18 +144,45 @@ predecessor:
 sudo ./deploy/scripts/rollback.sh
 ```
 
-Before changing anything it takes a rollback-guard snapshot of the current
-database. It then restores the target release's pre-migration snapshot and
-requires the target SHA from `/health`. If target health fails, it restores the
-original release, original database, and original SHA health. If that recovery
-also fails, the service remains stopped. Never delete a release, metadata file,
-or database snapshot until its rollback window is intentionally closed.
+Before changing anything it takes a rollback-guard snapshot of the current live
+database. It switches only the application release and starts the target
+against that same live database, so a successful rollback preserves every
+workspace and history write made by the current release. The target must return
+its exact SHA from `/health`; an old release that cannot open the current schema
+fails closed instead of receiving an older database snapshot. On any target
+activation, startup, schema, or health failure, rollback stops the target,
+reactivates the original release, restores the guard database, and verifies the
+original SHA. If that recovery also fails, the service remains stopped. The
+pre-migration snapshot remains reserved for automatic recovery from a failed
+forward release. Never delete a release, metadata file, or database snapshot
+until its rollback window is intentionally closed.
+
+## Expired-workspace purge
+
+The production release contains the compiled maintenance entrypoint. It does
+not depend on `tsx` or any other development dependency:
+
+```sh
+sudo systemctl status mandong-purge.timer
+sudo systemctl list-timers mandong-purge.timer
+sudo systemctl start mandong-purge.service
+sudo systemctl show mandong-purge.service \
+  -p User -p PrivateNetwork -p ProtectSystem -p ReadWritePaths
+```
+
+The oneshot loads the same generated release environment as the application and
+runs `node --preserve-symlinks-main
+/opt/mandong/current/dist/persistence/maintenance.js purge-expired`. Output is
+limited to aggregate purge/failure counts. `Persistent=true` catches a missed
+daily run after host downtime; the randomized delay avoids a fixed thundering
+start. A nonzero exit leaves a failed unit for operator inspection and retry.
 
 ## Operational checks
 
 ```sh
 sudo nginx -t
 sudo systemd-analyze verify /etc/systemd/system/mandong.service
+sudo systemd-analyze verify /etc/systemd/system/mandong-purge.service /etc/systemd/system/mandong-purge.timer
 sudo sqlite3 /var/lib/mandong/mandong.sqlite3 'PRAGMA integrity_check;'
 sudo systemctl show mandong.service \
   -p User -p Group -p ProtectSystem -p ProtectHome -p NoNewPrivileges

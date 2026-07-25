@@ -40,21 +40,12 @@ RELEASE="${RELEASE_ROOT}/${SHA}"
 install -d -o root -g root -m 0755 "${RELEASE_ROOT}"
 install -d -o root -g root -m 0700 "${BACKUP_ROOT}" "${METADATA_ROOT}"
 
-while IFS= read -r member; do
-  [[ -n ${member} ]] || continue
-  [[ ${member} != /* && ${member} != ".." && ${member} != ../* && ${member} != */../* && ${member} != */.. ]] \
-    || die "release archive contains an unsafe path"
-done < <(tar -tzf "${ARCHIVE}")
+validate_release_archive "${ARCHIVE}" || die "release archive validation failed"
 
 INCOMING="$(mktemp -d "${RELEASE_ROOT}/.incoming.${SHA}.XXXXXX")"
 trap 'rm -rf "${INCOMING}"' EXIT
-tar --no-same-owner --no-same-permissions -xzf "${ARCHIVE}" -C "${INCOMING}"
-for required_path in dist/server/index.js dist/client/index.html migrations package.json pnpm-lock.yaml; do
-  [[ -e ${INCOMING}/${required_path} ]] || die "release archive is missing ${required_path}"
-done
-if find "${INCOMING}/dist/client" -type f -name '*.map' -print -quit | grep -q .; then
-  die "release archive contains public client source maps"
-fi
+tar --no-same-owner --no-same-permissions --delay-directory-restore -xzf "${ARCHIVE}" -C "${INCOMING}"
+validate_release_tree "${INCOMING}" || die "extracted release validation failed"
 PATH="${RUNTIME_ROOT}:/usr/bin:/bin" "${COREPACK_BIN}" pnpm --dir "${INCOMING}" \
   install --prod --frozen-lockfile --ignore-scripts
 chown -R root:"${SERVICE_USER}" "${INCOMING}"

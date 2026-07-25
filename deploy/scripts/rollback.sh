@@ -29,13 +29,6 @@ TARGET="$(metadata_value "${METADATA}" PREVIOUS_RELEASE)"
 [[ -n ${TARGET} && ${TARGET} == "${RELEASE_ROOT}/"* && -d ${TARGET} ]] || die "rollback target is absent or invalid"
 TARGET_SHA="${TARGET##*/}"
 validate_commit_sha "${TARGET_SHA}"
-PREVIOUS_DB_PRESENT="$(metadata_value "${METADATA}" PREVIOUS_DB_PRESENT)"
-PRE_MIGRATION_BACKUP="$(metadata_value "${METADATA}" PRE_MIGRATION_BACKUP)"
-if [[ ${PREVIOUS_DB_PRESENT} == "1" ]]; then
-  [[ -f ${PRE_MIGRATION_BACKUP} ]] || die "required pre-migration database snapshot is absent"
-elif [[ ${PREVIOUS_DB_PRESENT} != "0" ]]; then
-  die "rollback metadata has an invalid database marker"
-fi
 
 stop_service
 GUARD_PRESENT=0
@@ -52,32 +45,30 @@ if [[ -f ${DB_PATH} ]]; then
   fi
 fi
 
-if ! restore_database "${PREVIOUS_DB_PRESENT}" "${PRE_MIGRATION_BACKUP}"; then
-  activate_release "${CURRENT}" "${CURRENT_SHA}" || die "rollback database restoration failed and current symlink restoration failed"
-  if ! restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}" || ! start_and_verify "${CURRENT_SHA}"; then
-    systemctl stop "${SERVICE_NAME}" || true
-    die "rollback database restoration failed and current release recovery failed"
-  fi
-  die "rollback database restoration failed; current release and database were restored"
-fi
 if ! activate_release "${TARGET}" "${TARGET_SHA}"; then
-  activate_release "${CURRENT}" "${CURRENT_SHA}" || die "rollback target activation failed and current symlink restoration failed"
-  if ! restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}" || ! start_and_verify "${CURRENT_SHA}"; then
+  if ! restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}"; then
     systemctl stop "${SERVICE_NAME}" || true
-    die "rollback target activation failed and current release recovery failed"
+    die "rollback target activation failed and guard database restoration failed"
+  fi
+  activate_release "${CURRENT}" "${CURRENT_SHA}" \
+    || die "rollback target activation failed; guard database was restored but current symlink restoration failed"
+  if ! start_and_verify "${CURRENT_SHA}"; then
+    systemctl stop "${SERVICE_NAME}" || true
+    die "rollback target activation failed and current release health recovery failed"
   fi
   die "rollback target activation failed; current release and database were restored"
 fi
 if start_and_verify "${TARGET_SHA}"; then
-  printf 'Rolled back from %s to %s with its pre-migration database snapshot.\n' "${CURRENT_SHA}" "${TARGET_SHA}"
+  printf 'Rolled back from %s to %s while preserving the live database.\n' "${CURRENT_SHA}" "${TARGET_SHA}"
   exit 0
 fi
 
 systemctl stop "${SERVICE_NAME}" || true
-activate_release "${CURRENT}" "${CURRENT_SHA}" || die "rollback target failed health verification and original symlink restoration failed"
 if ! restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}"; then
-  die "rollback target failed health verification; original symlink was restored but database restoration failed"
+  die "rollback target failed health verification and guard database restoration failed"
 fi
+activate_release "${CURRENT}" "${CURRENT_SHA}" \
+  || die "rollback target failed health verification; guard database was restored but original symlink restoration failed"
 if ! start_and_verify "${CURRENT_SHA}"; then
   systemctl stop "${SERVICE_NAME}" || true
   die "rollback target failed health verification; original release and database were restored but original health verification failed"

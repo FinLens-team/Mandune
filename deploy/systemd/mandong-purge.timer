@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Mandong private-workspace expiry purge daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=45m
+AccuracySec=1m
+Unit=mandong-purge.service
+
+[Install]
+WantedBy=timers.target

@@ -16,10 +16,35 @@ assert_contains() {
   }
 }
 
+assert_not_contains() {
+  local file=$1
+  local literal=$2
+  if grep -F -- "${literal}" "${file}" >/dev/null; then
+    printf 'ERROR: %s contains forbidden setting: %s\n' "${file}" "${literal}" >&2
+    exit 1
+  fi
+}
+
+assert_before() {
+  local file=$1
+  local first=$2
+  local second=$3
+  local first_line
+  local second_line
+  first_line="$(grep -nF -- "${first}" "${file}" | cut -d: -f1)"
+  second_line="$(grep -nF -- "${second}" "${file}" | cut -d: -f1)"
+  [[ -n ${first_line} && -n ${second_line} && ${first_line} -lt ${second_line} ]] || {
+    printf 'ERROR: %s does not order %s before %s\n' "${file}" "${first}" "${second}" >&2
+    exit 1
+  }
+}
+
 while IFS= read -r script; do
   bash -n "${script}"
 done < <(find "${DEPLOY_ROOT}" -type f -name '*.sh' -print | sort)
 printf 'PASS: deployment shell syntax\n'
+
+bash "${DEPLOY_ROOT}/tests/archive-validation.sh"
 
 NGINX_TEMPLATE="${DEPLOY_ROOT}/nginx/mandong.conf.template"
 for setting in \
@@ -50,17 +75,50 @@ for setting in \
   'ReadWritePaths=/var/lib/mandong'; do
   assert_contains "${SYSTEMD_UNIT}" "${setting}"
 done
+PURGE_UNIT="${DEPLOY_ROOT}/systemd/mandong-purge.service"
+for setting in \
+  'ConditionPathExists=/opt/mandong/current/dist/persistence/maintenance.js' \
+  'ExecStart=/usr/bin/env node --preserve-symlinks-main /opt/mandong/current/dist/persistence/maintenance.js purge-expired' \
+  'User=mandong' \
+  'PrivateNetwork=yes' \
+  'ProtectSystem=strict' \
+  'ReadWritePaths=/var/lib/mandong'; do
+  assert_contains "${PURGE_UNIT}" "${setting}"
+done
+PURGE_TIMER="${DEPLOY_ROOT}/systemd/mandong-purge.timer"
+for setting in \
+  'OnCalendar=daily' \
+  'Persistent=true' \
+  'RandomizedDelaySec=45m' \
+  'Unit=mandong-purge.service' \
+  'WantedBy=timers.target'; do
+  assert_contains "${PURGE_TIMER}" "${setting}"
+done
 assert_contains "${DEPLOY_ROOT}/scripts/lib.sh" 'readonly NODE_BIN="${RUNTIME_ROOT}/node"'
 assert_contains "${DEPLOY_ROOT}/scripts/lib.sh" 'readonly COREPACK_BIN="${RUNTIME_ROOT}/corepack"'
 assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'MANDONG_NGINX_BIN'
 assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'MANDONG_NGINX_VHOST_PATH'
-printf 'PASS: systemd identity, loopback, and sandbox invariants\n'
+assert_contains "${DEPLOY_ROOT}/scripts/install-host.sh" 'systemctl enable --now mandong-purge.timer'
+assert_contains "${REPO_ROOT}/package.json" 'node --preserve-symlinks-main dist/persistence/maintenance.js purge-expired'
+printf 'PASS: systemd identity, loopback, purge scheduling, and sandbox invariants\n'
+
+ROLLBACK_SCRIPT="${DEPLOY_ROOT}/scripts/rollback.sh"
+assert_contains "${ROLLBACK_SCRIPT}" 'while preserving the live database'
+assert_not_contains "${ROLLBACK_SCRIPT}" 'PRE_MIGRATION_BACKUP'
+assert_not_contains "${ROLLBACK_SCRIPT}" 'PREVIOUS_DB_PRESENT'
+assert_contains "${ROLLBACK_SCRIPT}" 'restore_database "${GUARD_PRESENT}" "${GUARD_BACKUP}"'
+printf 'PASS: rollback preserves live data and reserves guard restore for recovery\n'
+
+CREATE_RELEASE_SCRIPT="${DEPLOY_ROOT}/scripts/create-release.sh"
+assert_contains "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${REPO_ROOT}/dist"'
+assert_before "${CREATE_RELEASE_SCRIPT}" 'rm -rf -- "${REPO_ROOT}/dist"' 'corepack pnpm --dir "${REPO_ROOT}" build'
+printf 'PASS: release build removes all stale dist output before build\n'
 
 assert_contains "${REPO_ROOT}/vite.config.ts" 'sourcemap: false'
 printf 'PASS: production client source maps are disabled\n'
 
 if command -v systemd-analyze >/dev/null 2>&1; then
-  systemd-analyze verify "${SYSTEMD_UNIT}"
+  systemd-analyze verify "${SYSTEMD_UNIT}" "${PURGE_UNIT}" "${PURGE_TIMER}"
   printf 'PASS: systemd-analyze verify\n'
 else
   printf 'NOT RUN: systemd-analyze verify (systemd-analyze unavailable)\n'

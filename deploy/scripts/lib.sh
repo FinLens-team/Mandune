@@ -34,6 +34,138 @@ validate_commit_sha() {
   [[ $1 =~ ^[0-9a-f]{40}$ ]] || die "commit SHA must be 40 lowercase hexadecimal characters"
 }
 
+validate_archive_member_name() {
+  local member=$1
+  local normalized
+  local segment
+  local -a segments
+
+  [[ -n ${member} && ${member} != /* && ${member} != *\\* ]] || return 1
+  normalized="${member%/}"
+  [[ -n ${normalized} && ${normalized} != */ ]] || return 1
+  IFS='/' read -r -a segments <<<"${normalized}"
+  for segment in "${segments[@]}"; do
+    [[ -n ${segment} && ${segment} != "." && ${segment} != ".." ]] || return 1
+    [[ ${segment} =~ ^[A-Za-z0-9._@+~=-]+$ ]] || return 1
+  done
+
+  case "${normalized}" in
+    dist|dist/*|migrations|migrations/*|package.json|pnpm-lock.yaml) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+validate_release_archive() {
+  local archive=$1
+  local manifest_root
+  local names
+  local verbose
+  local member
+  local normalized
+  local details
+  local member_type
+  local name_count
+  local verbose_count
+  local required
+  local -A seen=()
+  local -A types=()
+
+  [[ -f ${archive} && ! -L ${archive} ]] || {
+    printf 'ERROR: release archive must be a regular file\n' >&2
+    return 1
+  }
+  manifest_root="$(mktemp -d)" || return 1
+  names="${manifest_root}/names"
+  verbose="${manifest_root}/verbose"
+  if ! tar --gzip --list --quoting-style=escape --file="${archive}" >"${names}" ||
+    ! tar --gzip --list --verbose --quoting-style=escape --file="${archive}" >"${verbose}"; then
+    rm -rf "${manifest_root}"
+    printf 'ERROR: release archive manifest could not be read\n' >&2
+    return 1
+  fi
+  name_count="$(wc -l <"${names}")"
+  verbose_count="$(wc -l <"${verbose}")"
+  if [[ ${name_count} -eq 0 || ${name_count} -ne ${verbose_count} ]]; then
+    rm -rf "${manifest_root}"
+    printf 'ERROR: release archive manifest is empty or ambiguous\n' >&2
+    return 1
+  fi
+
+  while IFS=$'\t' read -r member details; do
+    if ! validate_archive_member_name "${member}"; then
+      rm -rf "${manifest_root}"
+      printf 'ERROR: release archive contains an unsafe or unexpected path\n' >&2
+      return 1
+    fi
+    normalized="${member%/}"
+    member_type="${details:0:1}"
+    if [[ ${member_type} != "-" && ${member_type} != "d" ]]; then
+      rm -rf "${manifest_root}"
+      printf 'ERROR: release archive contains a link or special file\n' >&2
+      return 1
+    fi
+    if [[ -n ${seen[${normalized}]+present} ]]; then
+      rm -rf "${manifest_root}"
+      printf 'ERROR: release archive contains a duplicate path\n' >&2
+      return 1
+    fi
+    seen["${normalized}"]=1
+    types["${normalized}"]="${member_type}"
+  done < <(paste "${names}" "${verbose}")
+  rm -rf "${manifest_root}"
+
+  for required in dist/server/index.js dist/client/index.html package.json pnpm-lock.yaml; do
+    if [[ ${types[${required}]:-} != "-" ]]; then
+      printf 'ERROR: release archive is missing regular file %s\n' "${required}" >&2
+      return 1
+    fi
+  done
+  if [[ ${types[migrations]:-} != "d" ]]; then
+    printf 'ERROR: release archive is missing directory migrations\n' >&2
+    return 1
+  fi
+}
+
+validate_release_tree() {
+  local root=$1
+  local unexpected
+  local relative
+
+  unexpected="$(find "${root}" -xdev -mindepth 1 ! -type f ! -type d -print -quit)"
+  [[ -z ${unexpected} ]] || {
+    printf 'ERROR: extracted release contains a link or special file\n' >&2
+    return 1
+  }
+  unexpected="$(find "${root}" -xdev -type f -links +1 -print -quit)"
+  [[ -z ${unexpected} ]] || {
+    printf 'ERROR: extracted release contains a hard-linked file\n' >&2
+    return 1
+  }
+  while IFS= read -r relative; do
+    relative="${relative#./}"
+    [[ -z ${relative} ]] && continue
+    validate_archive_member_name "${relative}" || {
+      printf 'ERROR: extracted release contains an unexpected path\n' >&2
+      return 1
+    }
+  done < <(find "${root}" -xdev -mindepth 1 -printf '%P\n')
+
+  for relative in dist/server/index.js dist/client/index.html package.json pnpm-lock.yaml; do
+    [[ -f ${root}/${relative} && ! -L ${root}/${relative} ]] || {
+      printf 'ERROR: extracted release is missing regular file %s\n' "${relative}" >&2
+      return 1
+    }
+  done
+  [[ -d ${root}/migrations && ! -L ${root}/migrations ]] || {
+    printf 'ERROR: extracted release is missing directory migrations\n' >&2
+    return 1
+  }
+  if find "${root}/dist/client" -xdev -name '*.map' -print -quit | grep -q .; then
+    printf 'ERROR: release archive contains public client source maps\n' >&2
+    return 1
+  fi
+}
+
 acquire_deploy_lock() {
   require_command flock
   exec 9>"${DEPLOY_LOCK}"

@@ -22,7 +22,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
-    "maintenance:purge": "tsx src/persistence/maintenance.ts purge-expired"
+    "maintenance:purge": "node --preserve-symlinks-main dist/persistence/maintenance.js purge-expired"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.14",

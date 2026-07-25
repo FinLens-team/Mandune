@@ -53,10 +53,16 @@ fi
 chown root:root /etc/mandong/mandong.env
 chmod 0600 /etc/mandong/mandong.env
 
-systemd-analyze verify "${SCRIPT_DIR}/../systemd/mandong.service"
+systemd-analyze verify \
+  "${SCRIPT_DIR}/../systemd/mandong.service" \
+  "${SCRIPT_DIR}/../systemd/mandong-purge.service" \
+  "${SCRIPT_DIR}/../systemd/mandong-purge.timer"
 install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong.service" /etc/systemd/system/mandong.service
+install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-purge.service" /etc/systemd/system/mandong-purge.service
+install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-purge.timer" /etc/systemd/system/mandong-purge.timer
 systemctl daemon-reload
 systemctl enable mandong.service
+systemctl enable --now mandong-purge.timer
 
 NGINX_TARGET_DIR="$(dirname -- "${NGINX_TARGET}")"
 NGINX_CANDIDATE="$(mktemp "${NGINX_TARGET_DIR}/.mandong.conf.XXXXXX")"
