@@ -13,7 +13,7 @@ interface UiModule {
     loading: boolean;
     loadingLabel: string;
   }>;
-  DemoBadge: ComponentType;
+  DemoBadge: ComponentType<{ source?: "random" | "edited" }>;
   IconButton: ComponentType<{
     icon: typeof Menu;
     label: string;
@@ -32,11 +32,17 @@ describe("shared UI primitives", () => {
   it("renders the exact demo and lock labels with non-color cues", async () => {
     const { DemoBadge, LockBadge } = await loadUi();
     const demo = renderToStaticMarkup(createElement(DemoBadge));
+    const editedDemo = renderToStaticMarkup(createElement(DemoBadge, { source: "edited" }));
     const locked = renderToStaticMarkup(createElement(LockBadge));
 
     expect(demo).toContain("随机体验身份 · 示例数据");
     expect(demo).toContain('data-tone="demo"');
+    expect(demo).toContain('data-source="random"');
     expect(demo).toContain('aria-hidden="true"');
+    expect(editedDemo).toContain("体验持仓 · 已编辑");
+    expect(editedDemo).toContain('data-tone="demo"');
+    expect(editedDemo).toContain('data-source="edited"');
+    expect(editedDemo).not.toContain("用户真实持仓");
     expect(locked).toContain("暂未开放");
     expect(locked).toContain('data-tone="locked"');
     expect(locked).toContain('aria-hidden="true"');

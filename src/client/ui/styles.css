@@ -111,7 +111,6 @@
     background-color var(--duration-fast) var(--ease-enter),
     border-color var(--duration-fast) var(--ease-enter),
     color var(--duration-fast) var(--ease-enter),
-    box-shadow var(--duration-fast) var(--ease-enter),
     opacity var(--duration-fast) var(--ease-enter),
     transform var(--duration-fast) var(--ease-enter);
 }
@@ -120,21 +119,23 @@
   flex: 0 0 auto;
 }
 
-.ui-icon-button:disabled {
+.ui-icon-button:disabled,
+.ui-icon-button[aria-disabled="true"] {
   border-color: var(--color-border-subtle);
   color: var(--color-text-disabled);
   background: var(--color-bg-subtle);
   cursor: not-allowed;
+  transform: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .ui-icon-button:not(:disabled):hover {
+  .ui-icon-button:not(:disabled, [aria-disabled="true"]):hover {
     border-color: var(--color-text-primary);
     background: var(--color-bg-subtle);
   }
 }
 
-.ui-icon-button:not(:disabled):active {
+.ui-icon-button:not(:disabled, [aria-disabled="true"]):active {
   transform: translateY(1px);
 }
 
