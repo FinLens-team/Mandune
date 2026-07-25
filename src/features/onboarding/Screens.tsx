@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent, Ref } from "react";
-import type { PersonalConstraints } from "../../contracts/index.js";
+import type { AssetClass, PersonalConstraints } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
 import { Button } from "../../client/ui/index.js";
 import mandongLogo from "../../client/assets/mandong-logo.webp";
@@ -311,8 +311,13 @@ function formatConstraint(value: string): string {
   return value === "unknown" || value === "not_decided" ? "未知／尚未决定" : value;
 }
 
-function assetClassLabel(assetClass: "a_share" | "etf"): string {
-  return assetClass === "a_share" ? "A 股" : "ETF";
+function assetClassLabel(assetClass: AssetClass): string {
+  const labels: Record<AssetClass, string> = {
+    a_share: "A 股",
+    etf: "ETF",
+    fund: "基金",
+  };
+  return labels[assetClass];
 }
 
 export interface ExperienceSummaryScreenProps extends ScreenTitleProps {
@@ -479,15 +484,12 @@ export function ExperienceSummaryScreen({
                   </div>
                   <dl className="onboarding-holding__metrics">
                     <div className="onboarding-holding__metric">
-                      <dt>模拟持仓</dt>
+                      <dt>持仓尺度</dt>
                       <dd>{holding.size_basis}</dd>
                     </div>
                     <div className="onboarding-holding__metric">
-                      <dt>观察值</dt>
-                      <dd>
-                        {String(holding.observed_value)}
-                        {holding.observed_unit ? ` ${holding.observed_unit}` : ""}
-                      </dd>
+                      <dt>数据状态</dt>
+                      <dd>等待复盘</dd>
                     </div>
                   </dl>
                   <dl className="onboarding-holding__meta">

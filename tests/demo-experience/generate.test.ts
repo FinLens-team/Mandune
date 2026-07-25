@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getFixture } from "../../src/fixtures/index.js";
 import {
   createDemoExperienceFromSeed,
   rerollDemoExperience,
 } from "../../src/demo-experience/index.js";
+import { INSTRUMENT_DICTIONARY } from "../../src/instruments/index.js";
 
 const FIXED_NOW = () => new Date("2026-07-25T08:00:00.000Z");
 
@@ -15,29 +15,26 @@ describe("random demo experience", () => {
     expect(replay).toEqual(first);
     expect(first.seed).toBe("demo-experience-0000002f");
     expect(first.is_example).toBe(true);
-    expect(first.source_label).toBe("测试 fixture · 非实时行情");
+    expect(first.source_label).toBe("内置标的随机生成");
+    expect(first.source_kind).toBe("generated");
   });
 
-  it("only selects A-share or ETF lines backed by available observed fixture evidence", () => {
-    const fixture = getFixture("supported_full");
+  it("uses the same real instrument pool and directional fields as data management", () => {
     const identity = createDemoExperienceFromSeed(3, FIXED_NOW);
 
-    expect(identity.holdings.length).toBeGreaterThan(0);
+    expect(identity.holdings).toHaveLength(1);
     for (const holding of identity.holdings) {
-      expect(["a_share", "etf"]).toContain(holding.asset_class);
-      expect(holding.evidence_status).toBe("available");
-      expect(holding.provenance).toBe("observed");
-      expect(holding.observed_at).not.toBe(holding.fetched_at);
-      expect(holding.source_locator).toMatch(/^fixture:\/\//);
-
-      const line = fixture.snapshot.lines.find((candidate) => candidate.line_id === holding.line_id);
-      const evidence = fixture.analysis.evidence.find(
-        (candidate) => candidate.id === holding.evidence_id,
+      const instrument = INSTRUMENT_DICTIONARY.find(
+        (candidate) => candidate.symbol === holding.symbol,
       );
-      expect(line?.symbol).toBe(holding.symbol);
-      expect(evidence?.value).toBe(holding.observed_value);
-      expect(evidence?.observation_or_event_time).toBe(holding.observed_at);
-      expect(evidence?.fetched_at).toBe(holding.fetched_at);
+      expect(instrument).toMatchObject({
+        asset_class: holding.asset_class,
+        name: holding.name,
+        market: holding.market,
+      });
+      expect(holding.size_basis).toMatch(/仓位/);
+      expect(holding.observation_date).toMatch(/^2026-\d{2}-\d{2}$/);
+      expect(holding.source_name).toBe("内置标的随机生成");
     }
   });
 
@@ -70,5 +67,6 @@ describe("random demo experience", () => {
 
     expect(rerolled.seed).toBe("demo-experience-00000001");
     expect(rerolled.seed).not.toBe(current.seed);
+    expect(rerolled.holdings[0]?.symbol).not.toBe(current.holdings[0]?.symbol);
   });
 });

@@ -1,5 +1,5 @@
-import type { EvidenceRecord, PersonalConstraints } from "../contracts/index.js";
-import { FIXTURES } from "../fixtures/scenarios.js";
+import type { PersonalConstraints } from "../contracts/index.js";
+import { createRandomExampleLines } from "../portfolio/index.js";
 import {
   DEMO_EXPERIENCE_SOURCE_LABEL,
   type DemoExperienceHolding,
@@ -35,54 +35,6 @@ function pick<T>(items: readonly T[], random: () => number): T {
   return value;
 }
 
-function findAvailableEvidence(
-  evidence: readonly EvidenceRecord[],
-  lineId: string,
-): EvidenceRecord | undefined {
-  return evidence.find(
-    (record) =>
-      record.scope.kind === "asset" &&
-      record.scope.line_id === lineId &&
-      record.status === "available" &&
-      record.provenance === "observed" &&
-      record.value !== null &&
-      record.value !== undefined,
-  );
-}
-
-function fixtureCandidates(): DemoExperienceHolding[] {
-  const fixture = FIXTURES.supported_full;
-  return fixture.snapshot.lines.flatMap((line) => {
-    if (line.asset_class !== "a_share" && line.asset_class !== "etf") {
-      return [];
-    }
-    const evidence = findAvailableEvidence(fixture.analysis.evidence, line.line_id);
-    if (!evidence || evidence.value === null || evidence.value === undefined) {
-      return [];
-    }
-    return [
-      {
-        line_id: line.line_id,
-        evidence_id: evidence.id,
-        asset_class: line.asset_class,
-        name: line.name,
-        symbol: line.symbol,
-        market: line.market,
-        size_basis: line.size_basis,
-        observation_date: line.observation_date,
-        observed_value: evidence.value,
-        observed_unit: evidence.unit,
-        source_name: evidence.source.name,
-        source_locator: evidence.source.locator,
-        observed_at: evidence.observation_or_event_time,
-        fetched_at: evidence.fetched_at,
-        evidence_status: evidence.status,
-        provenance: evidence.provenance,
-      },
-    ];
-  });
-}
-
 function generateConstraints(random: () => number): PersonalConstraints {
   return {
     investment_horizon: pick(CONSTRAINT_VARIANTS.investment_horizon, random),
@@ -95,26 +47,41 @@ function generateConstraints(random: () => number): PersonalConstraints {
 export function createDemoExperienceFromSeed(
   seed: number,
   now: () => Date = () => new Date(),
+  excludedSymbols?: ReadonlySet<string>,
 ): DemoExperienceIdentity {
   const normalizedSeed = seed >>> 0;
   const random = mulberry32(normalizedSeed);
-  const candidates = fixtureCandidates();
-  if (candidates.length === 0) {
-    throw new Error("demo_experience_has_no_supported_fixture_evidence");
-  }
-
-  const holding = pick(candidates, random);
   const seedLabel = `demo-experience-${normalizedSeed.toString(16).padStart(8, "0")}`;
+  const createdAt = now();
+  const [line] = createRandomExampleLines({
+    createLineId: () => `line-${seedLabel}`,
+    excludedSymbols,
+    now: createdAt,
+    random,
+  });
+  if (!line) {
+    throw new Error("demo_experience_has_no_random_holding_candidate");
+  }
+  const holding: DemoExperienceHolding = {
+    line_id: line.line_id,
+    asset_class: line.asset_class,
+    name: line.name,
+    symbol: String(line.symbol),
+    ...(line.market ? { market: String(line.market) } : {}),
+    size_basis: String(line.size_basis),
+    observation_date: String(line.observation_date),
+    source_name: DEMO_EXPERIENCE_SOURCE_LABEL,
+  };
   return {
     identity_id: `identity-${seedLabel}`,
     seed: seedLabel,
-    scenario_id: "supported_full",
+    scenario_id: "random_portfolio",
     theme_id: "eastern_observation",
-    created_at: now().toISOString(),
+    created_at: createdAt.toISOString(),
     is_example: true,
-    source_kind: "fixture",
+    source_kind: "generated",
     source_label: DEMO_EXPERIENCE_SOURCE_LABEL,
-    holdings: [{ ...holding }],
+    holdings: [holding],
     constraints: generateConstraints(random),
   };
 }
@@ -133,9 +100,13 @@ export function rerollDemoExperience(
   now: () => Date = () => new Date(),
 ): DemoExperienceIdentity {
   const next = createRandomDemoExperience(random, now);
-  if (next.seed !== current.seed) {
+  const currentSymbols = new Set(current.holdings.map((holding) => holding.symbol));
+  if (
+    next.seed !== current.seed &&
+    next.holdings.every((holding) => !currentSymbols.has(holding.symbol))
+  ) {
     return next;
   }
   const currentSeed = Number.parseInt(current.seed.slice(-8), 16) >>> 0;
-  return createDemoExperienceFromSeed((currentSeed + 1) >>> 0, now);
+  return createDemoExperienceFromSeed((currentSeed + 1) >>> 0, now, currentSymbols);
 }

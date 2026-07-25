@@ -112,7 +112,7 @@ describe("S0-S3 onboarding screens", () => {
     expect(html).not.toContain("<form");
   });
 
-  it("shows the labelled simulated holdings, random source copy, and four constraints", async () => {
+  it("shows the random instrument holding, its draft state, and four constraints", async () => {
     const { ExperienceSummaryScreen } = await loadOnboarding();
     const identity = createDemoExperienceFromSeed(
       47,
@@ -127,8 +127,9 @@ describe("S0-S3 onboarding screens", () => {
 
     expect(html).toContain("随机模拟数据已出炉");
     expect(html).toContain("本次模拟持仓");
-    expect(html).toContain("模拟持仓");
-    expect(html).toContain("观察值");
+    expect(html).toContain("持仓尺度");
+    expect(html).toContain("数据状态");
+    expect(html).toContain("等待复盘");
     expect(html).toContain("数据日期");
     expect(html).toContain("数据来源");
     expect(html).toContain("随机生成");

@@ -1,4 +1,6 @@
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   FetchJourneyGateway,
   JourneyController,
@@ -72,19 +74,59 @@ function JourneyStatePage({
   actionLabel,
   heading,
   message,
+  deleted = false,
 }: {
   action: () => void;
   actionLabel: string;
   heading: string;
   message: string;
+  deleted?: boolean;
 }) {
   return (
     <div className="journey-state-page">
       <BrandBanner />
-      <main className="journey-state" id="main" role="status">
-        <h1 tabIndex={-1}>{heading}</h1>
-        <p>{message}</p>
-        <Button onClick={action} variant="primary">{actionLabel}</Button>
+      <main className={`journey-state${deleted ? " journey-state--deleted" : ""}`} id="main" role="status">
+        {deleted ? (
+          <>
+            <div className="journey-state__status">
+              <span className="journey-state__status-icon" aria-hidden="true">
+                <Trash2 size={20} strokeWidth={2.2} />
+              </span>
+              <span>永久删除</span>
+            </div>
+            <div className="journey-state__copy">
+              <p className="journey-state__eyebrow">匿名工作区</p>
+              <h1 tabIndex={-1}>{heading}</h1>
+              <p>{message}</p>
+            </div>
+            <ul className="journey-state__cleared" aria-label="已清除的数据">
+              {[
+                "持仓数据",
+                "个人约束",
+                "分析任务",
+                "复盘历史",
+              ].map((label, index) => (
+                <li key={label} style={{ "--item-index": index } as CSSProperties}>
+                  <span aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+            <div className="journey-state__action">
+              <p>继续使用满懂需要创建一个全新的匿名工作区。</p>
+              <Button onClick={action} variant="primary">
+                <Plus aria-hidden="true" size={19} />
+                {actionLabel}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 tabIndex={-1}>{heading}</h1>
+            <p>{message}</p>
+            <Button onClick={action} variant="primary">{actionLabel}</Button>
+          </>
+        )}
       </main>
     </div>
   );
@@ -185,6 +227,7 @@ export function App(props: AppProps = {}) {
       <JourneyStatePage
         action={() => void controller.bootstrap()}
         actionLabel="创建新的匿名工作区"
+        deleted
         heading="工作区已删除"
         message="持仓、约束、分析任务与历史已清除，无法通过正常产品路径恢复。"
       />

@@ -62,7 +62,7 @@ describe("journey identity and pure state", () => {
         entry_method: "example",
         is_usable: true,
       });
-      expect(line.notes).toContain(DEMO_EXPERIENCE_SOURCE_LABEL);
+      expect(line.notes).toBe(`随机体验身份 · ${DEMO_EXPERIENCE_SOURCE_LABEL}`);
     }
   });
 

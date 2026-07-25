@@ -37,6 +37,7 @@ export function createRandomExampleLines(input?: {
   random?: () => number;
   now?: Date;
   excludedSymbols?: ReadonlySet<string>;
+  createLineId?: () => string;
 }): DraftLine[] {
   const random = input?.random ?? Math.random;
   const pool = INSTRUMENT_DICTIONARY.filter(
@@ -49,7 +50,7 @@ export function createRandomExampleLines(input?: {
     RANDOM_SIZE_BASIS_VARIANTS[pickIndex(random, RANDOM_SIZE_BASIS_VARIANTS.length)]!;
   return [
     withUsability({
-      line_id: createId("line"),
+      line_id: input?.createLineId?.() ?? createId("line"),
       asset_class: entry.asset_class,
       name: entry.name,
       symbol: entry.symbol,

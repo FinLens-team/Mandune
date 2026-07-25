@@ -22,7 +22,7 @@ export function identityToPortfolioDraft(identity: DemoExperienceIdentity): Port
       entry_method: "example",
       is_usable: true,
       unresolved_fields: [],
-      notes: `${sourceLabel}；${holding.source_name}；观察 ${holding.observed_at}；获取 ${holding.fetched_at}`,
+      notes: sourceLabel,
     })),
   };
 }
