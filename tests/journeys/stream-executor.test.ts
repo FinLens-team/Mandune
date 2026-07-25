@@ -102,8 +102,8 @@ describe("StreamingAnalysisExecutor", () => {
     const requests: ModelStreamRequest[] = [];
     const modelGateway = gateway(async (request) => {
       requests.push(request);
-      const text = modelReports(SAFE_RATIONAL);
-      for (const delta of [text.slice(0, 8), text.slice(8)]) request.onText(delta);
+      const text = modelReports(SAFE_RATIONAL, `#角色观察\n\n${SAFE_PERSONA}`);
+      for (const delta of [text.slice(0, 8), text.slice(8, 64), text.slice(64)]) request.onText(delta);
       return { ok: true, text };
     });
 
@@ -114,7 +114,7 @@ describe("StreamingAnalysisExecutor", () => {
     expect(clientText).toHaveBeenNthCalledWith(2, "# 风险边界\n");
     expect(result).toMatchObject({
       ai_text: SAFE_RATIONAL,
-      ai_theme_text: SAFE_PERSONA,
+      ai_theme_text: `#角色观察\n\n${SAFE_PERSONA}`,
       source: { kind: "live", is_live: true },
     });
     expect(events
@@ -126,7 +126,7 @@ describe("StreamingAnalysisExecutor", () => {
       "正在思考...",
       "正在生成 市场概览",
       "正在生成 风险边界",
-      "正在生成 角色复盘",
+      "正在生成 角色观察",
     ]);
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",

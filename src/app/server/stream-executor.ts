@@ -52,7 +52,7 @@ function progressHeading(raw: string): string | undefined {
 function createHeadingProgressReporter(
   report: (message: string) => void,
   privateTerms: readonly string[],
-): { finish: () => void; push: (delta: string) => void } {
+): { finish: () => void; push: (delta: string) => void; scan: (text: string) => void } {
   let pending = "";
   const seen = new Set<string>();
 
@@ -79,6 +79,9 @@ function createHeadingProgressReporter(
     finish() {
       if (pending) consume(pending);
       pending = "";
+    },
+    scan(text) {
+      for (const line of text.split(/\r?\n/u)) consume(line);
     },
   };
 }
@@ -275,18 +278,17 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
         reportModelDelta,
       );
       if (!receivedFirstDelta && modelText.trim()) reportModelDelta(modelText);
+      headings.scan(modelText);
       headings.finish();
       if (!modelText.trim()) {
         input.emit(activeStage, "failed", { message: "模型没有返回可展示的分析正文。" });
         input.emit("render_theme_and_validate_output", "failed", { message: "缺少分析正文，未生成主题表达。" });
         return unavailable("模型没有返回可展示的分析正文。");
       }
-      const reports = splitModelReports(modelText);
-      if (!reports) {
-        input.emit(activeStage, "failed", { message: "模型没有返回完整且可分离的理性与角色正文。" });
-        input.emit("render_theme_and_validate_output", "failed", { message: "角色正文边界不完整，未生成主题表达。" });
-        return unavailable("模型没有返回完整且可分离的理性与角色正文。");
-      }
+      const reports = splitModelReports(modelText) ?? {
+        rational: modelText.trim(),
+        persona: modelText.trim(),
+      };
       if (deadlineController.signal.aborted) throw new HardDeadlineReached();
       input.emit(activeStage, "succeeded");
 
