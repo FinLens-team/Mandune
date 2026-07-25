@@ -92,12 +92,18 @@ export function AnalysisConfirmDialog(props: AnalysisConfirmDialogProps) {
             </span>
           </h3>
           <dl className="analysis-confirm__constraints">
-            {CONSTRAINT_SUMMARY.map(([key, label]) => (
-              <div key={key}>
-                <dt>{label}</dt>
-                <dd>{formatConstraintValue(snapshot.constraints[key])}</dd>
-              </div>
-            ))}
+            {CONSTRAINT_SUMMARY.map(([key, label]) => {
+              const value = snapshot.constraints[key];
+              const unknown = value === "unknown" || value === "not_decided";
+              return (
+                <div key={key}>
+                  <dt>{label}</dt>
+                  <dd className={unknown ? "analysis-confirm__value--unknown" : undefined}>
+                    {formatConstraintValue(value)}
+                  </dd>
+                </div>
+              );
+            })}
           </dl>
         </section>
         <section aria-label="运行方式" className="analysis-confirm__section">
