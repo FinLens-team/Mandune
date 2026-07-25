@@ -19,6 +19,14 @@
     "sha256": "50c31056259f6001d91ed335da85eb372a22378b0edf71aff76c8e4fe6979ad9",
     "alpha": true
   },
+  "laugh": {
+    "file": "nailong-laugh.webp",
+    "source": ".temp/image.png (RGBA 786x878, provided by the user as the home poster mascot; alpha-trimmed and re-centered to 658x838 with a symmetric 20px margin)",
+    "size": 41918,
+    "sha256": "a07c00ac0df28088f08fc582bb5e74810c85f799e0b211dceaa4b8f3f5302773",
+    "codec": "Lossy WebP q92, alpha preserved",
+    "alpha": true
+  },
   "conversion_source": "The intermediate conversion sources (nailong-intro-alpha.webm, nailong-rest.png) were removed from the repository after the WebP derivatives were verified; provenance is preserved via the sha256 entries above.",
   "background_processing": "The source contained a baked light-gray checkerboard. Near-neutral gray pixels were keyed out before the static and animated WebP derivatives were encoded with alpha."
 }

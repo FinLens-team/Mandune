@@ -3,9 +3,8 @@ import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
-import mandongLogo from "../../client/assets/mandong-logo.webp";
 import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
-import nailongRest from "../../client/assets/mascot/nailong-rest.webp";
+import nailongLaugh from "../../client/assets/mascot/nailong-laugh.webp";
 import { createExampleDraft } from "../../portfolio/index.js";
 import { OBSERVATION_THEME } from "../../theme/observation.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
@@ -82,10 +81,10 @@ const HOME_SPEECH_BUBBLES = [
   "先核对，再判断",
 ] as const;
 
-/** Always-visible poster copy from the「我是龙」theme pack; expression only. */
-const HOME_STATIC_BUBBLES = ["先核对，再判断", "笑一笑，再稳稳看"] as const;
+/** Full drift cycle of one floating caption (pop in, hold, rise, fade out). */
+const HOME_CAPTION_LIFETIME_MS = 3600;
 
-interface HomeSpeechBubble {
+interface HomeCaption {
   id: number;
   message: (typeof HOME_SPEECH_BUBBLES)[number];
   x: number;
@@ -136,7 +135,7 @@ export function WorkspaceShell({
   const [pageVisible, setPageVisible] = useState(
     () => typeof document === "undefined" || document.visibilityState !== "hidden",
   );
-  const [speechBubble, setSpeechBubble] = useState<HomeSpeechBubble | null>(null);
+  const [speechCaptions, setSpeechCaptions] = useState<HomeCaption[]>([]);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
     useState<DemoBadgeSource>(initialExperienceSource);
@@ -186,33 +185,36 @@ export function WorkspaceShell({
 
   useEffect(() => {
     if (reduceMotion || !pageVisible || view !== "home") {
-      setSpeechBubble(null);
+      setSpeechCaptions([]);
       return;
     }
 
-    let timer: number | undefined;
-    let bubbleId = 0;
+    let captionId = 0;
+    let spawnTimer: number | undefined;
+    const expireTimers = new Set<number>();
 
-    function scheduleNext(delay: number) {
-      timer = window.setTimeout(() => {
-        const messageIndex = Math.floor(Math.random() * HOME_SPEECH_BUBBLES.length);
-        setSpeechBubble({
-          id: bubbleId,
-          message: HOME_SPEECH_BUBBLES[messageIndex] ?? HOME_SPEECH_BUBBLES[0],
-          x: randomBetween(14, 70),
-          y: randomBetween(6, 44),
-        });
-        bubbleId += 1;
-        timer = window.setTimeout(() => {
-          setSpeechBubble(null);
-          scheduleNext(randomBetween(1400, 2600));
-        }, 1800);
-      }, delay);
+    function spawn() {
+      const messageIndex = Math.floor(Math.random() * HOME_SPEECH_BUBBLES.length);
+      const caption: HomeCaption = {
+        id: captionId,
+        message: HOME_SPEECH_BUBBLES[messageIndex] ?? HOME_SPEECH_BUBBLES[0],
+        x: randomBetween(14, 72),
+        y: randomBetween(12, 62),
+      };
+      captionId += 1;
+      setSpeechCaptions((previous) => [...previous.slice(-2), caption]);
+      const expire = window.setTimeout(() => {
+        expireTimers.delete(expire);
+        setSpeechCaptions((previous) => previous.filter((item) => item.id !== caption.id));
+      }, HOME_CAPTION_LIFETIME_MS);
+      expireTimers.add(expire);
+      spawnTimer = window.setTimeout(spawn, randomBetween(1800, 3200));
     }
 
-    scheduleNext(randomBetween(900, 1600));
+    spawnTimer = window.setTimeout(spawn, randomBetween(700, 1400));
     return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
+      if (spawnTimer !== undefined) window.clearTimeout(spawnTimer);
+      for (const timer of expireTimers) window.clearTimeout(timer);
     };
   }, [pageVisible, reduceMotion, view]);
 
@@ -269,28 +271,27 @@ export function WorkspaceShell({
           {view === "home" ? (
             <section className="workspace-home" aria-labelledby="workspace-home-heading">
               <div className="workspace-home__poster">
+                {/* Symbolic drifting sparklines — pure decoration, not market data */}
                 <svg
                   aria-hidden="true"
-                  className="workspace-home__curve"
+                  className="workspace-home__ticker"
                   fill="none"
                   preserveAspectRatio="xMidYMid slice"
-                  viewBox="0 0 390 780"
+                  viewBox="0 0 800 780"
                 >
-                  <path d="M-40 300 C 50 130, 232 118, 244 244 C 256 372, 84 402, 116 528 C 148 652, 338 646, 432 496" />
-                  <circle cx="52" cy="356" r="13" />
-                  <circle cx="330" cy="196" r="8" />
+                  <g className="workspace-home__ticker-line workspace-home__ticker-line--high">
+                    <path d="M0 150 L65 128 L130 168 L200 112 L270 148 L340 96 L410 136 L480 84 L550 124 L620 72 L690 110 L800 150 L865 128 L930 168 L1000 112 L1070 148 L1140 96 L1210 136 L1280 84 L1350 124 L1420 72 L1490 110 L1600 150" />
+                  </g>
+                  <g className="workspace-home__ticker-line workspace-home__ticker-line--mid">
+                    <path d="M0 420 L55 386 L110 442 L170 368 L235 410 L300 332 L360 372 L425 300 L485 346 L550 276 L615 324 L670 256 L730 306 L800 420 L855 386 L910 442 L970 368 L1035 410 L1100 332 L1160 372 L1225 300 L1285 346 L1350 276 L1415 324 L1470 256 L1530 306 L1600 420" />
+                  </g>
+                  <g className="workspace-home__ticker-line workspace-home__ticker-line--low">
+                    <path d="M0 585 L70 605 L140 560 L210 596 L280 544 L350 576 L420 520 L490 556 L560 500 L630 538 L700 486 L800 585 L870 605 L940 560 L1010 596 L1080 544 L1150 576 L1220 520 L1290 556 L1360 500 L1430 538 L1500 486 L1600 585" />
+                  </g>
                 </svg>
 
-                <header className="workspace-home__brand">
-                  <img
-                    alt="满懂 Mandong"
-                    className="workspace-home__brand-logo"
-                    decoding="async"
-                    height={317}
-                    src={mandongLogo}
-                    width={1200}
-                  />
-                  <span aria-hidden="true" className="workspace-home__brand-rule" />
+                <header className="workspace-home__masthead">
+                  <p className="workspace-home__theme-title">哈呃呃涨涨</p>
                 </header>
 
                 <div className="workspace-home__badges">
@@ -322,30 +323,24 @@ export function WorkspaceShell({
                   </div>
                 </div>
 
+                <div aria-hidden="true" className="workspace-home__speech">
+                  {speechCaptions.map((caption) => (
+                    <span
+                      key={caption.id}
+                      style={{
+                        "--bubble-x": `${caption.x}%`,
+                        "--bubble-y": `${caption.y}%`,
+                      } as CSSProperties}
+                    >
+                      {caption.message}
+                    </span>
+                  ))}
+                </div>
+
                 <div
                   className="workspace-home__stage"
                   data-coachmark={reviewCoachmarkVisible || undefined}
                 >
-                  <div aria-hidden="true" className="workspace-home__bubbles">
-                    {HOME_STATIC_BUBBLES.map((text) => (
-                      <span key={text}>{text}</span>
-                    ))}
-                  </div>
-
-                  <div aria-hidden="true" className="workspace-home__speech">
-                    {speechBubble ? (
-                      <span
-                        key={speechBubble.id}
-                        style={{
-                          "--bubble-x": `${speechBubble.x}%`,
-                          "--bubble-y": `${speechBubble.y}%`,
-                        } as CSSProperties}
-                      >
-                        {speechBubble.message}
-                      </span>
-                    ) : null}
-                  </div>
-
                   <button
                     aria-label={activeAnalysis
                       ? "点击奶龙，继续查看正在运行的复盘"
@@ -358,9 +353,9 @@ export function WorkspaceShell({
                       alt=""
                       decoding="async"
                       fetchPriority="high"
-                      height="512"
-                      src={nailongRest}
-                      width="512"
+                      height="838"
+                      src={nailongLaugh}
+                      width="658"
                     />
                   </button>
                 </div>

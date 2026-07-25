@@ -26,7 +26,11 @@ export function useOverlayPresence(open: boolean, exitDuration: number): {
     if (open) {
       setPresent(true);
       setPhase("opening");
-      frame = window.requestAnimationFrame(() => setPhase("open"));
+      // Double rAF: the first frame can fire before the "opening" styles are
+      // committed, which would skip the entry transition entirely.
+      frame = window.requestAnimationFrame(() => {
+        frame = window.requestAnimationFrame(() => setPhase("open"));
+      });
     } else if (present) {
       setPhase("closing");
       timer = window.setTimeout(() => {

@@ -2,15 +2,15 @@
    Workspace Shell — Poster Home + Drawer Motion System
 
    Home is a dark warm-gray poster stage (reference: mobile
-   mascot poster): brand top-left, oversized title, real-data
-   capsules, theme bubbles scattered around a large mascot,
-   decorative gold curve, hamburger bottom-left.
+   mascot poster): oversized theme copy on top, real-data
+   capsules, floating captions, a centered mascot, and symbolic
+   drifting sparklines in the background; hamburger bottom-left.
 
    Choreography:
-   Act 1 (0-400ms)   — Brand + title lift in
+   Act 1 (0-400ms)   — Theme copy + runtime title lift in
    Act 2 (300-650ms) — Status capsules cascade
-   Act 3 (400-1050ms) — Mascot lands, bubbles pop, curve fades in
-   Continuous         — Mascot breathes, bubbles float gently
+   Act 3 (400-1050ms) — Mascot lands, sparklines fade in
+   Continuous         — Sparklines drift, captions rise and fade
    ═══════════════════════════════════════════════════════════ */
 
 .workspace-shell {
@@ -47,13 +47,13 @@
   --poster-focus: #ffd97a;
 
   display: grid;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   background:
     radial-gradient(120% 90% at 50% 100%, var(--poster-bg-deep) 0%, transparent 55%),
     var(--poster-bg);
   color: var(--poster-ink);
-  overflow-x: clip;
+  overflow: clip;
 }
 
 /* Dark stage needs its own visible focus color */
@@ -68,23 +68,23 @@
   isolation: isolate;
   width: min(100%, 30rem);
   margin-inline: auto;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
   padding-block: max(var(--space-6), env(safe-area-inset-top)) 0;
   padding-inline: max(var(--space-4), env(safe-area-inset-left))
     max(var(--space-4), env(safe-area-inset-right));
   display: grid;
   grid-template-areas:
-    "brand"
+    "masthead"
     "copy"
     "stage";
   grid-template-rows: auto auto 1fr;
   overflow: clip;
 }
 
-/* ─── Decorative gold curve + rings ─── */
+/* ─── Symbolic drifting sparklines (decoration only, not data) ─── */
 
-.workspace-home__curve {
+.workspace-home__ticker {
   position: absolute;
   z-index: 0;
   inset: 0;
@@ -93,54 +93,77 @@
   pointer-events: none;
   stroke: var(--poster-gold);
   opacity: 0;
-  animation: curve-reveal 900ms 500ms var(--ease-enter) forwards;
+  animation: ticker-reveal 900ms 400ms var(--ease-enter) forwards;
 }
 
-.workspace-home__curve path {
-  stroke-width: 12;
+@keyframes ticker-reveal {
+  to { opacity: 1; }
+}
+
+/* Each line loops one 800-unit pattern; the path holds two copies
+   so a full -800px slide lands on an identical frame. */
+.workspace-home__ticker-line path {
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.workspace-home__curve circle {
-  stroke-width: 6;
-  opacity: 0.65;
+.workspace-home__ticker-line--high {
+  animation: ticker-slide-right 46s linear infinite;
+  transform: translateX(-800px);
 }
 
-@keyframes curve-reveal {
-  to { opacity: 0.88; }
+.workspace-home__ticker-line--high path {
+  stroke-width: 3;
+  stroke-opacity: 0.16;
 }
 
-/* ─── Brand row (subtask C: logo lives on the poster) ─── */
+.workspace-home__ticker-line--mid {
+  animation: ticker-slide-left 30s linear infinite;
+}
 
-.workspace-home__brand {
+.workspace-home__ticker-line--mid path {
+  stroke-width: 5;
+  stroke-opacity: 0.34;
+}
+
+.workspace-home__ticker-line--low {
+  animation: ticker-slide-left 38s linear infinite;
+}
+
+.workspace-home__ticker-line--low path {
+  stroke-width: 4;
+  stroke-opacity: 0.22;
+}
+
+@keyframes ticker-slide-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-800px); }
+}
+
+@keyframes ticker-slide-right {
+  from { transform: translateX(-800px); }
+  to { transform: translateX(0); }
+}
+
+/* ─── Masthead: theme main copy on top (expression only) ─── */
+
+.workspace-home__masthead {
   position: relative;
   z-index: 5;
-  grid-area: brand;
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
+  grid-area: masthead;
   margin-bottom: var(--space-4);
+}
+
+.workspace-home__theme-title {
+  margin: 0;
+  color: var(--poster-ink);
+  font-family: var(--font-sans);
+  font-size: clamp(40px, 12vw, 56px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: 0.02em;
   opacity: 0;
-  animation: brand-fade 420ms 60ms var(--ease-enter) forwards;
-}
-
-.workspace-home__brand-logo {
-  height: 20px;
-  width: auto;
-  display: block;
-  opacity: 0.95;
-}
-
-.workspace-home__brand-rule {
-  width: 44px;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--poster-gold);
-}
-
-@keyframes brand-fade {
-  from { opacity: 0; transform: translate3d(0, -4px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  animation: title-lift 550ms 80ms var(--ease-enter) forwards;
 }
 
 /* ─── Top-right capsules: real evidence date + experience source ─── */
@@ -184,7 +207,7 @@
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-/* ─── Copy block: oversized title + status capsules ─── */
+/* ─── Copy block: runtime state title + status capsules ─── */
 
 .workspace-home__copy {
   position: relative;
@@ -199,9 +222,9 @@
   margin: 0;
   color: var(--poster-ink);
   font-family: var(--font-sans);
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1.12;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
   letter-spacing: 0;
   text-align: left;
   opacity: 0;
@@ -268,29 +291,31 @@
   }
 }
 
-/* ─── Stage: mascot + bubbles ─── */
+/* ─── Stage: centered mascot ─── */
 
 .workspace-home__stage {
   position: relative;
   z-index: 2;
   grid-area: stage;
   display: grid;
-  align-items: end;
+  align-items: center;
   justify-items: center;
-  min-height: 15rem;
+  min-height: 0;
 }
 
-/* Static theme-copy bubbles scattered around the mascot */
-.workspace-home__bubbles {
+/* Floating captions: spawn at a random spot, rise, and fade out.
+   The layer covers the whole poster so captions can appear anywhere. */
+.workspace-home__speech {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   inset: 0;
   pointer-events: none;
 }
 
-.workspace-home__bubbles span,
 .workspace-home__speech span {
   position: absolute;
+  top: var(--bubble-y);
+  left: var(--bubble-x);
   min-height: 30px;
   max-width: 13rem;
   padding: 6px 14px;
@@ -304,74 +329,27 @@
   font-weight: 600;
   line-height: 18px;
   white-space: nowrap;
-}
-
-.workspace-home__bubbles span:nth-child(1) {
-  top: 8%;
-  left: 2%;
   opacity: 0;
-  animation:
-    bubble-pop 420ms 700ms var(--ease-enter) forwards,
-    bubble-float 4.2s 1200ms ease-in-out infinite;
+  animation: caption-rise 3600ms var(--ease-enter) both;
 }
 
-.workspace-home__bubbles span:nth-child(2) {
-  top: 40%;
-  right: 0;
-  opacity: 0;
-  animation:
-    bubble-pop 420ms 880ms var(--ease-enter) forwards,
-    bubble-float 4.8s 1500ms ease-in-out infinite reverse;
-}
-
-@keyframes bubble-pop {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-/* Float keeps opacity untouched so it can layer after bubble-pop */
-@keyframes bubble-float {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -5px; }
-}
-
-/* Timed drifting bubble (real theme copy, timer stops when hidden) */
-.workspace-home__speech {
-  position: absolute;
-  z-index: 4;
-  inset: 0;
-  pointer-events: none;
-}
-
-.workspace-home__speech span {
-  top: var(--bubble-y);
-  left: var(--bubble-x);
-  opacity: 0;
-  animation: bubble-drift 2400ms var(--ease-enter) both;
-}
-
-@keyframes bubble-drift {
+/* Pop in, hold briefly, then drift upward while fading away */
+@keyframes caption-rise {
   0% {
     opacity: 0;
-    transform: translate3d(-50%, 6px, 0) scale(0.9);
+    transform: translate3d(-50%, 10px, 0) scale(0.9);
   }
-  12% {
+  9% {
     opacity: 1;
     transform: translate3d(-50%, 0, 0) scale(1);
   }
-  72% {
-    opacity: 0.9;
+  38% {
+    opacity: 1;
     transform: translate3d(-50%, -8px, 0) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate3d(-50%, -16px, 0) scale(0.94);
+    transform: translate3d(-50%, -56px, 0) scale(0.96);
   }
 }
 
@@ -380,13 +358,14 @@
 .workspace-home__mascot-button {
   position: relative;
   z-index: 2;
-  width: min(78vw, 21rem);
-  aspect-ratio: 1;
+  width: min(72vw, 20rem);
+  aspect-ratio: 658 / 838;
+  max-height: 100%;
   padding: 0;
   border: 0;
   border-radius: 24px;
   display: grid;
-  align-items: end;
+  align-items: center;
   justify-items: center;
   color: inherit;
   background: transparent;
@@ -402,9 +381,10 @@
 
 .workspace-home__mascot-button img {
   width: 100%;
+  height: 100%;
   display: block;
   object-fit: contain;
-  object-position: bottom center;
+  object-position: center;
   filter: drop-shadow(0 18px 30px rgb(0 0 0 / 32%));
   pointer-events: none;
   user-select: none;
@@ -821,32 +801,24 @@
 
 /* ═══════════════════════════════════════════════════════════
    Responsive
-   Desktop splits the poster into a left copy axis and a right
-   mascot stage so the layout uses width instead of stretching
-   the phone poster.
+   Desktop keeps the same expanded single-column poster: theme
+   copy on top, mascot centered in the remaining space. Only
+   spacing and type scale change.
    ═══════════════════════════════════════════════════════════ */
 
 @media (min-width: 48rem) {
   .workspace-home__poster {
-    width: 100%;
-    max-width: 72rem;
-    grid-template-areas:
-      "brand brand"
-      "copy stage";
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    grid-template-rows: auto 1fr;
-    column-gap: var(--space-8);
-    padding-inline: max(var(--space-12), env(safe-area-inset-left))
+    width: min(100%, 52rem);
+    padding-inline: max(var(--space-8), env(safe-area-inset-left))
       max(var(--space-8), env(safe-area-inset-right));
   }
 
-  .workspace-home__copy {
-    align-self: center;
-    padding-bottom: var(--space-16);
+  .workspace-home__theme-title {
+    font-size: 72px;
   }
 
   .workspace-home h1 {
-    font-size: 64px;
+    font-size: 28px;
   }
 
   .workspace-home__subtitle {
@@ -854,21 +826,11 @@
   }
 
   .workspace-home__stage {
-    min-height: 60vh;
+    min-height: 0;
   }
 
   .workspace-home__mascot-button {
-    width: min(38vw, 27rem);
-  }
-
-  .workspace-home__bubbles span:nth-child(1) {
-    top: 14%;
-    left: 4%;
-  }
-
-  .workspace-home__bubbles span:nth-child(2) {
-    top: 44%;
-    right: 2%;
+    width: min(42vw, 26rem);
   }
 
   .workspace-home__menu {
@@ -903,15 +865,18 @@
 }
 
 @media (max-width: 23.4375rem) {
-  .workspace-home h1 {
+  .workspace-home__theme-title {
     font-size: 38px;
   }
 
-  .workspace-home__mascot-button {
-    width: min(82vw, 19rem);
+  .workspace-home h1 {
+    font-size: 22px;
   }
 
-  .workspace-home__bubbles span,
+  .workspace-home__mascot-button {
+    width: min(76vw, 18rem);
+  }
+
   .workspace-home__speech span {
     font-size: var(--font-size-xs);
     max-width: 11rem;
@@ -928,8 +893,12 @@
 }
 
 @media (max-height: 36rem) {
+  .workspace-home__theme-title {
+    font-size: 34px;
+  }
+
   .workspace-home h1 {
-    font-size: 30px;
+    font-size: 20px;
   }
 
   .workspace-home__poster {
