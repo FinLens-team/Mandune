@@ -67,23 +67,19 @@ const REQUIRED_TOKENS: Record<string, string> = {
 };
 
 const PRESERVED_HOOKS = [
-  ".shell",
-  ".topbar",
-  ".brand",
-  ".workspace-status",
-  ".intro",
-  ".boundary",
+  ".skip-link",
   ".panel",
   ".panel-head",
   ".panel-note",
   ".action-row",
   ".btn",
   ".field",
-  ".line-card",
-  ".example-banner",
-  ".long-card",
+  ".field-label",
+  ".constraint-grid",
+  ".consent-row",
+  ".file-btn",
+  ".status-message",
   ".analysis-status",
-  ".theme-preview",
 ];
 
 describe("visual foundation stylesheet", () => {
@@ -116,15 +112,12 @@ describe("visual foundation stylesheet", () => {
     expect(stylesheet).toContain(".ui-button__label--loading");
     expect(stylesheet).toContain("visibility: hidden;");
     expect(stylesheet).toContain("touch-action: manipulation;");
-    expect(stylesheet).toContain("touch-action: pan-y;");
     expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
     expect(stylesheet).toContain('.ui-icon-button:not(:disabled, [aria-disabled="true"]):active');
     expect(stylesheet).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.ui-icon-button[^}]*?transform: none;/,
     );
     expect(stylesheet).toContain("@media (max-width: 23.4375rem)");
-    expect(stylesheet).toContain("@media (min-width: 48rem)");
-    expect(stylesheet).toContain("@media (min-width: 80rem)");
   });
 
   it("removes the superseded global visual patterns", () => {
