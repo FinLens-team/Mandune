@@ -3,6 +3,7 @@ import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
+import mandongLogo from "../../client/assets/mandong-logo.webp";
 import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
 import nailongLaugh from "../../client/assets/mascot/nailong-laugh.webp";
 import { createExampleDraft } from "../../portfolio/index.js";
@@ -252,6 +253,18 @@ export function WorkspaceShell({
                   满懂 · 每日复盘
                 </h1>
 
+                <div className="workspace-home__topbar">
+                  <img
+                    alt="满懂"
+                    className="workspace-home__brand-mark"
+                    decoding="async"
+                    height={317}
+                    src={mandongLogo}
+                    width={1200}
+                  />
+                  <span className="workspace-home__page-label">主页</span>
+                </div>
+
                 <div aria-hidden="true" className="workspace-home__danmaku">
                   {danmaku.map((item) => (
                     <span
@@ -287,7 +300,6 @@ export function WorkspaceShell({
                       src={nailongLaugh}
                       width="658"
                     />
-                    <span className="workspace-home__cta">{homeCtaLabel}</span>
                   </button>
                 </div>
 
@@ -299,6 +311,7 @@ export function WorkspaceShell({
                     onClick={(event) => openDrawer(event.currentTarget)}
                     tooltip="工作区导航"
                   />
+                  <p className="workspace-home__hint">{homeCtaLabel}</p>
                 </div>
               </div>
 
