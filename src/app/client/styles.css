@@ -41,6 +41,12 @@
   padding: var(--space-8) var(--space-4) var(--space-16);
 }
 
+.journey-secondary__page:has(> .theme-switcher) {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
 .journey-secondary__header {
   display: grid;
   gap: var(--space-2);

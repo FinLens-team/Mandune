@@ -1,14 +1,16 @@
 .theme-switcher {
+  --theme-spring: cubic-bezier(.2, 1.45, .32, 1);
+
   min-height: calc(100vh - 4.5rem);
   min-height: calc(100dvh - 4.5rem);
-  padding: var(--space-8) 0 0;
+  padding: var(--space-8) 0 var(--space-6);
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   color: var(--color-text-primary);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 7%, transparent), transparent 18rem),
     var(--color-bg-base);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .theme-switcher__heading {
@@ -36,7 +38,7 @@
 .theme-switcher__rail {
   width: 100%;
   min-width: 0;
-  padding: var(--space-8) max(var(--space-4), calc((100vw - 64rem) / 2));
+  padding: var(--space-8) max(var(--space-4), calc((100vw - 68rem) / 2));
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -67,18 +69,22 @@
   text-align: left;
   scroll-snap-align: center;
   cursor: pointer;
-  transform: scale(.96);
-  opacity: .72;
+  transform:
+    translate3d(var(--theme-card-shift), 8px, 0)
+    rotate(var(--theme-card-rotation))
+    scale(.94);
+  transform-origin: 50% 82%;
+  opacity: .66;
   transition:
-    transform 220ms cubic-bezier(.16, 1, .3, 1),
-    opacity 180ms ease,
-    box-shadow 220ms ease;
+    transform 440ms var(--theme-spring),
+    opacity 180ms ease-out,
+    box-shadow 320ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .theme-switcher-card[data-selected="true"] {
   z-index: 1;
   opacity: 1;
-  transform: scale(1);
+  transform: translate3d(0, -12px, 0) rotate(0deg) scale(1.025);
   box-shadow: 0 8px 8px rgb(23 32 29 / 20%);
 }
 
@@ -100,6 +106,12 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  transform: scale(1.015);
+  transition: transform 500ms var(--theme-spring);
+}
+
+.theme-switcher-card[data-selected="true"] .theme-switcher-card__artwork img {
+  transform: scale(1.055);
 }
 
 .theme-switcher-card__check {
@@ -113,6 +125,8 @@
   place-items: center;
   color: var(--theme-on-accent);
   background: var(--theme-accent);
+  transform-origin: 50% 50%;
+  animation: theme-check-enter 420ms var(--theme-spring) both;
 }
 
 .theme-switcher-card__copy {
@@ -141,44 +155,76 @@
   font-weight: 700;
 }
 
-.theme-switcher__hint {
+.theme-switcher__decision {
   width: min(100% - var(--space-8), 64rem);
-  min-height: 1.5rem;
-  margin: 0 auto var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  text-align: center;
+  margin: 0 auto;
+  padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
 }
 
-.theme-switcher__actions {
-  padding: var(--space-3) max(var(--space-4), calc((100vw - 64rem) / 2))
-    calc(var(--space-3) + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-border-strong);
-  display: flex;
-  justify-content: flex-end;
-  background: var(--color-bg-surface);
+.theme-switcher__hint {
+  min-height: 1.5rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: right;
+  transition: color 180ms ease-out, transform 260ms var(--theme-spring);
 }
 
 .theme-switcher__confirm.ui-button {
   min-width: 9rem;
+  box-shadow: none;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition:
+    transform 320ms var(--theme-spring),
+    background-color 180ms ease-out,
+    border-color 180ms ease-out,
+    color 180ms ease-out,
+    opacity 180ms ease-out;
 }
 
 .theme-switcher__confirm.ui-button:not(:disabled) {
   border-color: var(--color-observed);
   background: var(--color-observed);
   color: #fff;
+  animation: theme-confirm-ready 420ms var(--theme-spring) both;
+}
+
+.theme-switcher__confirm.ui-button:not(:disabled) svg {
+  transition: transform 260ms var(--theme-spring);
+}
+
+@keyframes theme-check-enter {
+  from { opacity: 0; transform: scale(.72) rotate(-18deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes theme-confirm-ready {
+  0% { transform: scale(.96); }
+  68% { transform: scale(1.025); }
+  100% { transform: scale(1); }
 }
 
 @media (hover: hover) and (pointer: fine) {
   .theme-switcher-card:not([data-selected="true"]):hover {
     opacity: .9;
-    transform: translateY(-3px) scale(.975);
+    transform:
+      translate3d(var(--theme-card-shift), 1px, 0)
+      rotate(0deg)
+      scale(.975);
   }
 
   .theme-switcher__confirm.ui-button:not(:disabled):hover {
     border-color: #0d645b;
     background: #0d645b;
     color: #fff;
+  }
+
+  .theme-switcher__confirm.ui-button:not(:disabled):hover svg {
+    transform: translateX(3px);
   }
 }
 
@@ -190,7 +236,7 @@
 
 @media (max-width: 47.999rem) {
   .theme-switcher {
-    padding-top: var(--space-6);
+    padding: var(--space-6) 0 calc(var(--space-4) + env(safe-area-inset-bottom));
   }
 
   .theme-switcher__rail {
@@ -202,22 +248,39 @@
     flex-basis: min(72vw, 16rem);
   }
 
-  .theme-switcher__actions {
-    position: sticky;
-    bottom: 0;
+  .theme-switcher__decision {
+    align-items: flex-end;
+    padding-inline: 0;
   }
 
   .theme-switcher__confirm.ui-button {
     width: min(100%, 11rem);
+    flex: 0 0 min(48%, 11rem);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theme-switcher-card {
+  .theme-switcher-card,
+  .theme-switcher-card__artwork img,
+  .theme-switcher-card__check,
+  .theme-switcher__confirm.ui-button {
+    animation: none;
     transition-duration: 1ms;
   }
 }
 
-.theme-switcher[data-reduce-motion="true"] .theme-switcher-card {
+.theme-switcher[data-reduce-motion="true"] .theme-switcher-card,
+.theme-switcher[data-reduce-motion="true"] .theme-switcher-card__artwork img,
+.theme-switcher[data-reduce-motion="true"] .theme-switcher-card__check,
+.theme-switcher[data-reduce-motion="true"] .theme-switcher__confirm.ui-button {
+  animation: none;
+  transition-duration: 1ms;
+}
+
+.theme-switcher:not([data-animate-selection]) .theme-switcher-card,
+.theme-switcher:not([data-animate-selection]) .theme-switcher-card__artwork img,
+.theme-switcher:not([data-animate-selection]) .theme-switcher-card__check,
+.theme-switcher:not([data-animate-selection]) .theme-switcher__confirm.ui-button {
+  animation: none;
   transition-duration: 1ms;
 }

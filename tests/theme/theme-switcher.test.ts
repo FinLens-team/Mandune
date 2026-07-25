@@ -29,6 +29,8 @@ describe("workspace theme switcher", () => {
     expect(markup).toContain('aria-label="吉星高照，当前使用"');
     expect(markup).toContain('class="btn ui-button ui-button--primary primary theme-switcher__confirm" disabled=""');
     expect(markup).toContain("正在使用「吉星高照」");
+    expect(markup).toContain('class="theme-switcher__decision"');
+    expect(markup).not.toContain("<footer");
     expect(markup).not.toContain("暂未开放");
   });
 });

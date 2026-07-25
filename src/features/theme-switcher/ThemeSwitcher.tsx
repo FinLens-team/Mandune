@@ -1,5 +1,5 @@
-import { Check } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent, type UIEvent } from "react";
+import { Check, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type UIEvent } from "react";
 import { Button } from "../../client/ui/index.js";
 import { THEMES, THEME_IDS, type ThemeId } from "../../theme/index.js";
 import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
@@ -17,8 +17,10 @@ export function ThemeSwitcher({
   reducedMotion = false,
 }: ThemeSwitcherProps) {
   const [selectedThemeId, setSelectedThemeId] = useState(currentThemeId);
+  const [animateSelection, setAnimateSelection] = useState(true);
   const railRef = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | undefined>(undefined);
+  const motionResetFrame = useRef<number | undefined>(undefined);
   const canConfirm = selectedThemeId !== currentThemeId;
 
   useEffect(() => {
@@ -34,14 +36,20 @@ export function ThemeSwitcher({
 
   useEffect(() => () => {
     if (scrollTimer.current !== undefined) window.clearTimeout(scrollTimer.current);
+    if (motionResetFrame.current !== undefined) window.cancelAnimationFrame(motionResetFrame.current);
   }, []);
 
-  function selectTheme(themeId: ThemeId, scroll = true): void {
+  function selectTheme(themeId: ThemeId, scroll = true, animate = true): void {
+    if (!animate) {
+      setAnimateSelection(false);
+      if (motionResetFrame.current !== undefined) window.cancelAnimationFrame(motionResetFrame.current);
+      motionResetFrame.current = window.requestAnimationFrame(() => setAnimateSelection(true));
+    }
     setSelectedThemeId(themeId);
     if (!scroll) return;
     railRef.current?.querySelector<HTMLElement>(`[data-theme-card="${themeId}"]`)
       ?.scrollIntoView({
-        behavior: reducedMotion ? "instant" : "smooth",
+        behavior: reducedMotion || !animate ? "instant" : "smooth",
         block: "nearest",
         inline: "center",
       });
@@ -69,17 +77,18 @@ export function ThemeSwitcher({
     if (event.key === "ArrowLeft" && index > 0) {
       event.preventDefault();
       const previousThemeId = THEME_IDS[index - 1];
-      if (previousThemeId) selectTheme(previousThemeId);
+      if (previousThemeId) selectTheme(previousThemeId, true, false);
     } else if (event.key === "ArrowRight" && index < THEME_IDS.length - 1) {
       event.preventDefault();
       const nextThemeId = THEME_IDS[index + 1];
-      if (nextThemeId) selectTheme(nextThemeId);
+      if (nextThemeId) selectTheme(nextThemeId, true, false);
     }
   }
 
   return (
     <section
       className="theme-switcher"
+      data-animate-selection={animateSelection || undefined}
       data-reduce-motion={reducedMotion || undefined}
       style={themeCssVariables(selectedThemeId)}
       aria-labelledby="theme-switcher-heading"
@@ -103,6 +112,7 @@ export function ThemeSwitcher({
           const artwork = themeClientAssets(themeId).selection;
           const selected = selectedThemeId === themeId;
           const current = currentThemeId === themeId;
+          const position = THEME_IDS.indexOf(themeId) - THEME_IDS.indexOf(selectedThemeId);
           return (
             <button
               aria-checked={selected}
@@ -112,9 +122,13 @@ export function ThemeSwitcher({
               data-selected={selected || undefined}
               data-theme-card={themeId}
               key={themeId}
-              onClick={() => selectTheme(themeId)}
+              onClick={(event) => selectTheme(themeId, true, event.detail !== 0)}
               role="radio"
-              style={themeCssVariables(themeId)}
+              style={{
+                ...themeCssVariables(themeId),
+                "--theme-card-rotation": `${position * 1.25}deg`,
+                "--theme-card-shift": `${position * -8}px`,
+              } as CSSProperties}
               type="button"
             >
               <span className="theme-switcher-card__artwork">
@@ -141,13 +155,12 @@ export function ThemeSwitcher({
         })}
       </div>
 
-      <p className="theme-switcher__hint" aria-live="polite">
-        {canConfirm
-          ? `将从「${THEMES[currentThemeId].label}」更换为「${THEMES[selectedThemeId].label}」`
-          : `正在使用「${THEMES[currentThemeId].label}」`}
-      </p>
-
-      <footer className="theme-switcher__actions">
+      <div className="theme-switcher__decision">
+        <p className="theme-switcher__hint" aria-live="polite">
+          {canConfirm
+            ? `准备换成「${THEMES[selectedThemeId].label}」`
+            : `正在使用「${THEMES[currentThemeId].label}」`}
+        </p>
         <Button
           className="theme-switcher__confirm"
           disabled={!canConfirm}
@@ -155,8 +168,9 @@ export function ThemeSwitcher({
           variant="primary"
         >
           确认更换
+          <ChevronRight aria-hidden="true" size={18} strokeWidth={2.5} />
         </Button>
-      </footer>
+      </div>
     </section>
   );
 }
