@@ -68,12 +68,18 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).not.toContain("随机体验身份 · 示例数据");
+    expect(markup).toContain("哈呃呃涨涨");
     expect(markup).toContain("今日持仓");
     expect(markup).toContain("观察");
     expect(markup).toContain("随机体验数据");
+    expect(markup).toContain("点奶龙，开始今日复盘");
     expect(markup).toContain('aria-label="点击奶龙，确认发起今日复盘"');
-    expect(markup).toContain('class="workspace-home__mascot-button"');
+    expect(markup).toContain('class="workspace-home__hero"');
     expect(markup).toContain('alt=""');
+    expect(markup).not.toContain("看懂一点，安心一点");
+    expect(markup).not.toContain("项持仓已确认");
+    expect(markup).not.toContain("约束 ");
+    expect(markup).not.toContain("截至");
     expect(markup).not.toContain("体验证据将在发起后按最新完整交易日核对");
     expect(markup).not.toContain("最近一次复盘");
     expect(markup).not.toContain("查看持仓与约束");

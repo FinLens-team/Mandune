@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
@@ -52,25 +52,8 @@ const HOME_SPEECH_BUBBLES = [
   "先核对，再判断",
 ] as const;
 
-/** Full drift cycle of one floating caption (pop in, hold, rise, fade out). */
-const HOME_CAPTION_LIFETIME_MS = 3600;
-
-interface HomeCaption {
-  id: number;
-  message: (typeof HOME_SPEECH_BUBBLES)[number];
-  x: number;
-  y: number;
-}
-
-function randomBetween(minimum: number, maximum: number): number {
-  return minimum + Math.random() * (maximum - minimum);
-}
-
-function countKnownConstraints(draft: PortfolioDraft): number {
-  return Object.values(draft.constraints).filter(
-    (value) => value !== "unknown" && value !== "not_decided",
-  ).length;
-}
+/** One caption cycle above the mascot: fade in, hold, fade out. */
+const HOME_CAPTION_CYCLE_MS = 4800;
 
 function sourceLabel(source: ExperienceSource | undefined): string {
   return source === "edited" ? "体验持仓已编辑" : "随机体验数据";
@@ -81,7 +64,6 @@ export function WorkspaceShell({
   draft: controlledDraft,
   experienceSource,
   initialDraft,
-  lastAnalysisAt,
   latestCompleteTradingDay,
   onDraftChange,
   onExperienceSourceChange,
@@ -107,19 +89,14 @@ export function WorkspaceShell({
   const [pageVisible, setPageVisible] = useState(
     () => typeof document === "undefined" || document.visibilityState !== "hidden",
   );
-  const [speechCaptions, setSpeechCaptions] = useState<HomeCaption[]>([]);
+  const [speechIndex, setSpeechIndex] = useState(0);
+  const [speechCycle, setSpeechCycle] = useState(0);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
   const introPreloadRef = useRef<HTMLImageElement | null>(null);
   const draft = controlledDraft ?? uncontrolledDraft;
   const reduceMotion = controlledReducedMotion ?? uncontrolledReducedMotion;
-  const usableLineCount = draft.lines.filter((line) => line.is_usable).length;
-  const knownConstraintCount = countKnownConstraints(draft);
-  const homeRunStatus = activeAnalysis
-    ? "复盘进行中"
-    : lastAnalysisAt
-      ? "已有历史复盘"
-      : "复盘待开始";
+  const homeCtaLabel = activeAnalysis ? "复盘进行中，点奶龙继续" : "点奶龙，开始今日复盘";
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -151,38 +128,14 @@ export function WorkspaceShell({
   }, [view]);
 
   useEffect(() => {
-    if (reduceMotion || !pageVisible || view !== "home") {
-      setSpeechCaptions([]);
-      return;
-    }
+    if (reduceMotion || !pageVisible || view !== "home") return;
 
-    let captionId = 0;
-    let spawnTimer: number | undefined;
-    const expireTimers = new Set<number>();
+    const timer = window.setInterval(() => {
+      setSpeechIndex((previous) => (previous + 1) % HOME_SPEECH_BUBBLES.length);
+      setSpeechCycle((previous) => previous + 1);
+    }, HOME_CAPTION_CYCLE_MS);
 
-    function spawn() {
-      const messageIndex = Math.floor(Math.random() * HOME_SPEECH_BUBBLES.length);
-      const caption: HomeCaption = {
-        id: captionId,
-        message: HOME_SPEECH_BUBBLES[messageIndex] ?? HOME_SPEECH_BUBBLES[0],
-        x: randomBetween(14, 72),
-        y: randomBetween(12, 62),
-      };
-      captionId += 1;
-      setSpeechCaptions((previous) => [...previous.slice(-2), caption]);
-      const expire = window.setTimeout(() => {
-        expireTimers.delete(expire);
-        setSpeechCaptions((previous) => previous.filter((item) => item.id !== caption.id));
-      }, HOME_CAPTION_LIFETIME_MS);
-      expireTimers.add(expire);
-      spawnTimer = window.setTimeout(spawn, randomBetween(1800, 3200));
-    }
-
-    spawnTimer = window.setTimeout(spawn, randomBetween(700, 1400));
-    return () => {
-      if (spawnTimer !== undefined) window.clearTimeout(spawnTimer);
-      for (const timer of expireTimers) window.clearTimeout(timer);
-    };
+    return () => window.clearInterval(timer);
   }, [pageVisible, reduceMotion, view]);
 
   function activateMascot(trigger: HTMLElement) {
@@ -258,15 +211,10 @@ export function WorkspaceShell({
                 </svg>
 
                 <header className="workspace-home__masthead">
-                  <p className="workspace-home__theme-title">哈呃呃涨涨</p>
+                  <p className="workspace-home__signature">哈呃呃涨涨</p>
                 </header>
 
                 <div className="workspace-home__badges">
-                  {latestCompleteTradingDay ? (
-                    <span className="workspace-home__badge">
-                      截至 {latestCompleteTradingDay}
-                    </span>
-                  ) : null}
                   <span className="workspace-home__badge workspace-home__badge--demo">
                     {sourceLabel(experienceSource)}
                   </span>
@@ -276,54 +224,36 @@ export function WorkspaceShell({
                   <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
                     {activeAnalysis ? "复盘进行中" : "今日持仓观察"}
                   </h1>
-                  <p className="workspace-home__subtitle">看懂一点，安心一点</p>
-                  <div className="workspace-home__status-cluster" aria-label="当前复盘上下文">
-                    <span className="workspace-home__status-chip">
-                      {usableLineCount} 项持仓已确认
-                    </span>
-                    <span className="workspace-home__status-chip">
-                      约束 {knownConstraintCount} / 4
-                    </span>
-                    <span className="workspace-home__status-chip">
-                      {homeRunStatus}
-                    </span>
-                  </div>
-                </div>
-
-                <div aria-hidden="true" className="workspace-home__speech">
-                  {speechCaptions.map((caption) => (
-                    <span
-                      key={caption.id}
-                      style={{
-                        "--bubble-x": `${caption.x}%`,
-                        "--bubble-y": `${caption.y}%`,
-                      } as CSSProperties}
-                    >
-                      {caption.message}
-                    </span>
-                  ))}
                 </div>
 
                 <div
                   className="workspace-home__stage"
                   data-coachmark={reviewCoachmarkVisible || undefined}
                 >
+                  <div aria-hidden="true" className="workspace-home__speech">
+                    <span key={speechCycle}>
+                      {HOME_SPEECH_BUBBLES[speechIndex]}
+                    </span>
+                  </div>
+
                   <button
                     aria-label={activeAnalysis
                       ? "点击奶龙，继续查看正在运行的复盘"
                       : "点击奶龙，确认发起今日复盘"}
-                    className="workspace-home__mascot-button"
+                    className="workspace-home__hero"
                     onClick={(event) => activateMascot(event.currentTarget)}
                     type="button"
                   >
                     <img
                       alt=""
+                      className="workspace-home__mascot"
                       decoding="async"
                       fetchPriority="high"
                       height="838"
                       src={nailongLaugh}
                       width="658"
                     />
+                    <span className="workspace-home__cta">{homeCtaLabel}</span>
                   </button>
                 </div>
 

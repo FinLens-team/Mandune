@@ -12,7 +12,7 @@ describe("workspace shell responsive and motion styles", () => {
     expect(css).toContain("@media (min-width: 48rem)");
     expect(css).toContain("@media (max-width: 23.4375rem)");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
-    expect(css).toContain('[data-reduce-motion="true"] .workspace-home__mascot-button');
+    expect(css).toContain('[data-reduce-motion="true"] .workspace-home__hero');
     expect(css).toContain("env(safe-area-inset-bottom)");
     expect(css).toContain('[data-state="closing"] .workspace-drawer');
     expect(css).toContain('[data-state="closing"] .analysis-confirm');
