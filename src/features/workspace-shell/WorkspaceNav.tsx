@@ -1,0 +1,61 @@
+import { useState } from "react";
+import { Menu } from "lucide-react";
+import { IconButton } from "../../client/ui/index.js";
+import { WorkspaceDrawer, type WorkspacePage } from "./WorkspaceDrawer.js";
+import "./styles.css";
+
+export interface WorkspaceNavProps {
+  currentPage: Exclude<WorkspacePage, "home" | "portfolio">;
+  reduceMotion?: boolean;
+  onNavigateHome: () => void;
+  onNavigatePortfolio: () => void;
+  onNavigateHistory: () => void;
+  onNavigateAtlas?: () => void;
+  onNavigateAbout: () => void;
+}
+
+/**
+ * Persistent workspace navigation for the secondary pages (history,
+ * atlas, about): the same floating menu button + drawer that the data
+ * management view uses, and the single way back to the home stage.
+ */
+export function WorkspaceNav({
+  currentPage,
+  reduceMotion = false,
+  onNavigateHome,
+  onNavigatePortfolio,
+  onNavigateHistory,
+  onNavigateAtlas,
+  onNavigateAbout,
+}: WorkspaceNavProps) {
+  const [open, setOpen] = useState(false);
+  const [trigger, setTrigger] = useState<HTMLElement | null>(null);
+
+  return (
+    <>
+      <div className="workspace-shell__menu">
+        <IconButton
+          icon={Menu}
+          label="打开工作区导航"
+          onClick={(event) => {
+            setTrigger(event.currentTarget);
+            setOpen(true);
+          }}
+          tooltip="工作区导航"
+        />
+      </div>
+      <WorkspaceDrawer
+        currentPage={currentPage}
+        onClose={() => setOpen(false)}
+        onNavigateAbout={onNavigateAbout}
+        onNavigateAtlas={onNavigateAtlas}
+        onNavigateHistory={onNavigateHistory}
+        onNavigateHome={onNavigateHome}
+        onNavigatePortfolio={onNavigatePortfolio}
+        open={open}
+        reduceMotion={reduceMotion}
+        returnFocus={trigger}
+      />
+    </>
+  );
+}

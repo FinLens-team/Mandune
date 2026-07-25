@@ -11,13 +11,17 @@ import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./foc
 
 export type WorkspaceView = "home" | "portfolio";
 
+/** All destinations reachable from the persistent workspace drawer. */
+export type WorkspacePage = "home" | "portfolio" | "history" | "atlas" | "about";
+
 export interface WorkspaceDrawerProps {
   open: boolean;
-  currentView: WorkspaceView;
+  currentPage: WorkspacePage;
   reduceMotion: boolean;
   returnFocus: HTMLElement | null;
   onClose: () => void;
-  onNavigate: (view: WorkspaceView) => void;
+  onNavigateHome: () => void;
+  onNavigatePortfolio: () => void;
   onNavigateHistory: () => void;
   onNavigateAtlas?: () => void;
   onNavigateAbout: () => void;
@@ -47,10 +51,23 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
 
   if (!presence.present) return null;
 
-  function navigate(action: () => void) {
-    action();
+  function navigate(action: (() => void) | undefined) {
+    action?.();
     props.onClose();
   }
+
+  const items: Array<{
+    action: (() => void) | undefined;
+    icon: typeof Home;
+    label: string;
+    page: WorkspacePage;
+  }> = [
+    { action: props.onNavigateHome, icon: Home, label: "主页", page: "home" },
+    { action: props.onNavigatePortfolio, icon: BriefcaseBusiness, label: "数据管理", page: "portfolio" },
+    { action: props.onNavigateHistory, icon: History, label: "历史记录", page: "history" },
+    { action: props.onNavigateAtlas, icon: LibraryBig, label: "满懂图鉴", page: "atlas" },
+    { action: props.onNavigateAbout, icon: CircleHelp, label: "关于项目", page: "about" },
+  ];
 
   return (
     <div
@@ -82,36 +99,18 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
         </header>
 
         <nav className="workspace-drawer__nav" aria-label="主要导航">
-          <button
-            aria-current={props.currentView === "home" ? "page" : undefined}
-            data-initial-focus={props.currentView === "home" ? "true" : undefined}
-            onClick={() => navigate(() => props.onNavigate("home"))}
-            type="button"
-          >
-            <Home aria-hidden="true" size={20} />
-            <span>主页</span>
-          </button>
-          <button
-            aria-current={props.currentView === "portfolio" ? "page" : undefined}
-            data-initial-focus={props.currentView === "portfolio" ? "true" : undefined}
-            onClick={() => navigate(() => props.onNavigate("portfolio"))}
-            type="button"
-          >
-            <BriefcaseBusiness aria-hidden="true" size={20} />
-            <span>数据管理</span>
-          </button>
-          <button onClick={() => navigate(props.onNavigateHistory)} type="button">
-            <History aria-hidden="true" size={20} />
-            <span>历史记录</span>
-          </button>
-          <button onClick={() => navigate(() => props.onNavigateAtlas?.())} type="button">
-            <LibraryBig aria-hidden="true" size={20} />
-            <span>满懂图鉴</span>
-          </button>
-          <button onClick={() => navigate(props.onNavigateAbout)} type="button">
-            <CircleHelp aria-hidden="true" size={20} />
-            <span>关于项目</span>
-          </button>
+          {items.map(({ action, icon: Icon, label, page }) => (
+            <button
+              aria-current={props.currentPage === page ? "page" : undefined}
+              data-initial-focus={props.currentPage === page ? "true" : undefined}
+              key={page}
+              onClick={() => navigate(action)}
+              type="button"
+            >
+              <Icon aria-hidden="true" size={20} />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
 
         <footer className="workspace-drawer__footer">

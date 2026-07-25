@@ -20,6 +20,8 @@ export interface WorkspaceShellProps {
   draft?: PortfolioDraft;
   experienceSource?: ExperienceSource;
   initialDraft?: PortfolioDraft;
+  /** Entry view for this mount; the drawer on secondary pages uses it to land on 数据管理. */
+  initialView?: WorkspaceView;
   lastAnalysisAt?: string;
   latestCompleteTradingDay?: string;
   onDraftChange?: (draft: PortfolioDraft) => void;
@@ -80,6 +82,7 @@ export function WorkspaceShell({
   draft: controlledDraft,
   experienceSource,
   initialDraft,
+  initialView,
   onDraftChange,
   onExperienceSourceChange,
   onNavigateAbout,
@@ -94,7 +97,7 @@ export function WorkspaceShell({
   const [uncontrolledDraft, setUncontrolledDraft] = useState(
     () => initialDraft ?? createExampleDraft(),
   );
-  const [view, setView] = useState<WorkspaceView>("home");
+  const [view, setView] = useState<WorkspaceView>(initialView ?? "home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTrigger, setDrawerTrigger] = useState<HTMLElement | null>(null);
   const [reviewTrigger, setReviewTrigger] = useState<HTMLElement | null>(null);
@@ -357,12 +360,13 @@ export function WorkspaceShell({
         ) : null}
 
         <WorkspaceDrawer
-          currentView={view}
+          currentPage={view}
           onClose={() => setDrawerOpen(false)}
-          onNavigate={navigate}
           onNavigateAbout={onNavigateAbout}
           onNavigateAtlas={onNavigateAtlas}
           onNavigateHistory={onNavigateHistory}
+          onNavigateHome={() => navigate("home")}
+          onNavigatePortfolio={() => navigate("portfolio")}
           open={drawerOpen}
           reduceMotion={reduceMotion}
           returnFocus={drawerTrigger}
