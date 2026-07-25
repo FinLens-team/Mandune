@@ -293,6 +293,28 @@ function FrontBoundarySummary({ input }: { input: LongCardRuntimeInput }) {
   );
 }
 
+function RiskNotes({ input, withReferences = false }: {
+  input: LongCardRuntimeInput;
+  withReferences?: boolean;
+}) {
+  return (
+    <section className="mandong-long-card__risk" aria-label="风险与判断边界">
+      <ScrollText aria-hidden="true" size={22} />
+      <div>
+        <h3>风险与判断边界</h3>
+        <ul className="mandong-long-card__plain-list">
+          {input.analysis.risk_notes.map((note) => (
+            <li key={note.id}>
+              <p>{note.statement}</p>
+              {withReferences && note.refs?.length ? <ReferenceList refs={note.refs} /> : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 interface FaceProps {
   active: boolean;
   faceId: string;
@@ -386,6 +408,8 @@ export function NarrativeFront({
         ) : <p>当前分析范围内未记录额外未知项。</p>}
       </section>
 
+      <RiskNotes input={input} />
+
       <footer className="mandong-long-card__footer">
         <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
       </footer>
@@ -431,6 +455,7 @@ export function AiNarrativeFront({
           </div>
         </div>
         <AnalysisStatus status={analysis.status} />
+        <FrontBoundarySummary input={input} />
         <div className="mandong-long-card__guide" data-mascot-mood="calm">
           <Doudou />
         </div>
@@ -442,6 +467,8 @@ export function AiNarrativeFront({
           <GeneratedMarkdown>{aiText}</GeneratedMarkdown>
         ) : <p>模型未返回可展示的复盘文本。</p>}
       </section>
+
+      <RiskNotes input={input} />
 
       <footer className="mandong-long-card__footer">
         <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
@@ -476,10 +503,6 @@ function Constraints({ constraints }: { constraints: PersonalConstraints }) {
 
 export function RationalEvidenceBack({ active, faceId, headingId, headingRef, input }: FaceProps) {
   const { analysis, snapshot } = input;
-  // Relaxed Demo mode: the back face is the formal rational analysis report
-  // (the model's report text plus the inputs it was given). The placeholder
-  // conclusion/advice shells and derivation bookkeeping stay hidden.
-  const relaxed = Boolean(input.aiText && !input.narrative);
   return (
     <article
       aria-hidden={!active}
@@ -491,37 +514,33 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
     >
       <header className="mandong-long-card__intro">
         <div className="mandong-long-card__date-row">
-          <p>{relaxed ? "理性分析背面" : "理性证据背面"}</p>
+          <p>理性证据背面</p>
           <ExampleBadge input={input} />
         </div>
         <div className="mandong-long-card__masthead mandong-long-card__masthead--evidence">
           <div>
-            <h2 id={headingId} ref={headingRef} tabIndex={-1}>{relaxed ? "今日理性分析报告" : "逐项核对这份分析"}</h2>
+            <h2 id={headingId} ref={headingRef} tabIndex={-1}>逐项核对这份分析</h2>
           </div>
           <BookOpenCheck aria-hidden="true" size={40} strokeWidth={1.5} />
         </div>
         <AnalysisStatus status={analysis.status} />
-        {!relaxed ? (
-          <dl className="mandong-long-card__identity">
-            <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
-            <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
-            <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
-            <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
-          </dl>
-        ) : null}
+        <dl className="mandong-long-card__identity">
+          <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
+          <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
+          <div><dt>契约版本</dt><dd>{analysis.contracts_version}</dd></div>
+          <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
+        </dl>
       </header>
 
-      {relaxed ? (
+      {input.aiText?.trim() ? (
         <section className="mandong-long-card__section" aria-labelledby={`${headingId}-report`}>
-          <h3 id={`${headingId}-report`}>报告正文</h3>
-          {input.aiText?.trim() ? (
-            <GeneratedMarkdown>{input.aiText}</GeneratedMarkdown>
-          ) : <p>模型未返回可展示的分析报告。</p>}
+          <h3 id={`${headingId}-report`}>模型生成的理性说明</h3>
+          <GeneratedMarkdown>{input.aiText}</GeneratedMarkdown>
         </section>
       ) : null}
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-inputs`}>
-        <h3 id={`${headingId}-inputs`}>{relaxed ? "本次分析用到的持仓" : "确认输入与覆盖"}</h3>
+        <h3 id={`${headingId}-inputs`}>确认输入与覆盖</h3>
         <CoverageSummary input={input} />
         <ul className="mandong-long-card__evidence-list">
           {snapshot.lines.map((line) => {
@@ -546,9 +565,8 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
         <Constraints constraints={analysis.constraints} />
       </section>
 
-      {!relaxed ? (
-        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-conclusions`}>
-          <h3 id={`${headingId}-conclusions`}>结论与引用</h3>
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-conclusions`}>
+        <h3 id={`${headingId}-conclusions`}>结论与引用</h3>
         <ol className="mandong-long-card__evidence-list">
           {analysis.conclusions.map((conclusion) => (
             <li key={conclusion.id}>
@@ -559,11 +577,9 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           ))}
         </ol>
       </section>
-      ) : null}
 
-      {!relaxed ? (
-        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-advice`}>
-          <h3 id={`${headingId}-advice`}>建议与触发依据</h3>
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-advice`}>
+        <h3 id={`${headingId}-advice`}>建议与触发依据</h3>
         {analysis.advice.length > 0 ? (
           <ul className="mandong-long-card__evidence-list">
             {analysis.advice.map((advice) => (
@@ -575,10 +591,9 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           </ul>
         ) : <p>当前没有证据支持方向性建议。</p>}
       </section>
-      ) : null}
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-evidence`}>
-        <h3 id={`${headingId}-evidence`}>{relaxed ? "本次分析用到的行情证据" : "观察证据与核验状态"}</h3>
+        <h3 id={`${headingId}-evidence`}>观察证据与核验状态</h3>
         <ul className="mandong-long-card__evidence-list">
           {analysis.evidence.map((evidence) => (
             <li key={evidence.id}>
@@ -607,9 +622,8 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
         </ul>
       </section>
 
-      {!relaxed ? (
-        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-derived`}>
-          <h3 id={`${headingId}-derived`}>可复算派生关系</h3>
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-derived`}>
+        <h3 id={`${headingId}-derived`}>可复算派生关系</h3>
         {analysis.derived.length > 0 ? (
           <ul className="mandong-long-card__evidence-list">
             {analysis.derived.map((derived) => (
@@ -626,11 +640,9 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           </ul>
         ) : <p>当前结果未形成可复算派生项。</p>}
       </section>
-      ) : null}
 
-      {!relaxed ? (
-        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-gaps`}>
-          <h3 id={`${headingId}-gaps`}>缺口、假设与限制</h3>
+      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-gaps`}>
+        <h3 id={`${headingId}-gaps`}>缺口、假设与限制</h3>
         <ul className="mandong-long-card__plain-list">
           {analysis.unknowns.map((unknown) => <li key={unknown.id}>{unknown.subject}：{unknown.impact}（{unknown.reason}）</li>)}
           {analysis.coverage.missing_metrics.map((metric) => <li key={metric}>缺失指标：{metric}</li>)}
@@ -639,7 +651,8 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
           {analysis.unknowns.length + analysis.coverage.missing_metrics.length + analysis.assumptions.length + analysis.limitations.length === 0 ? <li>当前分析范围内未记录额外缺口。</li> : null}
         </ul>
       </section>
-      ) : null}
+
+      <RiskNotes input={input} withReferences />
 
       <footer className="mandong-long-card__footer">
         <p>AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。</p>
@@ -795,10 +808,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   }
 
   const showEvidence = face === "evidence";
-  // Relaxed Demo mode: the back is the formal rational report, the front is the
-  // theme rendition of the same report.
-  const relaxedMode = Boolean(aiText && !narrative);
-  const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : "东方观象";
+  const faceLabel = showEvidence ? "理性证据" : "东方观象";
   const rotation = reducedMotion
     ? face === "evidence" ? -180 : 0
     : longCardDragRotation(face, dragDeltaX, stageWidthRef.current);
@@ -818,7 +828,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
           variant="secondary"
         >
           {showEvidence ? <ArrowLeft aria-hidden="true" size={18} /> : <ScrollText aria-hidden="true" size={18} />}
-          <span>{showEvidence ? "返回观象" : relaxedMode ? "查看理性分析" : "查看证据"}</span>
+          <span>{showEvidence ? "返回观象" : "查看证据"}</span>
         </Button>
       </div>
       <div
