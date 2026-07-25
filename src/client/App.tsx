@@ -10,7 +10,6 @@ import {
   type JourneyPersistence,
 } from "../app/client/index.js";
 import { Button, DemoBadge } from "./ui/index.js";
-import { AnalysisProgress } from "../features/analysis-progress/index.js";
 import { HistoryAboutView } from "../features/history-view/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
@@ -20,13 +19,6 @@ import "../app/client/styles.css";
 export interface AppProps {
   gateway?: JourneyGateway;
   persistence?: JourneyPersistence;
-}
-
-function latestCompleteTradingDay(draft: NonNullable<ReturnType<typeof useJourney>[0]["draft"]>) {
-  const dates = draft.lines
-    .map((line) => line.observation_date)
-    .filter((value): value is string => /^\d{4}-\d{2}-\d{2}$/.test(value));
-  return dates.sort().at(-1);
 }
 
 function useJourney(props: AppProps) {
@@ -138,26 +130,27 @@ export function App(props: AppProps = {}) {
   }
 
   if (state.phase === "analysis" && state.activeAnalysis) {
-    return (
-      <div className="journey-analysis">
-        <AnalysisProgress
-          analysisId={state.activeAnalysis.analysisId}
-          connection={state.activeAnalysis.connection}
-          events={state.activeAnalysis.events}
-          onLeave={() => controller.leaveAnalysis()}
-          onOpenResult={() => controller.openCurrentResult()}
-          onRetry={() => state.draft && void controller.startAnalysis(state.draft)}
-          reduceMotion={state.reducedMotion}
-          terminal={state.activeAnalysis.terminal}
+    const terminal = state.activeAnalysis.terminal;
+    if (terminal) {
+      // Displayable terminals open the long card directly; only honest degradation stays here.
+      return (
+        <JourneyStatePage
+          action={() => controller.navigate("home")}
+          actionLabel="返回主页"
+          heading="本次复盘未能生成观象长笺"
+          message={terminal.reason ?? "当前证据不足，未生成正常观象长笺。"}
         />
-        {state.activeAnalysis.terminal ? (
-          <nav aria-label="终态恢复" className="journey-analysis__terminal-actions">
-            <Button onClick={() => controller.navigate("home")} variant="secondary">
-              返回主页
-            </Button>
-          </nav>
-        ) : null}
-      </div>
+      );
+    }
+    return (
+      <main aria-live="polite" className="journey-state" id="main" role="status">
+        <span className="journey-state__pulse" aria-hidden="true" />
+        <h1>正在核对本次复盘</h1>
+        <p>只随真实任务事件推进，完成后直接打开观象长笺。</p>
+        <Button onClick={() => controller.leaveAnalysis()} variant="secondary">
+          暂时离开，任务继续进行
+        </Button>
+      </main>
     );
   }
 
@@ -171,6 +164,11 @@ export function App(props: AppProps = {}) {
           >
             {state.resultReturn === "history" ? "返回历史记录" : "返回主页"}
           </Button>
+          {state.resultReturn === "home" && state.draft ? (
+            <Button onClick={() => void controller.startAnalysis(state.draft!)} variant="secondary">
+              刷新复盘
+            </Button>
+          ) : null}
           <Button onClick={() => controller.navigate("history")} variant="secondary">
             查看全部历史
           </Button>
@@ -218,14 +216,11 @@ export function App(props: AppProps = {}) {
             ? { analysisId: state.activeAnalysis.analysisId }
             : undefined}
           draft={state.draft}
-          lastAnalysisAt={state.lastAnalysisAt}
-          latestCompleteTradingDay={latestCompleteTradingDay(state.draft)}
           onDraftChange={(draft) => controller.updateDraft(draft)}
           onNavigateAbout={() => controller.navigate("about")}
           onNavigateHistory={() => controller.navigate("history")}
           onReducedMotionChange={(enabled) => controller.setReducedMotion(enabled)}
-          onResumeAnalysis={(analysisId) => void controller.resumeAnalysis(analysisId)}
-          onStartAnalysis={() => void controller.startAnalysis(state.draft!)}
+          onStartAnalysis={() => void controller.startToday(state.draft!)}
           reducedMotion={state.reducedMotion}
           workspace={state.workspace}
         />

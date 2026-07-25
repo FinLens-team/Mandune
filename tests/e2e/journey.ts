@@ -85,56 +85,33 @@ export async function verifyDrawerAndEmptySecondaryViews(
 }
 
 export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<JourneyEvidence, "analysisId" | "cutoff" | "snapshotId">> {
-  await page.getByRole("button", { name: "发起今日复盘", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("约 90 秒")).toBeVisible();
-  await expect(dialog.getByText(/180 秒/)).toBeVisible();
-  await checkpoint(page, "S7 analysis confirmation");
-
   const started = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return response.request().method() === "POST" && url.pathname === "/api/analyses";
   });
-  await dialog.getByRole("button", { name: "开始复盘" }).click();
+  await page.getByRole("button", { name: "点击兜兜，发起今日复盘" }).click();
   const startBody = await (await started).json() as { analysis_id?: unknown };
   expect(typeof startBody.analysis_id).toBe("string");
   const analysisId = String(startBody.analysis_id);
 
-  await expect(page.getByRole("heading", { level: 1, name: "正在核对本次复盘" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2, name: "完整阶段列表" })).toBeVisible();
-  await expect(page.locator(".analysis-progress__stages > li")).toHaveCount(8);
-  await expect(page.locator("main.analysis-progress")).toHaveAttribute("data-reduce-motion", "true");
-  await checkpoint(page, "S8 analysis progress");
-
-  let openResult = page.getByRole("button", { name: "查看观象长笺" });
-  await expect(openResult).toBeVisible({ timeout: 45_000 });
-  await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "正在核对本次复盘" })).toBeVisible();
-  await expect(page.getByText(/阶段只随真实任务事件更新/)).toBeVisible();
-  openResult = page.getByRole("button", { name: "查看观象长笺" });
-  await expect(openResult).toBeVisible({ timeout: 45_000 });
-  await openResult.click();
-
+  // 进度页已隐藏：无确认框，复盘完成后直接打开观象长笺。
   const card = page.getByRole("region", { name: "观象长笺结果" });
-  await expect(card).toBeVisible();
+  await expect(card).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole("button", { name: "刷新复盘" })).toBeVisible();
   await expect(card.getByText(/fixture.*非实时/i).first()).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "核心观察" })).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "方向性建议" })).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "风险与判断边界" })).toBeVisible();
   await checkpoint(page, "S9 narrative front");
 
-  const snapshotId = (await card.locator("dt", { hasText: "组合快照" }).locator("+ dd").first().textContent())?.trim() ?? "";
-  const cutoff = (await card.locator("dt", { hasText: "证据截止" }).locator("+ dd").first().textContent())?.trim() ?? "";
-  expect(snapshotId).not.toBe("");
-  expect(cutoff).not.toBe("");
-
   await card.getByRole("button", { name: "查看证据" }).click();
   await expect(card.getByRole("heading", { level: 2, name: "逐项核对这份分析" })).toBeVisible();
   await expect(card.getByText("与正面同一版本")).toBeVisible();
   await expect(card.getByRole("heading", { level: 3, name: "确认输入与覆盖" })).toBeVisible();
-  await expect(card.getByText(snapshotId, { exact: true })).toBeVisible();
-  await expect(card.getByText(cutoff, { exact: true }).first()).toBeVisible();
+  const snapshotId = (await card.locator("dt", { hasText: "组合快照" }).locator("+ dd").first().textContent())?.trim() ?? "";
+  const cutoff = (await card.locator("dt", { hasText: "证据截止" }).locator("+ dd").first().textContent())?.trim() ?? "";
+  expect(snapshotId).not.toBe("");
+  expect(cutoff).not.toBe("");
   await checkpoint(page, "S9 rational evidence back");
   await card.getByRole("button", { name: "返回观象" }).click();
 
@@ -156,10 +133,8 @@ export async function verifyImmutableHistory(
   await checkpoint(page, "S10 immutable history detail");
 
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: /正在核对本次复盘|和兜兜一起/ })).toBeVisible();
-  const resultButton = page.getByRole("button", { name: "查看观象长笺" });
-  await expect(resultButton).toBeVisible({ timeout: 45_000 });
-  await resultButton.click();
+  // 刷新后同一任务的可展示终态直接打开观象长笺，不再停留在进度页。
+  await expect(page.getByRole("region", { name: "观象长笺结果" })).toBeVisible({ timeout: 45_000 });
   await page.getByRole("button", { name: "查看全部历史" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "历史记录" })).toBeVisible();
   await expect(page.getByText("共 1 次复盘，按完成时间倒序排列。")).toBeVisible();

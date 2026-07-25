@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       ".qoder/**",
+      ".localdata/**",
+      "tmp/**",
       "dist/**",
       "coverage/**",
       "node_modules/**",

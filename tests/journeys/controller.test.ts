@@ -334,7 +334,8 @@ describe("journey controller analysis status matrix", () => {
     await enterReturning(app);
     await app.controller.startAnalysis(app.state.draft!);
 
-    expect(app.state.phase).toBe("analysis");
+    // Displayable terminals now open the long card directly; degraded ones stay honest.
+    expect(app.state.phase).toBe(displayable ? "result" : "analysis");
     expect(app.state.activeAnalysis?.terminal).toMatchObject({
       analysis_id: `analysis_${scenarioId}`,
       displayable,
@@ -343,9 +344,10 @@ describe("journey controller analysis status matrix", () => {
     expect(Boolean(app.state.activeAnalysis?.resultInput)).toBe(displayable);
     if (displayable) {
       expect(app.state.activeAnalysis?.resultInput?.exampleLabel).toBe("示例 fixture（非实时）");
-      app.controller.openCurrentResult();
-      expect(app.state.phase).toBe("result");
+      expect(app.state.displayedResult).toEqual(app.state.activeAnalysis?.resultInput);
+      expect(app.state.resultReturn).toBe("home");
     } else {
+      expect(app.state.displayedResult).toBeNull();
       app.controller.openCurrentResult();
       expect(app.state.phase).toBe("analysis");
     }
@@ -375,6 +377,76 @@ describe("journey controller analysis status matrix", () => {
       terminal_reason: "persistence_failure",
       reason: "restart_interrupted",
     });
+  });
+});
+
+describe("journey controller mascot startToday entry", () => {
+  function todaySummary(gateway: FakeGateway): HistorySummary {
+    return {
+      record_id: gateway.record.record_id,
+      analysis_id: gateway.record.analysis.analysis_id,
+      snapshot_id: gateway.record.snapshot.snapshot_id,
+      analysis_completed_at: new Date().toISOString(),
+      evidence_cutoff_at: gateway.record.analysis.evidence_cutoff_at,
+      result_status: gateway.record.analysis.status,
+      theme_id: gateway.record.analysis.theme_id,
+      narrative_status: "available",
+      readability: "readable",
+      versions: {
+        history_schema: HISTORY_SCHEMA_VERSION,
+        contracts: gateway.record.analysis.contracts_version,
+        rational_analysis: gateway.record.rational_analysis_version,
+        theme_narrative: gateway.record.theme_narrative_version,
+      },
+    };
+  }
+
+  it("starts today's analysis once when no readable record exists yet", async () => {
+    const app = harness(new FakeGateway("supported_full"));
+    await enterReturning(app);
+
+    await app.controller.startToday(app.state.draft!);
+
+    expect(app.gateway.calls).toContain("listHistory");
+    expect(app.gateway.calls.filter((call) => call === "startAnalysis")).toHaveLength(1);
+    expect(app.state).toMatchObject({ phase: "result", resultReturn: "home" });
+  });
+
+  it("replays today's readable record instead of starting another analysis", async () => {
+    const gateway = new FakeGateway("supported_full");
+    const summary = todaySummary(gateway);
+    gateway.list = async () => {
+      gateway.calls.push("listHistory");
+      return [summary];
+    };
+    const app = harness(gateway);
+    await enterReturning(app);
+
+    await app.controller.startToday(app.state.draft!);
+
+    expect(gateway.calls).toContain(`replayHistory:${gateway.record.record_id}`);
+    expect(gateway.calls.filter((call) => call === "startAnalysis")).toHaveLength(0);
+    expect(app.state).toMatchObject({
+      phase: "result",
+      resultReturn: "home",
+      displayedResult: { isExample: true },
+    });
+  });
+
+  it("ignores older-day records and starts a fresh analysis", async () => {
+    const gateway = new FakeGateway("supported_full");
+    const summary = { ...todaySummary(gateway), analysis_completed_at: "2020-01-01T08:00:00.000Z" };
+    gateway.list = async () => {
+      gateway.calls.push("listHistory");
+      return [summary];
+    };
+    const app = harness(gateway);
+    await enterReturning(app);
+
+    await app.controller.startToday(app.state.draft!);
+
+    expect(gateway.calls.filter((call) => call === "startAnalysis")).toHaveLength(1);
+    expect(app.state.phase).toBe("result");
   });
 });
 

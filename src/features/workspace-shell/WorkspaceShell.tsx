@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { BriefcaseBusiness, Menu } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
-import { Button, DemoBadge, IconButton } from "../../client/ui/index.js";
+import { DemoBadge, IconButton } from "../../client/ui/index.js";
 import { createExampleDraft } from "../../portfolio/index.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
 import { snapshotCurrentDraft } from "../review/model.js";
-import { AnalysisConfirmDialog } from "./AnalysisConfirmDialog.js";
 import { WorkspaceDrawer, type WorkspaceView } from "./WorkspaceDrawer.js";
 import "./styles.css";
 
@@ -16,10 +15,7 @@ export interface WorkspaceShellProps {
   initialDraft?: PortfolioDraft;
   onDraftChange?: (draft: PortfolioDraft) => void;
   workspace: WorkspacePublicStatus | null;
-  latestCompleteTradingDay?: string;
-  lastAnalysisAt?: string;
   onReducedMotionChange?: (enabled: boolean) => void;
-  onResumeAnalysis?: (analysisId: string) => void;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   onNavigateHistory: () => void;
   onNavigateAbout: () => void;
@@ -30,17 +26,20 @@ export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
   return snapshotCurrentDraft(draft);
 }
 
+export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
+  return Object.values(snapshot.constraints).filter(
+    (value) => value === "unknown" || value === "not_decided",
+  ).length;
+}
+
 export function WorkspaceShell({
   activeAnalysis,
   draft: controlledDraft,
   initialDraft,
-  lastAnalysisAt,
-  latestCompleteTradingDay,
   onNavigateAbout,
   onNavigateHistory,
   onDraftChange,
   onReducedMotionChange,
-  onResumeAnalysis,
   onStartAnalysis,
   reducedMotion: controlledReducedMotion,
   workspace,
@@ -51,9 +50,6 @@ export function WorkspaceShell({
   const [view, setView] = useState<WorkspaceView>("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTrigger, setDrawerTrigger] = useState<HTMLElement | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmTrigger, setConfirmTrigger] = useState<HTMLElement | null>(null);
-  const [pendingSnapshot, setPendingSnapshot] = useState<PortfolioSnapshot | null>(null);
   const [savedSnapshotId, setSavedSnapshotId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
@@ -72,21 +68,14 @@ export function WorkspaceShell({
     if (view === "home") homeHeadingRef.current?.focus();
   }, [view]);
 
-  function openConfirmation(event: MouseEvent<HTMLElement>) {
+  function startToday() {
     const result = prepareAnalysisSnapshot(draft);
     if (!result.ok) {
       setMessage(result.message);
       setView("portfolio");
       return;
     }
-    setPendingSnapshot(result.snapshot);
-    setConfirmTrigger(event.currentTarget);
-    setMessage(
-      result.skippedCount > 0
-        ? `${result.skippedCount} 条未决持仓不会进入本次复盘。`
-        : null,
-    );
-    setConfirmOpen(true);
+    onStartAnalysis(result.snapshot);
   }
 
   function navigate(nextView: WorkspaceView) {
@@ -123,18 +112,14 @@ export function WorkspaceShell({
               <h1 id="workspace-home-heading" ref={homeHeadingRef} tabIndex={-1}>
                 和兜兜一起，核对今天能确认的变化
               </h1>
-              <p>
-                体验证据将在发起后按最新完整交易日核对；缺失或失败会保持未知，不会补写成当前值。
-              </p>
-              {lastAnalysisAt ? <p>最近一次复盘：{lastAnalysisAt}</p> : null}
               {savedSnapshotId ? <p>已保存输入快照：{savedSnapshotId}</p> : null}
-              {activeAnalysis ? <p>已有复盘仍在进行，可返回同一任务继续查看。</p> : null}
+              {activeAnalysis ? <p>已有复盘仍在进行，点击兜兜继续查看。</p> : null}
             </div>
 
             <button
-              aria-label="点击兜兜，确认发起今日复盘"
+              aria-label="点击兜兜，发起今日复盘"
               className="workspace-mascot-button"
-              onClick={openConfirmation}
+              onClick={startToday}
               type="button"
             >
               <span className="workspace-mascot" role="img" aria-label="熊猫兜兜，东方观象向导">
@@ -148,24 +133,6 @@ export function WorkspaceShell({
                 <span className="workspace-mascot__coat" />
               </span>
             </button>
-
-            <div className="workspace-home__actions">
-              <Button onClick={openConfirmation} variant="primary">
-                发起今日复盘
-              </Button>
-              <Button onClick={() => navigate("portfolio")} variant="secondary">
-                <BriefcaseBusiness aria-hidden="true" size={20} />
-                查看持仓与约束
-              </Button>
-              {activeAnalysis && onResumeAnalysis ? (
-                <Button
-                  onClick={() => onResumeAnalysis(activeAnalysis.analysisId)}
-                  variant="secondary"
-                >
-                  返回分析进度
-                </Button>
-              ) : null}
-            </div>
             {message ? (
               <p className="workspace-shell__message" role="status">
                 {message}
@@ -208,23 +175,6 @@ export function WorkspaceShell({
         reduceMotion={reduceMotion}
         returnFocus={drawerTrigger}
         workspace={workspace}
-      />
-
-      <AnalysisConfirmDialog
-        latestCompleteTradingDay={latestCompleteTradingDay}
-        onCancel={() => {
-          setConfirmOpen(false);
-          setPendingSnapshot(null);
-        }}
-        onConfirm={(snapshot) => {
-          setConfirmOpen(false);
-          setPendingSnapshot(null);
-          onStartAnalysis(snapshot);
-        }}
-        open={confirmOpen}
-        reduceMotion={reduceMotion}
-        returnFocus={confirmTrigger}
-        snapshot={pendingSnapshot}
       />
     </div>
   );

@@ -260,7 +260,7 @@ export function NarrativeFront({
   input,
   narrative,
 }: NarrativeFaceProps) {
-  const { analysis, snapshot } = input;
+  const { analysis } = input;
   return (
     <article className="mandong-long-card__face mandong-long-card__front" aria-labelledby={headingId} id={faceId}>
       <header className="mandong-long-card__intro">
@@ -278,12 +278,6 @@ export function NarrativeFront({
           </div>
         </div>
         <AnalysisStatus status={analysis.status} />
-        <dl className="mandong-long-card__identity">
-          <div><dt>组合快照</dt><dd>{snapshot.snapshot_id}</dd></div>
-          <div><dt>分析版本</dt><dd>{analysis.analysis_id}</dd></div>
-          <div><dt>证据截止</dt><dd>{analysis.evidence_cutoff_at}</dd></div>
-        </dl>
-        <CoverageSummary input={input} />
         <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
           <Doudou />
         </div>

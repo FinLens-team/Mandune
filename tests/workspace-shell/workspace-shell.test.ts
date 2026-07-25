@@ -7,15 +7,6 @@ import type { WorkspacePublicStatus } from "../../src/workspace/index.js";
 import type { snapshotCurrentDraft } from "../../src/features/review/model.js";
 
 interface WorkspaceShellModule {
-  AnalysisConfirmDialog: ComponentType<{
-    open: boolean;
-    snapshot: PortfolioSnapshot | null;
-    latestCompleteTradingDay?: string;
-    reduceMotion: boolean;
-    returnFocus: null;
-    onCancel: () => void;
-    onConfirm: (snapshot: PortfolioSnapshot) => void;
-  }>;
   WorkspaceDrawer: ComponentType<{
     open: boolean;
     currentView: "home" | "portfolio";
@@ -34,7 +25,6 @@ interface WorkspaceShellModule {
     initialDraft?: PortfolioDraft;
     onDraftChange?: (draft: PortfolioDraft) => void;
     onReducedMotionChange?: (enabled: boolean) => void;
-    onResumeAnalysis?: (analysisId: string) => void;
     reducedMotion?: boolean;
     workspace: WorkspacePublicStatus | null;
     onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
@@ -66,7 +56,7 @@ const workspace = {
 };
 
 describe("S4-S7 workspace shell", () => {
-  it("renders a quiet mascot-led home and routes both analysis entry points through confirmation", async () => {
+  it("renders a quiet mascot-led home where the mascot is the single analysis entry", async () => {
     const { WorkspaceShell } = await loadWorkspaceShell();
     const markup = renderToStaticMarkup(
       createElement(WorkspaceShell, {
@@ -80,14 +70,16 @@ describe("S4-S7 workspace shell", () => {
 
     expect(markup).toContain("随机体验身份 · 示例数据");
     expect(markup).toContain("熊猫兜兜，东方观象向导");
-    expect(markup).toContain("点击兜兜，确认发起今日复盘");
-    expect(markup).toContain("发起今日复盘");
-    expect(markup).toContain("查看持仓与约束");
+    expect(markup).toContain("点击兜兜，发起今日复盘");
+    expect(markup).not.toContain("体验证据将在发起后按最新完整交易日核对");
+    expect(markup).not.toContain("最近一次复盘");
+    expect(markup).not.toContain("查看持仓与约束");
+    expect(markup).not.toContain("确认发起");
     expect(markup).not.toContain("实时行情");
     expect(markup).not.toContain("登录");
   });
 
-  it("accepts controlled journey state and exposes the active-analysis resume seam", async () => {
+  it("accepts controlled journey state and keeps the mascot as the resume entry", async () => {
     const { WorkspaceShell } = await loadWorkspaceShell();
     const markup = renderToStaticMarkup(
       createElement(WorkspaceShell, {
@@ -95,7 +87,6 @@ describe("S4-S7 workspace shell", () => {
         draft: createExampleDraft(),
         onDraftChange: vi.fn(),
         onReducedMotionChange: vi.fn(),
-        onResumeAnalysis: vi.fn(),
         reducedMotion: true,
         workspace,
         onStartAnalysis: vi.fn(),
@@ -105,8 +96,7 @@ describe("S4-S7 workspace shell", () => {
     );
 
     expect(markup).toContain('data-reduce-motion="true"');
-    expect(markup).toContain("已有复盘仍在进行，可返回同一任务继续查看。");
-    expect(markup).toContain("返回分析进度");
+    expect(markup).toContain("已有复盘仍在进行，点击兜兜继续查看。");
   });
 
   it("renders an account-free drawer with workspace retention and accessible controls", async () => {
@@ -207,33 +197,5 @@ describe("S4-S7 workspace shell", () => {
     expect(second.snapshot.snapshot_id).not.toBe(first.snapshot.snapshot_id);
     expect(first.snapshot.lines[0]?.name).not.toBe("修改后的体验持仓");
     expect(second.snapshot.lines[0]?.name).toBe("修改后的体验持仓");
-  });
-
-  it("puts default focus on start and states the evidence and timeout boundaries", async () => {
-    const { AnalysisConfirmDialog, prepareAnalysisSnapshot } = await loadWorkspaceShell();
-    const prepared = prepareAnalysisSnapshot(createExampleDraft());
-    expect(prepared.ok).toBe(true);
-    if (!prepared.ok) return;
-
-    const markup = renderToStaticMarkup(
-      createElement(AnalysisConfirmDialog, {
-        open: true,
-        snapshot: prepared.snapshot,
-        latestCompleteTradingDay: "2026-07-24",
-        reduceMotion: false,
-        returnFocus: null,
-        onCancel: vi.fn(),
-        onConfirm: vi.fn(),
-      }),
-    );
-
-    expect(markup).toContain('role="dialog"');
-    expect(markup).toContain('aria-modal="true"');
-    expect(markup).toContain("2026-07-24");
-    expect(markup).toContain("约 90 秒");
-    expect(markup).toContain("180 秒");
-    expect(markup).toContain("4 项未知，相关判断将受限");
-    expect(markup).toMatch(/data-initial-focus="true"[^>]*><span[^>]*>开始复盘/);
-    expect(markup).toContain("取消");
   });
 });

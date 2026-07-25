@@ -89,6 +89,13 @@ function historyInput(
   };
 }
 
+function isSameLocalDay(iso: string, now: Date): boolean {
+  const value = new Date(iso);
+  return value.getFullYear() === now.getFullYear() &&
+    value.getMonth() === now.getMonth() &&
+    value.getDate() === now.getDate();
+}
+
 function terminalUnavailable(
   analysisId: string,
   reason: string,
@@ -230,6 +237,49 @@ export class JourneyController {
         type: "DRAFT_SAVE_FAILED",
         message: "复盘未能发起；当前草稿仍保留，可以稍后重试。",
       });
+    }
+  }
+
+  /**
+   * Mascot entry: today's review runs once automatically. An in-flight task is
+   * resumed, an already-completed same-day record opens its immutable long card,
+   * and only a day without a readable record starts a new analysis.
+   */
+  async startToday(draft: PortfolioDraft): Promise<void> {
+    const state = this.options.getState();
+    if (!state.workspace) return;
+    const active = state.activeAnalysis;
+    if (active && !active.terminal) {
+      await this.resumeAnalysis(active.analysisId);
+      return;
+    }
+    if (active?.terminal?.displayable && active.resultInput) {
+      this.openCurrentResult();
+      return;
+    }
+    if (await this.openTodayRecord(state.workspace.workspace_id)) return;
+    await this.startAnalysis(draft);
+  }
+
+  private async openTodayRecord(workspaceId: string): Promise<boolean> {
+    try {
+      const history = await this.options.gateway.list(workspaceId);
+      const today = history
+        .filter((item) =>
+          item.readability === "readable" &&
+          isSameLocalDay(item.analysis_completed_at, new Date()),
+        )
+        .sort((a, b) => Date.parse(b.analysis_completed_at) - Date.parse(a.analysis_completed_at));
+      const latest = today[0];
+      if (!latest) return false;
+      const replay = await this.options.gateway.replayHistory(latest.record_id);
+      if (replay.status !== "replayed") return false;
+      const input = historyInput(replay.record, historyExampleLabel(replay.record));
+      if (!journeyLongCardIsDisplayable(input)) return false;
+      this.options.dispatch({ type: "RESULT_OPENED", input, returnTo: "home" });
+      return true;
+    } catch {
+      return false;
     }
   }
 

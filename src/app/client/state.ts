@@ -186,19 +186,33 @@ export function journeyReducer(state: JourneyState, action: JourneyAction): Jour
         },
         message: undefined,
       };
-    case "ANALYSIS_TERMINAL":
+    case "ANALYSIS_TERMINAL": {
       if (state.activeAnalysis?.analysisId !== action.analysisId) return state;
+      const activeAnalysis: ActiveJourneyAnalysis = {
+        ...state.activeAnalysis,
+        connection: "connected",
+        terminal: action.terminal,
+        ...(action.resultInput ? { resultInput: action.resultInput } : {}),
+      };
+      // The staged progress page is hidden: a displayable terminal opens the long card directly.
+      if (state.phase === "analysis" && action.terminal.displayable && action.resultInput) {
+        return {
+          ...state,
+          activeAnalysis,
+          ...(action.completedAt ? { lastAnalysisAt: action.completedAt } : {}),
+          displayedResult: action.resultInput,
+          message: undefined,
+          phase: "result",
+          resultReturn: "home",
+        };
+      }
       return {
         ...state,
-        activeAnalysis: {
-          ...state.activeAnalysis,
-          connection: "connected",
-          terminal: action.terminal,
-          ...(action.resultInput ? { resultInput: action.resultInput } : {}),
-        },
+        activeAnalysis,
         ...(action.completedAt ? { lastAnalysisAt: action.completedAt } : {}),
         message: action.terminal.reason,
       };
+    }
     case "ANALYSIS_DISCONNECTED":
       if (state.activeAnalysis?.analysisId !== action.analysisId) return state;
       return {
