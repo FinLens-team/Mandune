@@ -20,6 +20,16 @@ import type {
   HistorySummary,
 } from "../../history/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
+import {
+  validateAtlasCard,
+  validateAtlasDetail,
+  validateAtlasOutcome,
+} from "../../atlas/validation.js";
+import type {
+  AtlasCardDetail,
+  AtlasCardV1,
+  AtlasOutcome,
+} from "../../atlas/types.js";
 
 export type JourneyFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -85,6 +95,13 @@ export interface JourneyGateway {
     reused_active: boolean;
   }>;
   touchWorkspace(): Promise<WorkspacePublicStatus>;
+}
+
+export interface AtlasGateway {
+  getAtlasOutcome(analysisId: string): Promise<AtlasOutcome | null>;
+  listAtlasCards(): Promise<AtlasCardV1[]>;
+  getAtlasCard(cardId: string): Promise<AtlasCardDetail | null>;
+  deleteAtlasCard(cardId: string): Promise<void>;
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -167,7 +184,7 @@ function checkedHistoryRead(value: unknown): HistoryReadResult {
   return { status: "unavailable", code: "storage_failure" };
 }
 
-export class FetchJourneyGateway implements JourneyGateway {
+export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
   readonly pollIntervalMs: number;
 
   constructor(
@@ -359,6 +376,51 @@ export class FetchJourneyGateway implements JourneyGateway {
       ...(aiText ? { aiText } : {}),
       ...(aiThemeText ? { aiThemeText } : {}),
     };
+  }
+
+  async getAtlasOutcome(analysisId: string): Promise<AtlasOutcome | null> {
+    const response = await this.response(`/api/atlas/outcomes/${encodeURIComponent(analysisId)}`);
+    if (response.status === 404) return null;
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    const outcome = object(body) ? body.outcome : undefined;
+    if (!validateAtlasOutcome(outcome) || outcome.analysis_id !== analysisId) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
+    return outcome;
+  }
+
+  async listAtlasCards(): Promise<AtlasCardV1[]> {
+    const response = await this.response("/api/atlas/cards");
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    if (!object(body) || !Array.isArray(body.cards) || !body.cards.every(validateAtlasCard)) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
+    return body.cards;
+  }
+
+  async getAtlasCard(cardId: string): Promise<AtlasCardDetail | null> {
+    const response = await this.response(`/api/atlas/cards/${encodeURIComponent(cardId)}`);
+    if (response.status === 404) return null;
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    const detail = object(body) ? body.detail : undefined;
+    if (!validateAtlasDetail(detail) || detail.card.card_id !== cardId) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
+    return detail;
+  }
+
+  async deleteAtlasCard(cardId: string): Promise<void> {
+    const response = await this.response(`/api/atlas/cards/${encodeURIComponent(cardId)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    if (!object(body) || body.deleted !== true || body.card_id !== cardId) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
   }
 
   async list(workspaceId: string): Promise<HistorySummary[]> {

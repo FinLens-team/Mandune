@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { AtlasService } from "../../atlas/index.js";
 import {
   validatePortfolioDraft,
   validatePortfolioSnapshot,
@@ -46,6 +47,7 @@ export class JourneyAnalysisService {
     private readonly executor: AnalysisExecutor = new FixtureAnalysisExecutor(),
     private readonly now: () => Date = () => new Date(),
     private readonly createId: () => string = () => `analysis_${randomUUID()}`,
+    private readonly atlas?: AtlasService,
   ) {}
 
   async getDraft(workspaceId: string): Promise<PortfolioDraft | null> {
@@ -227,6 +229,15 @@ export class JourneyAnalysisService {
         retryable: execution.analysis.status === "unavailable",
         execution,
       });
+      try {
+        await this.atlas?.start({
+          workspaceId: run.workspace_id,
+          analysis: execution.analysis,
+          snapshot: run.snapshot,
+        });
+      } catch {
+        // 图鉴是非阻塞后置任务，初始化失败不能改写已完成复盘。
+      }
     } catch {
       this.finishStream(run.analysis_id);
       try {

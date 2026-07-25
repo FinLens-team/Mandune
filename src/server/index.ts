@@ -28,6 +28,7 @@ export function startServer(
   // Any failure aborts startup; production never substitutes a memory store.
   const services = createDurableServices(config);
   const app = createApp(config, services.workspaces, {
+    atlas: services.atlas,
     history: services.history,
     journey: services.journey,
   });

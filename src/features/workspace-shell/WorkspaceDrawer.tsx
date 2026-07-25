@@ -4,6 +4,7 @@ import {
   CircleHelp,
   History,
   Home,
+  LibraryBig,
   Lock,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export interface WorkspaceDrawerProps {
   onClose: () => void;
   onNavigate: (view: WorkspaceView) => void;
   onNavigateHistory: () => void;
+  onNavigateAtlas?: () => void;
   onNavigateAbout: () => void;
   onReduceMotionChange: (enabled: boolean) => void;
 }
@@ -125,6 +127,10 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
           <button onClick={() => navigate(props.onNavigateHistory)} type="button">
             <History aria-hidden="true" size={20} />
             <span>历史记录</span>
+          </button>
+          <button onClick={() => navigate(() => props.onNavigateAtlas?.())} type="button">
+            <LibraryBig aria-hidden="true" size={20} />
+            <span>满懂图鉴</span>
           </button>
           <button onClick={() => navigate(props.onNavigateAbout)} type="button">
             <CircleHelp aria-hidden="true" size={20} />

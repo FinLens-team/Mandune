@@ -7,6 +7,12 @@ import {
   type HealthResponse,
 } from "../contracts/index.js";
 import {
+  AtlasService,
+  FixtureAtlasCandidateGenerator,
+  MemoryAtlasStore,
+  createAtlasRoutes,
+} from "../atlas/index.js";
+import {
   JourneyAnalysisService,
   MemoryJourneyStore,
   createJourneyRoutes,
@@ -31,11 +37,23 @@ export function createApp(
   backend?: {
     history: HistoryService;
     journey: JourneyAnalysisService;
+    atlas?: AtlasService;
   },
 ): Hono {
   const app = new Hono();
   const history = backend?.history ?? new HistoryService();
-  const journey = backend?.journey ?? new JourneyAnalysisService(new MemoryJourneyStore(), history);
+  const atlas = backend?.atlas ?? new AtlasService(
+    new MemoryAtlasStore(),
+    new FixtureAtlasCandidateGenerator(),
+  );
+  const journey = backend?.journey ?? new JourneyAnalysisService(
+    new MemoryJourneyStore(),
+    history,
+    undefined,
+    undefined,
+    undefined,
+    atlas,
+  );
 
   app.onError((error, c) => {
     if (error instanceof PersistenceError) {
@@ -54,12 +72,15 @@ export function createApp(
     return c.json(body);
   });
 
-  app.route("/api/workspaces", createWorkspaceRoutes(workspaceService));
+  app.route("/api/workspaces", createWorkspaceRoutes(workspaceService, {
+    onDeleted: async (workspaceId) => { await atlas.eraseWorkspace(workspaceId); },
+  }));
   app.route("/api", createJourneyRoutes({
     workspaces: workspaceService,
     journey,
     history,
   }));
+  app.route("/api/atlas", createAtlasRoutes({ workspaces: workspaceService, atlas }));
 
   // Unknown /api/* must not fall through to SPA HTML (would look like enumeration).
   app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
