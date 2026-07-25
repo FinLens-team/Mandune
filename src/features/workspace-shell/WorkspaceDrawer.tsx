@@ -95,7 +95,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps) {
         role="dialog"
       >
         <header className="workspace-drawer__header">
-          <p className="workspace-drawer__title">匿名私密工作区</p>
+          <p className="workspace-drawer__title">让持仓分析 像刷梗一样自然</p>
         </header>
 
         <nav className="workspace-drawer__nav" aria-label="主要导航">
