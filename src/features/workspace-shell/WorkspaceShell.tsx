@@ -54,11 +54,74 @@ export const THEME_DANMAKU = [
   "先核对，再判断",
 ] as const;
 
-/** 弹幕泳道（距海报顶部的百分比），生成时随机挑选。 */
-const DANMAKU_LANES = [8, 16, 24, 34, 44, 54, 64, 74] as const;
+/** 弹幕泳道（距海报顶部的百分比）：只走顶部天空带与底部低空带，避开居中的吉祥物。 */
+const DANMAKU_LANES = [6, 12, 18, 78, 84] as const;
 
 /** 同屏弹幕上限，超出时最旧的一条让位。 */
 const DANMAKU_MAX_CONCURRENT = 8;
+
+interface TickerCandle {
+  x: number;
+  bodyTop: number;
+  bodyHeight: number;
+  wickTop: number;
+  wickBottom: number;
+  filled?: boolean;
+}
+
+/** 上排蜡烛（天空带，viewBox 800x780 坐标系）。 */
+const TICKER_CANDLES_HIGH: readonly TickerCandle[] = [
+  { x: 30, bodyTop: 120, bodyHeight: 26, wickTop: 108, wickBottom: 158, filled: true },
+  { x: 95, bodyTop: 100, bodyHeight: 34, wickTop: 88, wickBottom: 146 },
+  { x: 160, bodyTop: 132, bodyHeight: 20, wickTop: 120, wickBottom: 164 },
+  { x: 225, bodyTop: 92, bodyHeight: 40, wickTop: 78, wickBottom: 144, filled: true },
+  { x: 290, bodyTop: 118, bodyHeight: 28, wickTop: 104, wickBottom: 158 },
+  { x: 355, bodyTop: 84, bodyHeight: 36, wickTop: 70, wickBottom: 132 },
+  { x: 420, bodyTop: 110, bodyHeight: 24, wickTop: 98, wickBottom: 146, filled: true },
+  { x: 485, bodyTop: 76, bodyHeight: 42, wickTop: 62, wickBottom: 130 },
+  { x: 550, bodyTop: 104, bodyHeight: 30, wickTop: 90, wickBottom: 146 },
+  { x: 615, bodyTop: 88, bodyHeight: 34, wickTop: 74, wickBottom: 134, filled: true },
+  { x: 680, bodyTop: 112, bodyHeight: 22, wickTop: 100, wickBottom: 146 },
+  { x: 745, bodyTop: 96, bodyHeight: 32, wickTop: 82, wickBottom: 140 },
+];
+
+/** 下排蜡烛（低空带）。 */
+const TICKER_CANDLES_LOW: readonly TickerCandle[] = [
+  { x: 55, bodyTop: 660, bodyHeight: 30, wickTop: 646, wickBottom: 702 },
+  { x: 125, bodyTop: 640, bodyHeight: 38, wickTop: 624, wickBottom: 690, filled: true },
+  { x: 195, bodyTop: 672, bodyHeight: 22, wickTop: 660, wickBottom: 706 },
+  { x: 265, bodyTop: 632, bodyHeight: 42, wickTop: 616, wickBottom: 686 },
+  { x: 335, bodyTop: 656, bodyHeight: 26, wickTop: 644, wickBottom: 694, filled: true },
+  { x: 405, bodyTop: 626, bodyHeight: 36, wickTop: 610, wickBottom: 674 },
+  { x: 475, bodyTop: 650, bodyHeight: 28, wickTop: 636, wickBottom: 690 },
+  { x: 545, bodyTop: 620, bodyHeight: 40, wickTop: 606, wickBottom: 672, filled: true },
+  { x: 615, bodyTop: 644, bodyHeight: 30, wickTop: 630, wickBottom: 686 },
+  { x: 685, bodyTop: 634, bodyHeight: 34, wickTop: 620, wickBottom: 680 },
+  { x: 755, bodyTop: 654, bodyHeight: 24, wickTop: 642, wickBottom: 690, filled: true },
+];
+
+/** 渲染一排蜡烛并复制一份到 +800，配合 ±800px 滑动形成无缝循环。 */
+function TickerCandles({ candles, prefix }: { candles: readonly TickerCandle[]; prefix: string }) {
+  return (
+    <>
+      {[...candles, ...candles.map((candle) => ({ ...candle, x: candle.x + 800 }))].map(
+        (candle, index) => (
+          <g key={`${prefix}-${index}`}>
+            <line x1={candle.x + 6} y1={candle.wickTop} x2={candle.x + 6} y2={candle.wickBottom} />
+            <rect
+              data-filled={candle.filled || undefined}
+              height={candle.bodyHeight}
+              rx={2}
+              width={12}
+              x={candle.x}
+              y={candle.bodyTop}
+            />
+          </g>
+        ),
+      )}
+    </>
+  );
+}
 
 interface HomeDanmaku {
   id: number;
@@ -147,18 +210,27 @@ export function WorkspaceShell({
     let danmakuId = 0;
     let spawnTimer: number | undefined;
     const expireTimers = new Set<number>();
+    const activeTexts = new Set<string>();
 
     function spawn() {
+      // 同一句文案未飞出屏幕前不重复生成
+      const pool = THEME_DANMAKU.filter((text) => !activeTexts.has(text));
+      if (pool.length === 0) {
+        spawnTimer = window.setTimeout(spawn, randomBetween(1200, 2000));
+        return;
+      }
       const item: HomeDanmaku = {
         id: danmakuId,
-        text: THEME_DANMAKU[Math.floor(Math.random() * THEME_DANMAKU.length)] ?? THEME_DANMAKU[0],
+        text: pool[Math.floor(Math.random() * pool.length)] ?? THEME_DANMAKU[0],
         lane: DANMAKU_LANES[Math.floor(Math.random() * DANMAKU_LANES.length)] ?? DANMAKU_LANES[0],
         duration: randomBetween(8, 12),
       };
       danmakuId += 1;
+      activeTexts.add(item.text);
       setDanmaku((previous) => [...previous.slice(-(DANMAKU_MAX_CONCURRENT - 1)), item]);
       const expire = window.setTimeout(() => {
         expireTimers.delete(expire);
+        activeTexts.delete(item.text);
         setDanmaku((previous) => previous.filter((entry) => entry.id !== item.id));
       }, item.duration * 1000 + 400);
       expireTimers.add(expire);
@@ -225,7 +297,7 @@ export function WorkspaceShell({
           {view === "home" ? (
             <section className="workspace-home" aria-labelledby="workspace-home-heading">
               <div className="workspace-home__poster">
-                {/* Symbolic drifting sparklines — pure decoration, not market data */}
+                {/* Symbolic candle clusters — pure decoration, not market data */}
                 <svg
                   aria-hidden="true"
                   className="workspace-home__ticker"
@@ -234,13 +306,10 @@ export function WorkspaceShell({
                   viewBox="0 0 800 780"
                 >
                   <g className="workspace-home__ticker-line workspace-home__ticker-line--high">
-                    <path d="M0 150 L65 128 L130 168 L200 112 L270 148 L340 96 L410 136 L480 84 L550 124 L620 72 L690 110 L800 150 L865 128 L930 168 L1000 112 L1070 148 L1140 96 L1210 136 L1280 84 L1350 124 L1420 72 L1490 110 L1600 150" />
-                  </g>
-                  <g className="workspace-home__ticker-line workspace-home__ticker-line--mid">
-                    <path d="M0 420 L55 386 L110 442 L170 368 L235 410 L300 332 L360 372 L425 300 L485 346 L550 276 L615 324 L670 256 L730 306 L800 420 L855 386 L910 442 L970 368 L1035 410 L1100 332 L1160 372 L1225 300 L1285 346 L1350 276 L1415 324 L1470 256 L1530 306 L1600 420" />
+                    <TickerCandles candles={TICKER_CANDLES_HIGH} prefix="h" />
                   </g>
                   <g className="workspace-home__ticker-line workspace-home__ticker-line--low">
-                    <path d="M0 585 L70 605 L140 560 L210 596 L280 544 L350 576 L420 520 L490 556 L560 500 L630 538 L700 486 L800 585 L870 605 L940 560 L1010 596 L1080 544 L1150 576 L1220 520 L1290 556 L1360 500 L1430 538 L1500 486 L1600 585" />
+                    <TickerCandles candles={TICKER_CANDLES_LOW} prefix="l" />
                   </g>
                 </svg>
 

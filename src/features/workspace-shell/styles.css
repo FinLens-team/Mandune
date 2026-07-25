@@ -112,11 +112,23 @@
   to { opacity: 1; }
 }
 
-/* Each line loops one 800-unit pattern; the path holds two copies
-   so a full -800px slide lands on an identical frame. */
-.workspace-home__ticker-line path {
+/* Each row loops one 800-unit pattern; candles are duplicated at +800
+   so a full ±800px slide lands on an identical frame. */
+.workspace-home__ticker-line line {
+  stroke-width: 2;
   stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-opacity: 0.3;
+}
+
+.workspace-home__ticker-line rect {
+  stroke-width: 1.5;
+  stroke-opacity: 0.3;
+  fill: var(--poster-gold);
+  fill-opacity: 0;
+}
+
+.workspace-home__ticker-line rect[data-filled] {
+  fill-opacity: 0.18;
 }
 
 .workspace-home__ticker-line--high {
@@ -124,27 +136,8 @@
   transform: translateX(-800px);
 }
 
-.workspace-home__ticker-line--high path {
-  stroke-width: 3;
-  stroke-opacity: 0.16;
-}
-
-.workspace-home__ticker-line--mid {
-  animation: ticker-slide-left 30s linear infinite;
-}
-
-.workspace-home__ticker-line--mid path {
-  stroke-width: 5;
-  stroke-opacity: 0.34;
-}
-
 .workspace-home__ticker-line--low {
   animation: ticker-slide-left 38s linear infinite;
-}
-
-.workspace-home__ticker-line--low path {
-  stroke-width: 4;
-  stroke-opacity: 0.22;
 }
 
 @keyframes ticker-slide-left {
@@ -161,7 +154,7 @@
 
 .workspace-home__danmaku {
   position: absolute;
-  z-index: 6;
+  z-index: 1;
   inset: 0;
   pointer-events: none;
   overflow: clip;
@@ -304,17 +297,16 @@
 }
 
 .workspace-home__brand-mark {
-  height: 16px;
+  height: 19px;
   width: auto;
   display: block;
-  opacity: 0.92;
 }
 
 .workspace-home__page-label {
   padding-left: var(--space-3);
   border-left: 1px solid rgb(247 242 233 / 26%);
   color: var(--poster-ink-soft);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: 0.14em;
 }
