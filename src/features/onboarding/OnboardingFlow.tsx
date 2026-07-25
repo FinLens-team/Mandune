@@ -38,16 +38,31 @@ export function OnboardingFlow({
   reducedMotion = false,
   splashDurationMs,
 }: OnboardingFlowProps) {
-  const [step, setStep] = useState<OnboardingStep>(() =>
-    hasCompletedOnboarding(storage, workspaceId) ? "complete" : "s0",
-  );
+  const returningVisit = useRef(hasCompletedOnboarding(storage, workspaceId));
+  const [step, setStep] = useState<OnboardingStep>("s0");
   const [themeSelected, setThemeSelected] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
   const [identity, setIdentity] = useState<DemoExperienceIdentity | null>(null);
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false,
+  );
   const titleRef = useRef<HTMLHeadingElement>(null);
   const notifiedReturningVisit = useRef(false);
+  const effectiveReducedMotion = reducedMotion || prefersReducedMotion;
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
 
   useEffect(() => {
     if (step !== "complete" || notifiedReturningVisit.current) return;
@@ -57,10 +72,15 @@ export function OnboardingFlow({
 
   useEffect(() => {
     if (step !== "s0") return;
-    const delay = splashDurationMs ?? (reducedMotion ? 400 : 2_500);
-    const timer = window.setTimeout(() => setStep("s1"), delay);
+    const delay = splashDurationMs ?? (
+      returningVisit.current
+        ? effectiveReducedMotion ? 0 : 400
+        : effectiveReducedMotion ? 400 : 2_300
+    );
+    const nextStep: OnboardingStep = returningVisit.current ? "complete" : "s1";
+    const timer = window.setTimeout(() => setStep(nextStep), delay);
     return () => window.clearTimeout(timer);
-  }, [reducedMotion, splashDurationMs, step]);
+  }, [effectiveReducedMotion, splashDurationMs, step]);
 
   useEffect(() => {
     if (step === "s1" || step === "s2" || step === "s3") {
@@ -87,8 +107,9 @@ export function OnboardingFlow({
 
   return (
     <div
-      className={`onboarding${reducedMotion ? " onboarding--reduced-motion" : ""}${keyboardNavigation ? " onboarding--keyboard" : ""}`}
+      className={`onboarding${effectiveReducedMotion ? " onboarding--reduced-motion" : ""}${keyboardNavigation ? " onboarding--keyboard" : ""}`}
       data-step={step}
+      data-visit={returningVisit.current ? "returning" : "first"}
       onKeyDown={(event) => {
         if (event.key === "Tab" || event.key.startsWith("Arrow")) {
           setKeyboardNavigation(true);
@@ -99,19 +120,29 @@ export function OnboardingFlow({
         跳到主要内容
       </a>
       <main id="onboarding-main">
-        {step === "s0" ? <SplashScreen onSkip={() => setStep("s1")} /> : null}
+        {step === "s0" ? (
+          <SplashScreen
+            onSkip={() => setStep(returningVisit.current ? "complete" : "s1")}
+            returning={returningVisit.current}
+          />
+        ) : null}
         {step === "s1" ? (
           <ThemeSelectionScreen
             onContinue={() => {
               if (themeSelected) setStep("s2");
             }}
             onPreview={(index) => {
-              setPreviewMessage(`主题预览 ${index} 尚未开放，不能用于下一步。`);
+              setPreviewIndex(index);
+              setPreviewMessage(
+                `主题预览 ${String(index).padStart(2, "0")} 暂未开放；它只预览表现方向，不能用于下一步。`,
+              );
             }}
             onSelect={() => {
               setThemeSelected(true);
+              setPreviewIndex(null);
               setPreviewMessage(null);
             }}
+            previewIndex={previewIndex}
             previewMessage={previewMessage}
             selected={themeSelected}
             titleRef={titleRef}
