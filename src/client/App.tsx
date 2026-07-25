@@ -14,6 +14,7 @@ import { BrandBanner, Button } from "./ui/index.js";
 import { AboutView } from "../features/about/index.js";
 import { AnalysisProgress } from "../features/analysis-progress/index.js";
 import { HistoryView } from "../features/history-view/index.js";
+import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
 import { WorkspaceShell } from "../features/workspace-shell/index.js";
@@ -211,6 +212,13 @@ export function App(props: AppProps = {}) {
           </Button>
           </nav>
           <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
+          {atlasGateway && state.resultReturn === "home" && state.activeAnalysis?.analysisId === state.displayedResult.analysis.analysis_id ? (
+            <AtlasReveal
+              analysisId={state.displayedResult.analysis.analysis_id}
+              gateway={atlasGateway}
+              onOpenAtlas={() => controller.navigate("atlas")}
+            />
+          ) : null}
         </main>
       </div>
     );

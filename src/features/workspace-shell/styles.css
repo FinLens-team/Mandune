@@ -760,8 +760,7 @@
 
 .analysis-confirm__boundary {
   padding: var(--space-3);
-  border: 1px solid var(--color-risk);
-  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-risk);
   background: var(--color-risk-bg);
   color: var(--color-risk) !important;
   font-size: var(--font-size-sm);
@@ -858,8 +857,7 @@
   }
 
   .workspace-shell__menu {
-    top: var(--space-6);
-    bottom: auto;
+    bottom: var(--space-6);
     left: var(--space-6);
   }
 }
@@ -930,16 +928,5 @@
 
   .workspace-home__speech {
     display: none;
-  }
-
-  .workspace-drawer,
-  .analysis-confirm {
-    transform: none !important;
-    transition-duration: var(--duration-instant);
-  }
-
-  .workspace-drawer__backdrop,
-  .analysis-confirm__backdrop {
-    transition-duration: var(--duration-instant);
   }
 }

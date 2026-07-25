@@ -25,23 +25,9 @@ type EditorTab = "holdings" | "constraints";
 
 export interface PortfolioEditorProps {
   draft: PortfolioDraft;
-  experienceSource?: DemoBadgeSource;
   onChange: (draft: PortfolioDraft) => void;
-  onExperienceSourceChange?: (source: DemoBadgeSource) => void;
   onSave?: (snapshot: PortfolioSnapshot) => void;
   onCancel?: () => void;
-}
-
-const EDITOR_TABS: readonly EditorTab[] = ["holdings", "constraints"];
-
-function formatDraftValue(value: string | undefined): string {
-  return !value || value === "unknown" || value === "not_decided" ? "未知" : value;
-}
-
-function assetClassLabel(value: AssetClass): string {
-  if (value === "a_share") return "A 股";
-  if (value === "etf") return "ETF";
-  return "基金";
 }
 
 const EMPTY_HOLDING = {
@@ -153,29 +139,8 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
   const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
   const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
   const [message, setMessage] = useState<string | null>(null);
-  const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
-    useState<DemoBadgeSource>("random");
-  const experienceSource = controlledExperienceSource ?? uncontrolledExperienceSource;
   const usable = useMemo(() => listUsableLines(draft), [draft]);
   const unresolved = useMemo(() => listUnresolvedLines(draft), [draft]);
-
-  function emitChange(nextDraft: PortfolioDraft) {
-    onChange(nextDraft);
-    if (experienceSource === "random") {
-      if (controlledExperienceSource === undefined) setUncontrolledExperienceSource("edited");
-      onExperienceSourceChange?.("edited");
-    }
-  }
-
-  function selectAdjacentTab(event: KeyboardEvent<HTMLButtonElement>, current: EditorTab) {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const direction = event.key === "ArrowRight" ? 1 : -1;
-    const currentIndex = EDITOR_TABS.indexOf(current);
-    const next = EDITOR_TABS[(currentIndex + direction + EDITOR_TABS.length) % EDITOR_TABS.length]!;
-    setActiveTab(next);
-    document.getElementById(`portfolio-${next}-tab`)?.focus();
-  }
 
   function save() {
     const result = snapshotCurrentDraft(draft);
@@ -216,9 +181,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           className={activeTab === "holdings" ? "is-active" : undefined}
           id="portfolio-holdings-tab"
           onClick={() => setActiveTab("holdings")}
-          onKeyDown={(event) => selectAdjacentTab(event, "holdings")}
           role="tab"
-          tabIndex={activeTab === "holdings" ? 0 : -1}
           type="button"
         >
           持仓数据（{draft.lines.length}）
@@ -229,9 +192,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           className={activeTab === "constraints" ? "is-active" : undefined}
           id="portfolio-constraints-tab"
           onClick={() => setActiveTab("constraints")}
-          onKeyDown={(event) => selectAdjacentTab(event, "constraints")}
           role="tab"
-          tabIndex={activeTab === "constraints" ? 0 : -1}
           type="button"
         >
           个人偏好
@@ -272,7 +233,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
                   <IconButton
                     icon={Trash2}
                     label={`删除 ${line.name}`}
-                    onClick={() => emitChange(deleteHolding(draft, line.line_id))}
+                    onClick={() => onChange(deleteHolding(draft, line.line_id))}
                     tooltip="删除持仓"
                   />
                 </div>
@@ -293,7 +254,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
             className="portfolio-add"
             onSubmit={(event) => {
               event.preventDefault();
-              emitChange(appendHolding(draft, newHolding));
+              onChange(appendHolding(draft, newHolding));
               setNewHolding(EMPTY_HOLDING);
             }}
           >
@@ -389,7 +350,7 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
           <ConstraintsForm
             compact
             value={draft.constraints}
-            onChange={(constraints) => emitChange(editConstraints(draft, constraints))}
+            onChange={(constraints) => onChange(editConstraints(draft, constraints))}
           />
         </div>
       </div>

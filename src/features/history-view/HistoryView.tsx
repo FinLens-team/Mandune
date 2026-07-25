@@ -25,10 +25,6 @@ import {
 import "./styles.css";
 
 export type HistoryAvailability = "active" | "deleted" | "expired";
-/** Resolve only from data saved with this record, never from the current draft source. */
-export type HistoryRecordSourceResolver = (
-  record: HistoryRecordV1,
-) => DemoBadgeSource | undefined;
 
 export interface HistoryViewProps {
   availability?: HistoryAvailability;
@@ -36,7 +32,6 @@ export interface HistoryViewProps {
   onOpenRecord: (record: HistoryRecordV1) => void;
   reader: HistoryReader;
   reduceMotion?: boolean;
-  resolveRecordSource?: HistoryRecordSourceResolver;
   workspaceId: string;
 }
 
@@ -44,7 +39,6 @@ interface HistoryListProps {
   entries: HistoryListEntry[];
   onNavigateHome: () => void;
   onSelectRecord: (recordId: string) => void;
-  resolveRecordSource?: HistoryRecordSourceResolver;
 }
 
 interface HistoryDetailProps {
@@ -52,7 +46,6 @@ interface HistoryDetailProps {
   onBack: () => void;
   onNavigateHome: () => void;
   onOpenRecord: (record: HistoryRecordV1) => void;
-  resolveRecordSource?: HistoryRecordSourceResolver;
 }
 
 const ASSET_CLASS_LABELS = {
@@ -98,32 +91,13 @@ function SummaryMetadata({ summary }: { summary: HistorySummary }) {
         <dt>完成时间</dt>
         <dd><time dateTime={summary.analysis_completed_at}>{formatHistoryDateTime(summary.analysis_completed_at)}</time></dd>
       </div>
-      <div>
-        <dt>生成状态</dt>
-        <dd>{summary.narrative_status === "available" ? "主题叙事已保存" : "未生成主题叙事"}</dd>
-      </div>
-      <div>
-        <dt>版本边界</dt>
-        <dd>
-          <span>历史 <code>{summary.versions.history_schema}</code></span>
-          <span> · 分析 <code>{summary.versions.rational_analysis}</code></span>
-        </dd>
-      </div>
     </dl>
   );
 }
 
-function EntryBoundary({
-  entry,
-  resolveRecordSource,
-}: {
-  entry: HistoryListEntry;
-  resolveRecordSource?: HistoryRecordSourceResolver;
-}) {
+function EntryBoundary({ entry }: { entry: HistoryListEntry }) {
   if (entry.detail.status === "found") {
     const boundary = historyRecordBoundary(entry.detail.record);
-    const recordSource = resolveRecordSource?.(entry.detail.record) ??
-      entry.detail.record.experience_source;
     return (
       <div className="history-entry__badges">
         {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
@@ -144,12 +118,7 @@ function EntryBoundary({
   return <Badge tone="neutral">记录已不存在</Badge>;
 }
 
-export function HistoryList({
-  entries,
-  onNavigateHome,
-  onSelectRecord,
-  resolveRecordSource,
-}: HistoryListProps) {
+export function HistoryList({ entries, onNavigateHome, onSelectRecord }: HistoryListProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -171,9 +140,10 @@ export function HistoryList({
     <section aria-labelledby="history-list-heading">
       <div className="history-section-heading">
         <div>
+          <p className="history-eyebrow">不可变复盘</p>
           <h2 id="history-list-heading" ref={headingRef} tabIndex={-1}>历史记录</h2>
         </div>
-        <p>共 {entries.length} 次复盘，按完成时间倒序排列。每条记录按保存时的快照与版本读取。</p>
+        <p>共 {entries.length} 次复盘，按完成时间倒序排列。</p>
       </div>
       <ol className="history-list">
         {entries.map((entry) => (
@@ -191,7 +161,7 @@ export function HistoryList({
                 </div>
                 <AnalysisStatus status={entry.summary.result_status} />
               </div>
-              <EntryBoundary entry={entry} resolveRecordSource={resolveRecordSource} />
+              <EntryBoundary entry={entry} />
               <SummaryMetadata summary={entry.summary} />
               <Button
                 className="history-entry__action"
@@ -273,18 +243,14 @@ function FoundDetail({
   onBack,
   onOpenRecord,
   record,
-  resolveRecordSource,
 }: {
   onBack: () => void;
   onOpenRecord: (record: HistoryRecordV1) => void;
   record: HistoryRecordV1;
-  resolveRecordSource?: HistoryRecordSourceResolver;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const boundary = historyRecordBoundary(record);
-  const recordSource = resolveRecordSource?.(record) ?? record.experience_source;
-  const canOpenLongCard = record.analysis.status !== "unavailable" &&
-    (Boolean(record.narrative) || Boolean(record.ai_text?.trim()));
+  const canOpenLongCard = record.analysis.status !== "unavailable" && Boolean(record.narrative);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -298,8 +264,8 @@ function FoundDetail({
       </Button>
       <header className="history-detail__header">
         <div>
+          <p className="history-eyebrow">不可变历史记录</p>
           <h2 id="history-detail-heading" ref={headingRef} tabIndex={-1}>本次复盘边界</h2>
-          <p>核对分析完成时保存的输入、证据时点和版本。</p>
         </div>
         <div className="history-entry__badges">
           {!boundary.isExample ? <Badge tone="neutral">用户确认快照</Badge> : null}
@@ -365,7 +331,7 @@ function FoundDetail({
           <Button onClick={() => onOpenRecord(record)} variant="primary">打开本次复盘报告</Button>
         ) : (
           <p className="history-detail__no-card">
-            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未保存可重放的模型文本或主题叙事。"}
+            {record.analysis.status === "unavailable" ? "分析不可用，没有可展示的复盘报告。" : "本次未生成主题叙事，不能展示不完整的复盘报告。"}
           </p>
         )}
       </div>
@@ -373,22 +339,9 @@ function FoundDetail({
   );
 }
 
-export function HistoryDetail({
-  detail,
-  onBack,
-  onNavigateHome,
-  onOpenRecord,
-  resolveRecordSource,
-}: HistoryDetailProps) {
+export function HistoryDetail({ detail, onBack, onNavigateHome, onOpenRecord }: HistoryDetailProps) {
   if (detail.status === "found") {
-    return (
-      <FoundDetail
-        onBack={onBack}
-        onOpenRecord={onOpenRecord}
-        record={detail.record}
-        resolveRecordSource={resolveRecordSource}
-      />
-    );
+    return <FoundDetail onBack={onBack} onOpenRecord={onOpenRecord} record={detail.record} />;
   }
   if (detail.status === "unsupported_version") {
     return <UnsupportedDetail detail={detail} onBack={onBack} onNavigateHome={onNavigateHome} />;
@@ -451,7 +404,6 @@ export function HistoryView({
   onOpenRecord,
   reader,
   reduceMotion = false,
-  resolveRecordSource,
   workspaceId,
 }: HistoryViewProps) {
   const [loadRevision, setLoadRevision] = useState(0);
@@ -511,14 +463,12 @@ export function HistoryView({
           onBack={() => setSelectedRecordId(null)}
           onNavigateHome={onNavigateHome}
           onOpenRecord={onOpenRecord}
-          resolveRecordSource={resolveRecordSource}
         />
       ) : (
         <HistoryList
           entries={result.entries}
           onNavigateHome={onNavigateHome}
           onSelectRecord={setSelectedRecordId}
-          resolveRecordSource={resolveRecordSource}
         />
       )}
     </div>

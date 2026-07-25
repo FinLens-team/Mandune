@@ -6,7 +6,6 @@ import { BrandBanner, IconButton } from "../../client/ui/index.js";
 import nailongIntro from "../../client/assets/mascot/nailong-intro.webp";
 import nailongLaugh from "../../client/assets/mascot/nailong-laugh.webp";
 import { createExampleDraft } from "../../portfolio/index.js";
-import { OBSERVATION_THEME } from "../../theme/observation.js";
 import { PortfolioEditor } from "../review/ReviewPage.js";
 import { snapshotCurrentDraft } from "../review/model.js";
 import { AnalysisConfirmDialog } from "./AnalysisConfirmDialog.js";
@@ -25,6 +24,7 @@ export interface WorkspaceShellProps {
   onDraftChange?: (draft: PortfolioDraft) => void;
   onExperienceSourceChange?: (source: ExperienceSource) => void;
   onNavigateAbout: () => void;
+  onNavigateAtlas?: () => void;
   onNavigateHistory: () => void;
   onReducedMotionChange?: (enabled: boolean) => void;
   onResumeAnalysis?: (analysisId: string) => void;
@@ -39,39 +39,10 @@ export function prepareAnalysisSnapshot(draft: PortfolioDraft) {
   return snapshotCurrentDraft(draft);
 }
 
-function useMascotMotionEnabled(reduceMotion: boolean): {
-  active: boolean;
-  ref: RefObject<HTMLButtonElement | null>;
-} {
-  const ref = useRef<HTMLButtonElement>(null);
-  const [active, setActive] = useState(false);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setActive(false);
-      return;
-    }
-
-    let inViewport = true;
-    const sync = () => setActive(document.visibilityState === "visible" && inViewport);
-    const observer =
-      typeof IntersectionObserver === "undefined"
-        ? null
-        : new IntersectionObserver(([entry]) => {
-            inViewport = entry?.isIntersecting ?? false;
-            sync();
-          });
-
-    if (ref.current) observer?.observe(ref.current);
-    document.addEventListener("visibilitychange", sync);
-    sync();
-    return () => {
-      observer?.disconnect();
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, [reduceMotion]);
-
-  return { active, ref };
+export function countUnknownConstraints(snapshot: PortfolioSnapshot): number {
+  return Object.values(snapshot.constraints).filter(
+    (value) => value === "unknown" || value === "not_decided",
+  ).length;
 }
 
 const HOME_SPEECH_BUBBLES = [
@@ -115,6 +86,7 @@ export function WorkspaceShell({
   onDraftChange,
   onExperienceSourceChange,
   onNavigateAbout,
+  onNavigateAtlas,
   onNavigateHistory,
   onResumeAnalysis,
   onReviewCoachmarkDismiss,
@@ -137,11 +109,6 @@ export function WorkspaceShell({
   );
   const [speechCaptions, setSpeechCaptions] = useState<HomeCaption[]>([]);
   const [uncontrolledReducedMotion, setUncontrolledReducedMotion] = useState(false);
-  const [uncontrolledExperienceSource, setUncontrolledExperienceSource] =
-    useState<DemoBadgeSource>(initialExperienceSource);
-  const [uncontrolledReviewCoachmarkVisible, setUncontrolledReviewCoachmarkVisible] = useState(
-    initialReviewCoachmarkVisible,
-  );
   const homeHeadingRef = useRef<HTMLHeadingElement>(null);
   const introPreloadRef = useRef<HTMLImageElement | null>(null);
   const draft = controlledDraft ?? uncontrolledDraft;
@@ -405,6 +372,7 @@ export function WorkspaceShell({
           onClose={() => setDrawerOpen(false)}
           onNavigate={navigate}
           onNavigateAbout={onNavigateAbout}
+          onNavigateAtlas={onNavigateAtlas}
           onNavigateHistory={onNavigateHistory}
           open={drawerOpen}
           reduceMotion={reduceMotion}

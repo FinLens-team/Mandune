@@ -4,6 +4,7 @@ import {
   CircleHelp,
   History,
   Home,
+  LibraryBig,
 } from "lucide-react";
 import { BrandLockup } from "../../client/ui/index.js";
 import { handleOverlayKeyDown, useOverlayFocus, useOverlayPresence } from "./focus.js";
