@@ -235,8 +235,8 @@ describe("OpenAI-compatible AI SDK model gateway", () => {
       timeoutMs: 1_000,
     })));
     expect(results).toEqual([
-      { ok: true, value: { schema_version: "test.v1", answer: "first" } },
-      { ok: true, value: { schema_version: "test.v1", answer: "second" } },
+      { ok: true, value: { schema_version: "test.v1", answer: "first" }, finishReason: "stop" },
+      { ok: true, value: { schema_version: "test.v1", answer: "second" }, finishReason: "stop" },
     ]);
     expect(String(firstFetch.mock.calls[0]?.[0])).toContain("first.example.test");
     expect(String(secondFetch.mock.calls[0]?.[0])).toContain("second.example.test");

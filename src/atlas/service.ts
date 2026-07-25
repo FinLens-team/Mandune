@@ -103,6 +103,12 @@ export interface StartAtlasInput {
   snapshot: PortfolioSnapshot;
 }
 
+export interface ConsumeAtlasInput extends StartAtlasInput {
+  candidate: unknown | null;
+  allowed_reference_ids: string[];
+  invalid_candidate?: boolean;
+}
+
 export class AtlasService {
   private readonly tasks = new Map<string, Promise<void>>();
 
@@ -132,6 +138,25 @@ export class AtlasService {
     if (begun.created) {
       const key = `${input.workspaceId}:${input.analysis.analysis_id}`;
       const task = this.process(input, selectedKind).finally(() => this.tasks.delete(key));
+      this.tasks.set(key, task);
+    }
+    return this.publicOutcome(begun.outcome);
+  }
+
+  async consume(input: ConsumeAtlasInput): Promise<AtlasOutcome | null> {
+    if (input.analysis.status === "unavailable") return null;
+    const selectedKind = selectAtlasKind(input.analysis.analysis_id);
+    const createdAt = this.now().toISOString();
+    const begun = await this.store.beginRun({
+      workspace_id: input.workspaceId,
+      analysis_id: input.analysis.analysis_id,
+      selected_kind: selectedKind,
+      status: "pending",
+      created_at: createdAt,
+    });
+    if (begun.created) {
+      const key = `${input.workspaceId}:${input.analysis.analysis_id}`;
+      const task = this.processConsumed(input, selectedKind).finally(() => this.tasks.delete(key));
       this.tasks.set(key, task);
     }
     return this.publicOutcome(begun.outcome);
@@ -210,47 +235,70 @@ export class AtlasService {
         await this.finishWithoutCard(input, timedOut ? "timeout" : "generation_failed", "failed");
         return;
       }
-      if (raw === null) {
-        await this.finishWithoutCard(input, "no_candidate", "no_card");
-        return;
-      }
-      if (!validateAtlasCandidate(raw, selectedKind, input.analysis)) {
+      await this.persistCandidate(input, selectedKind, raw, existing, []);
+    } catch {
+      await this.finishWithoutCard(input, timedOut ? "timeout" : "generation_failed", "failed");
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private async processConsumed(input: ConsumeAtlasInput, selectedKind: AtlasCardKind): Promise<void> {
+    try {
+      const existing = await this.store.listCards(input.workspaceId);
+      if (input.invalid_candidate) {
         await this.finishWithoutCard(input, "invalid_candidate", "no_card");
         return;
       }
-      const candidate = structuredClone(raw);
-      const duplicate = decideAtlasDuplicate(candidate, existing);
-      const occurredAt = this.now().toISOString();
-      if (duplicate.kind === "uncertain") {
-        await this.finishWithoutCard(input, "dedupe_uncertain", "no_card", occurredAt);
-        return;
-      }
-      if (duplicate.kind === "same") {
-        const result = await this.store.addEncounter(
-          input.workspaceId,
-          duplicate.card.card_id,
-          encounterFor(candidate, duplicate.card.card_id, input.analysis.analysis_id, occurredAt),
-          input.analysis.analysis_id,
-        );
-        if (result !== "committed" && result !== "workspace_erased") {
-          await this.finishWithoutCard(input, "storage_failed", "failed", occurredAt);
-        }
-        return;
-      }
-      const cardId = this.createId();
-      const card = cardFor(candidate, cardId, input.analysis.analysis_id, occurredAt);
-      const result = await this.store.createCard(
-        { workspace_id: input.workspaceId, canonical_key: canonicalKey(candidate), card },
-        encounterFor(candidate, cardId, input.analysis.analysis_id, occurredAt),
+      await this.persistCandidate(input, selectedKind, input.candidate, existing, input.allowed_reference_ids);
+    } catch {
+      await this.finishWithoutCard(input, "storage_failed", "failed");
+    }
+  }
+
+  private async persistCandidate(
+    input: StartAtlasInput,
+    selectedKind: AtlasCardKind,
+    raw: unknown | null,
+    existing: readonly StoredAtlasCard["card"][],
+    additionalReferenceIds: readonly string[],
+  ): Promise<void> {
+    if (raw === null) {
+      await this.finishWithoutCard(input, "no_candidate", "no_card");
+      return;
+    }
+    if (!validateAtlasCandidate(raw, selectedKind, input.analysis, additionalReferenceIds)) {
+      await this.finishWithoutCard(input, "invalid_candidate", "no_card");
+      return;
+    }
+    const candidate = structuredClone(raw);
+    const duplicate = decideAtlasDuplicate(candidate, existing);
+    const occurredAt = this.now().toISOString();
+    if (duplicate.kind === "uncertain") {
+      await this.finishWithoutCard(input, "dedupe_uncertain", "no_card", occurredAt);
+      return;
+    }
+    if (duplicate.kind === "same") {
+      const result = await this.store.addEncounter(
+        input.workspaceId,
+        duplicate.card.card_id,
+        encounterFor(candidate, duplicate.card.card_id, input.analysis.analysis_id, occurredAt),
         input.analysis.analysis_id,
       );
       if (result !== "committed" && result !== "workspace_erased") {
         await this.finishWithoutCard(input, "storage_failed", "failed", occurredAt);
       }
-    } catch {
-      await this.finishWithoutCard(input, timedOut ? "timeout" : "generation_failed", "failed");
-    } finally {
-      if (timer) clearTimeout(timer);
+      return;
+    }
+    const cardId = this.createId();
+    const card = cardFor(candidate, cardId, input.analysis.analysis_id, occurredAt);
+    const result = await this.store.createCard(
+      { workspace_id: input.workspaceId, canonical_key: canonicalKey(candidate), card },
+      encounterFor(candidate, cardId, input.analysis.analysis_id, occurredAt),
+      input.analysis.analysis_id,
+    );
+    if (result !== "committed" && result !== "workspace_erased") {
+      await this.finishWithoutCard(input, "storage_failed", "failed", occurredAt);
     }
   }
 

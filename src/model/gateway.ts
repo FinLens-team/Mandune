@@ -19,7 +19,7 @@ export type ModelGatewayFailureCode =
   | "provider_failure";
 
 export type ModelGatewayResult<T> =
-  | { ok: true; value: T }
+  | { ok: true; value: T; finishReason?: string }
   | { ok: false; code: ModelGatewayFailureCode; retryable: boolean };
 
 /**

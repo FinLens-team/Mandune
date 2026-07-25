@@ -51,7 +51,7 @@ export function createOpenAICompatibleModelGateway(
         name: config.providerName,
         baseURL: config.baseURL,
         apiKey: config.apiKey,
-        supportsStructuredOutputs: true,
+        supportsStructuredOutputs: config.supportsStructuredOutputs,
         ...(config.fetch ? { fetch: config.fetch } : {}),
       })
     : undefined;
@@ -112,7 +112,7 @@ export function createOpenAICompatibleModelGateway(
         if (hasPrivatePayload(value)) {
           return { ok: false, code: "privacy_violation", retryable: false };
         }
-        return { ok: true, value };
+        return { ok: true, value, finishReason: result.finishReason };
       } catch (error) {
         return failureFrom(error, request.signal, timedOut);
       } finally {

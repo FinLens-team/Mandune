@@ -1,14 +1,24 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+  GENERATED_DAILY_REVIEW_SCHEMA_VERSION,
   RATIONAL_ANALYSIS_SCHEMA_VERSION,
+  REVIEW_PACKET_SCHEMA_VERSION,
   THEME_NARRATIVE_SCHEMA_VERSION,
   validateOwnedAnalysisResult,
+  validateStoredGeneratedDailyReview,
   validateThemeModelOutput,
   type AnalysisCommitFence,
   type AnalysisResultSink,
   type RationalModelOutput,
   type ThemeModelOutput,
+  type ReviewPacketV2,
+  type ValidatedGeneratedDailyReviewV2,
 } from "../analysis/index.js";
+import {
+  DAILY_REVIEW_MODEL_ID,
+  DAILY_REVIEW_PROMPT_VERSION,
+} from "../analysis/prompt-compiler.js";
+import { ATLAS_GENERATION_POLICY_VERSION } from "../atlas/generation-policy.js";
 import {
   CONTRACTS_VERSION,
   validatePortfolioSnapshot,
@@ -38,6 +48,12 @@ interface SinkPayload {
   narrative?: ThemeModelOutput;
   ai_text?: string;
   ai_theme_text?: string;
+  review_packet?: ReviewPacketV2;
+  generated_review?: ValidatedGeneratedDailyReviewV2;
+  model_id?: string;
+  prompt_version?: string;
+  skill_versions?: { core: string; persona: string };
+  atlas_policy_version?: string;
   experience_source?: HistoryExperienceSource;
 }
 
@@ -58,6 +74,16 @@ function versionsFromEnvelope(record: StoredHistoryEnvelope): HistoryVersions {
     contracts: record.versions.contracts,
     rational_analysis: record.versions.rational_analysis,
     theme_narrative: record.versions.theme_narrative,
+    ...(record.versions.review_packet !== undefined
+      ? { review_packet: record.versions.review_packet }
+      : {}),
+    ...(record.versions.generated_daily_review !== undefined
+      ? { generated_daily_review: record.versions.generated_daily_review }
+      : {}),
+    ...(record.versions.prompt !== undefined ? { prompt: record.versions.prompt } : {}),
+    ...(record.versions.atlas_policy !== undefined
+      ? { atlas_policy: record.versions.atlas_policy }
+      : {}),
   };
 }
 
@@ -75,6 +101,21 @@ function unsupportedVersions(versions: HistoryVersions): UnsupportedHistoryVersi
   if (versions.theme_narrative !== null && versions.theme_narrative !== THEME_NARRATIVE_SCHEMA_VERSION) {
     unsupported.push({ component: "theme_narrative", version: versions.theme_narrative });
   }
+  if (versions.review_packet !== undefined && versions.review_packet !== null &&
+    versions.review_packet !== REVIEW_PACKET_SCHEMA_VERSION) {
+    unsupported.push({ component: "review_packet", version: versions.review_packet });
+  }
+  if (versions.generated_daily_review !== undefined && versions.generated_daily_review !== null &&
+    versions.generated_daily_review !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION) {
+    unsupported.push({ component: "generated_daily_review", version: versions.generated_daily_review });
+  }
+  if (versions.prompt !== undefined && versions.prompt !== null && versions.prompt !== DAILY_REVIEW_PROMPT_VERSION) {
+    unsupported.push({ component: "prompt", version: versions.prompt });
+  }
+  if (versions.atlas_policy !== undefined && versions.atlas_policy !== null &&
+    versions.atlas_policy !== ATLAS_GENERATION_POLICY_VERSION) {
+    unsupported.push({ component: "atlas_policy", version: versions.atlas_policy });
+  }
   return unsupported;
 }
 
@@ -88,7 +129,9 @@ function summaryOf(record: StoredHistoryEnvelope): HistorySummary {
     evidence_cutoff_at: record.evidence_cutoff_at,
     result_status: record.result_status,
     theme_id: record.theme_id,
-    narrative_status: versions.theme_narrative === null ? "not_generated" : "available",
+    narrative_status: versions.theme_narrative === null && !versions.generated_daily_review
+      ? "not_generated"
+      : "available",
     versions,
     readability: unsupportedVersions(versions).length === 0 ? "readable" : "unsupported_version",
   };
@@ -103,6 +146,54 @@ function rationalView(record: HistoryRecordV1): RationalModelOutput {
     limitations: record.analysis.limitations,
     risk_notes: record.analysis.risk_notes,
   };
+}
+
+function v2RecordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelope): boolean {
+  const fields = [
+    record.review_packet,
+    record.generated_review,
+    record.model_id,
+    record.prompt_version,
+    record.skill_versions,
+    record.atlas_policy_version,
+  ];
+  if (fields.every((value) => value === undefined)) {
+    return envelope.versions.review_packet === undefined &&
+      envelope.versions.generated_daily_review === undefined &&
+      envelope.versions.prompt === undefined &&
+      envelope.versions.atlas_policy === undefined;
+  }
+  if (!record.review_packet || !record.generated_review || !record.model_id ||
+    !record.prompt_version || !record.skill_versions || !record.atlas_policy_version) return false;
+  if (
+    record.review_packet.schema_version !== REVIEW_PACKET_SCHEMA_VERSION ||
+    record.generated_review.schema_version !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
+    record.model_id !== DAILY_REVIEW_MODEL_ID ||
+    record.prompt_version !== DAILY_REVIEW_PROMPT_VERSION ||
+    record.atlas_policy_version !== ATLAS_GENERATION_POLICY_VERSION ||
+    !record.skill_versions.core.startsWith("sha256:") ||
+    !record.skill_versions.persona.startsWith("sha256:") ||
+    envelope.versions.review_packet !== REVIEW_PACKET_SCHEMA_VERSION ||
+    envelope.versions.generated_daily_review !== GENERATED_DAILY_REVIEW_SCHEMA_VERSION ||
+    envelope.versions.prompt !== DAILY_REVIEW_PROMPT_VERSION ||
+    envelope.versions.atlas_policy !== ATLAS_GENERATION_POLICY_VERSION
+  ) return false;
+  const packet = record.review_packet;
+  if (
+    packet.analysis_id !== record.analysis.analysis_id ||
+    packet.snapshot_id !== record.snapshot.snapshot_id ||
+    packet.latest_complete_trading_day !== record.analysis.latest_complete_trading_day ||
+    packet.evidence_cutoff_at !== record.analysis.evidence_cutoff_at ||
+    !isDeepStrictEqual(packet.holdings, record.snapshot.lines) ||
+    !isDeepStrictEqual(packet.constraints, record.snapshot.constraints) ||
+    !isDeepStrictEqual(packet.evidence, record.analysis.evidence) ||
+    !isDeepStrictEqual(packet.derived, record.analysis.derived) ||
+    !isDeepStrictEqual(packet.coverage, record.analysis.coverage) ||
+    !isDeepStrictEqual(packet.unknowns, record.analysis.unknowns)
+  ) return false;
+  if (!validateStoredGeneratedDailyReview(record.generated_review, packet)) return false;
+  return record.ai_text === record.generated_review.rational_report.markdown &&
+    record.ai_theme_text === record.generated_review.persona_report.markdown;
 }
 
 function recordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelope): boolean {
@@ -126,6 +217,7 @@ function recordIsValid(record: HistoryRecordV1, envelope: StoredHistoryEnvelope)
   ) return false;
 
   if (!validatePortfolioSnapshot(record.snapshot).ok || !validateOwnedAnalysisResult(record.analysis).ok) return false;
+  if (!v2RecordIsValid(record, envelope)) return false;
   if (!record.narrative) return record.theme_narrative_version === null;
   return record.theme_narrative_version === THEME_NARRATIVE_SCHEMA_VERSION &&
     validateThemeModelOutput(record.narrative, rationalView(record), {
@@ -216,12 +308,28 @@ export class HistoryService {
         ...(payloadCopy.narrative ? { narrative: payloadCopy.narrative } : {}),
         ...(payloadCopy.ai_text ? { ai_text: payloadCopy.ai_text } : {}),
         ...(payloadCopy.ai_theme_text ? { ai_theme_text: payloadCopy.ai_theme_text } : {}),
+        ...(payloadCopy.review_packet ? { review_packet: payloadCopy.review_packet } : {}),
+        ...(payloadCopy.generated_review ? { generated_review: payloadCopy.generated_review } : {}),
+        ...(payloadCopy.model_id ? { model_id: payloadCopy.model_id } : {}),
+        ...(payloadCopy.prompt_version ? { prompt_version: payloadCopy.prompt_version } : {}),
+        ...(payloadCopy.skill_versions ? { skill_versions: payloadCopy.skill_versions } : {}),
+        ...(payloadCopy.atlas_policy_version
+          ? { atlas_policy_version: payloadCopy.atlas_policy_version }
+          : {}),
       };
       const versions: HistoryVersions = {
         history_schema: HISTORY_SCHEMA_VERSION,
         contracts: CONTRACTS_VERSION,
         rational_analysis: payloadCopy.rational_analysis_version,
         theme_narrative: historyRecord.theme_narrative_version,
+        ...(historyRecord.review_packet ? { review_packet: REVIEW_PACKET_SCHEMA_VERSION } : {}),
+        ...(historyRecord.generated_review
+          ? { generated_daily_review: GENERATED_DAILY_REVIEW_SCHEMA_VERSION }
+          : {}),
+        ...(historyRecord.prompt_version ? { prompt: historyRecord.prompt_version } : {}),
+        ...(historyRecord.atlas_policy_version
+          ? { atlas_policy: historyRecord.atlas_policy_version }
+          : {}),
       };
       const envelope: StoredHistoryEnvelope = {
         workspace_id: workspaceId,
@@ -235,6 +343,7 @@ export class HistoryService {
         versions,
         payload_json: JSON.stringify(historyRecord),
       };
+      if (!recordIsValid(historyRecord, envelope)) throw new HistorySaveError("invalid_result");
       const result = await this.store.append(envelope, fence);
       if (result === "committed" || result === "idempotent") return;
       if (result === "fence_closed") throw new HistorySaveError("commit_fenced");
