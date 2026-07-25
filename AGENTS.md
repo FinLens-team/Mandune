@@ -35,6 +35,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - `src/contracts/`：框架中立的版本化契约与纯校验器，不得导入 React、Hono 或供应商 SDK。
 - `src/analysis/`：确定性派生、ReviewPacket、Prompt 编译、结果校验与单 agent 编排。
 - 默认 `stream` 分析只调用一次模型；同一次输出包含有边界的理性背面与人物正面，人物正文按快照主题加载定稿 persona skill。Markdown 标题实时投影为等待页进度，两个分区完整校验后才进入结果与历史。
+- A2A 采用 HTTP+JSON 绑定与 ProtoJSON 对象形状；协议 `1.0.x` 对外协商值固定为 `1.0`，请求必须携带 `A2A-Version: 1.0`（缺失按 `0.3` 处理并拒绝）。
 - `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store。
 - `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。
 - `src/theme/`：三主题共享目录与 persona 映射；客户端素材映射独立放在 `src/theme/client.ts`，服务端不得导入媒体资源。

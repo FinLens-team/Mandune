@@ -66,6 +66,16 @@ describe("A2A deep review routes", () => {
       protocolVersion: "1.0",
     }]);
     expect(card.capabilities.streaming).toBe(false);
+    expect(card.capabilities).not.toHaveProperty("stateTransitionHistory");
+    expect(card.securitySchemes).toEqual({
+      bearerAuth: {
+        httpAuthSecurityScheme: { scheme: "Bearer", bearerFormat: "opaque" },
+      },
+    });
+    expect(card.securityRequirements).toEqual([{
+      schemes: { bearerAuth: { list: [] } },
+    }]);
+    expect(card).not.toHaveProperty("security");
     expect(card.skills).toHaveLength(1);
     expect(card.skills[0].examples).toHaveLength(3);
     expect(card.skills[0].tags).toContain("volcano-ark");
@@ -91,6 +101,13 @@ describe("A2A deep review routes", () => {
       body: JSON.stringify(request),
     });
     expect(unauthorized.status).toBe(401);
+    expect(await unauthorized.json()).toEqual({
+      error: {
+        code: 401,
+        status: "UNAUTHENTICATED",
+        message: "Bearer token required",
+      },
+    });
 
     const response = await app.request("http://localhost/a2a/message:send", {
       method: "POST",
@@ -141,6 +158,7 @@ describe("A2A deep review routes", () => {
       method: "POST",
       headers: {
         "content-type": "application/a2a+json",
+        "a2a-version": "1.0",
         authorization: `Bearer ${TOKEN}`,
       },
       body: JSON.stringify({
@@ -163,6 +181,7 @@ describe("A2A deep review routes", () => {
       method: "POST",
       headers: {
         "content-type": "application/a2a+json",
+        "a2a-version": "1.0",
         authorization: `Bearer ${TOKEN}`,
       },
       body: JSON.stringify({
@@ -176,7 +195,15 @@ describe("A2A deep review routes", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
-      error: { code: "private_payload_rejected", message: "A2A input rejected" },
+      error: {
+        code: 400,
+        status: "INVALID_ARGUMENT",
+        message: "A2A input rejected",
+        details: [{
+          "@type": "type.googleapis.com/google.rpc.BadRequest",
+          fieldViolations: [{ field: "message.parts", description: "private_payload_rejected" }],
+        }],
+      },
     });
     expect(deepRunner.run).not.toHaveBeenCalled();
   });
@@ -188,6 +215,7 @@ describe("A2A deep review routes", () => {
       method: "POST",
       headers: {
         "content-type": "application/a2a+json",
+        "a2a-version": "1.0",
         authorization: `Bearer ${TOKEN}`,
       },
       body: JSON.stringify({
@@ -204,8 +232,166 @@ describe("A2A deep review routes", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
-      error: { code: "private_payload_rejected", message: "A2A input rejected" },
+      error: {
+        code: 400,
+        status: "INVALID_ARGUMENT",
+        message: "A2A input rejected",
+        details: [{
+          "@type": "type.googleapis.com/google.rpc.BadRequest",
+          fieldViolations: [{ field: "message.parts", description: "private_payload_rejected" }],
+        }],
+      },
     });
     expect(deepRunner.run).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "0.3", "1.0.1"])("rejects unsupported protocol version: %s", async (version) => {
+    const deepRunner = runner();
+    const app = createA2ARoutes({ runner: deepRunner, bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${TOKEN}`,
+        ...(version ? { "a2a-version": version } : {}),
+      },
+      body: JSON.stringify({
+        message: { role: "ROLE_USER", messageId: "message-version", parts: [{ text: "测试" }] },
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: 400,
+        status: "FAILED_PRECONDITION",
+        message: `A2A version ${version ?? "0.3"} is not supported`,
+        details: [{
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          reason: "VERSION_NOT_SUPPORTED",
+          domain: "a2a-protocol.org",
+        }],
+      },
+    });
+    expect(deepRunner.run).not.toHaveBeenCalled();
+  });
+
+  it("accepts the protocol version as a request parameter", async () => {
+    const deepRunner = runner();
+    const app = createA2ARoutes({ runner: deepRunner, bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send?A2A-Version=1.0", {
+      method: "POST",
+      headers: { authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify({
+        message: { role: "ROLE_USER", messageId: "message-query-version", parts: [{ text: "测试" }] },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(deepRunner.run).toHaveBeenCalledOnce();
+  });
+
+  it("returns only an accepted output mode", async () => {
+    const app = createA2ARoutes({ runner: runner(), bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send", {
+      method: "POST",
+      headers: { authorization: `Bearer ${TOKEN}`, "a2a-version": "1.0" },
+      body: JSON.stringify({
+        message: { role: "ROLE_USER", messageId: "message-output", parts: [{ text: "测试" }] },
+        configuration: { acceptedOutputModes: ["text/plain"] },
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.message.parts).toEqual([{
+      text: `已完成无副作用的上下文总结。\n\n风险提示：${A2A_RISK_NOTICE}`,
+      mediaType: "text/plain",
+    }]);
+  });
+
+  it("rejects a push notification configuration when the capability is disabled", async () => {
+    const deepRunner = runner();
+    const app = createA2ARoutes({ runner: deepRunner, bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send", {
+      method: "POST",
+      headers: { authorization: `Bearer ${TOKEN}`, "a2a-version": "1.0" },
+      body: JSON.stringify({
+        message: { role: "ROLE_USER", messageId: "message-push", parts: [{ text: "测试" }] },
+        configuration: {
+          taskPushNotificationConfig: { url: "https://callback.example.com/a2a" },
+        },
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: 400,
+        status: "FAILED_PRECONDITION",
+        message: "This agent does not support push notifications",
+        details: [{
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          reason: "PUSH_NOTIFICATION_NOT_SUPPORTED",
+          domain: "a2a-protocol.org",
+        }],
+      },
+    });
+    expect(deepRunner.run).not.toHaveBeenCalled();
+  });
+
+  it("uses the standard A2A error shape for unsupported media types", async () => {
+    const deepRunner = runner();
+    const app = createA2ARoutes({ runner: deepRunner, bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send", {
+      method: "POST",
+      headers: { authorization: `Bearer ${TOKEN}`, "a2a-version": "1.0" },
+      body: JSON.stringify({
+        message: {
+          role: "ROLE_USER",
+          messageId: "message-media",
+          parts: [{ text: "测试", mediaType: "text/html" }],
+        },
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: 400,
+        status: "INVALID_ARGUMENT",
+        message: "Media type text/html is not supported",
+        details: [{
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          reason: "CONTENT_TYPE_NOT_SUPPORTED",
+          domain: "a2a-protocol.org",
+        }],
+      },
+    });
+    expect(deepRunner.run).not.toHaveBeenCalled();
+  });
+
+  it("maps unexpected runner failures to an opaque internal error", async () => {
+    const deepRunner: DeepReviewRunner = {
+      run: vi.fn(async () => {
+        throw new Error("sensitive downstream detail");
+      }),
+    };
+    const app = createA2ARoutes({ runner: deepRunner, bearerToken: TOKEN });
+    const response = await app.request("http://localhost/a2a/message:send", {
+      method: "POST",
+      headers: { authorization: `Bearer ${TOKEN}`, "a2a-version": "1.0" },
+      body: JSON.stringify({
+        message: { role: "ROLE_USER", messageId: "message-failure", parts: [{ text: "测试" }] },
+      }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: {
+        code: 500,
+        status: "INTERNAL",
+        message: "The agent could not complete the request",
+      },
+    });
   });
 });
