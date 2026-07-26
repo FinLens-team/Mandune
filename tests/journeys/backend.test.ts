@@ -243,7 +243,7 @@ describe("#34 backend journey transport", () => {
     expect(await response.json()).toEqual({ error: "invalid_experience_source" });
   });
 
-  it("rejects fixture substitution when a confirmed symbol no longer maps", async () => {
+  it("keeps unmatched random holdings as an observation-only result", async () => {
     const { app, journey } = composition();
     const cookie = await createCookie(app);
     const draft = draftFor("supported_full", (value) => {
@@ -263,8 +263,13 @@ describe("#34 backend journey transport", () => {
     const result = await request(app, cookie, `/api/analyses/${analysis_id}/result`);
     expect(await result.json()).toMatchObject({
       status: "ready",
-      source: { kind: "unavailable", is_live: false },
-      analysis: { status: "unavailable", evidence: [], conclusions: [], advice: [] },
+      source: { kind: "fixture", is_live: false },
+      analysis: {
+        status: "observation_only",
+        evidence: expect.arrayContaining([expect.objectContaining({ status: "unverified" })]),
+        conclusions: expect.arrayContaining([expect.objectContaining({ id: "observation-only-boundary" })]),
+        advice: expect.arrayContaining([expect.objectContaining({ id: "observation-only-wait-for-data" })]),
+      },
     });
   });
 

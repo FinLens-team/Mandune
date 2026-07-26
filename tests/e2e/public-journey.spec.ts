@@ -69,7 +69,7 @@ test("first-S4 coachmark dismisses on review trigger and stays dismissed", async
   const mascot = page.getByRole("button", { name: "点击兜兜，确认发起今日复盘" });
   await expect(coachmark).toBeVisible();
   await mascot.click();
-  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
+  const dialog = page.getByRole("dialog", { name: "是否基于当前数据复盘分析？" });
   await expect(dialog.getByRole("button", { name: "开始复盘" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
@@ -106,7 +106,7 @@ test("ordinary UI reaches a limited result when one constraint stays unknown", a
   await expectPublicPrivacySurface(page);
 });
 
-test("ordinary UI fails closed when an edited holding has no same-asset fixture", async ({ page }) => {
+test("ordinary UI keeps an observation boundary when an edited holding has no same-asset fixture", async ({ page }) => {
   await completeOnboarding(page);
   await openPortfolioEditor(page);
   const firstHolding = page.locator(".portfolio-line").first();
@@ -116,9 +116,9 @@ test("ordinary UI fails closed when an edited holding has no same-asset fixture"
   await enableReducedMotion(page);
 
   await page.getByRole("button", { name: "点击兜兜，确认发起今日复盘" }).click();
-  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
+  const dialog = page.getByRole("dialog", { name: "是否基于当前数据复盘分析？" });
   await dialog.getByRole("button", { name: "开始复盘" }).click();
-  await expect(page.getByText("分析不可用，可重试", { exact: true })).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByRole("button", { name: "查看复盘报告" })).toHaveCount(0);
+  await expect(page.getByText("仅观察", { exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole("button", { name: "查看复盘报告" })).toBeVisible();
   await expectPublicPrivacySurface(page);
 });

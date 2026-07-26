@@ -61,7 +61,7 @@ class MemoryStorage implements OnboardingStorage {
 }
 
 describe("S0-S3 onboarding screens", () => {
-  it("exposes three selectable themes and keeps the unused red panda card locked", async () => {
+  it("allows previewing the red doudou card while keeping it unavailable", async () => {
     const { ThemeSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
       onContinue: noop,
@@ -72,6 +72,7 @@ describe("S0-S3 onboarding screens", () => {
     expect(html.match(/onboarding-theme-card/g)?.length).toBeGreaterThanOrEqual(4);
     expect(html.match(/<img/g)).toHaveLength(4);
     expect(html).toContain("我是龙");
+    expect(html).toContain("查看鸿运当头主题预览，暂未开放");
     expect(html).toContain("选择我是龙主题");
     expect(html).toContain("选择吉星高照主题");
     expect(html).toContain("选择孙哥主题");
@@ -173,7 +174,7 @@ describe("onboarding responsive and motion styles", () => {
   it("keeps compact controls, independent source options, and the summary safe area", () => {
     expect(stylesheet).toContain("position: fixed;");
     expect(stylesheet).toContain("env(safe-area-inset-bottom)");
-    expect(stylesheet).toContain("grid-template-rows: auto minmax(19rem, 1fr) auto auto;");
+    expect(stylesheet).toContain("grid-template-rows: auto minmax(20rem, 1fr) auto auto;");
     expect(stylesheet).toContain(".onboarding-source__options");
     expect(stylesheet).toContain("grid-template-columns: repeat(3, minmax(0, 1fr));");
     expect(stylesheet).toContain("height: calc(5rem + env(safe-area-inset-bottom));");

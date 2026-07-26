@@ -135,6 +135,7 @@ export function AnalysisProgress({
         .slice(-8);
 
   function playInitialMascotMusic() {
+    if (themeId !== "eastern_observation") return;
     if (initialMusicAnalysisRef.current === analysisId) return;
     initialMusicAnalysisRef.current = analysisId;
     void playWaitingMascotMusic();
@@ -237,7 +238,9 @@ export function AnalysisProgress({
             aria-label={`点击${theme.mascot.name}播放音乐`}
             className="analysis-progress__stage"
             data-idle={mascotIdle || undefined}
-            onClick={() => void playWaitingMascotMusic()}
+            onClick={() => {
+              if (themeId === "eastern_observation") void playWaitingMascotMusic();
+            }}
             type="button"
           >
             {showPop && assets.progressAnimation?.kind === "video" ? (

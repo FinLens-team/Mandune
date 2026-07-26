@@ -113,7 +113,7 @@ function themeCardMotion(index: number, focusedIndex: number | null): CSSPropert
   if (focusedIndex !== null) {
     if (index === focusedIndex) {
       x = 0;
-      y = -28;
+      y = 8;
       rotation = 0;
       scale = 1.08;
       z = 10;
@@ -145,9 +145,11 @@ export function ThemeSelectionScreen({
   onSelect,
   onContinue,
 }: ThemeSelectionScreenProps) {
-  const focusedIndex = THEME_CARDS.find((theme) =>
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const selectedIndex = THEME_CARDS.find((theme) =>
     theme.available && theme.themeId === selectedThemeId
   )?.index ?? 2;
+  const focusedIndex = previewIndex ?? selectedIndex;
   const focusedTheme = THEME_CARDS.find((theme) => theme.index === focusedIndex) ?? null;
 
   return (
@@ -164,11 +166,16 @@ export function ThemeSelectionScreen({
           {THEME_CARDS.map((theme) => (
             <button
               aria-label={theme.available ? `选择${theme.name}主题` : `查看${theme.name}主题预览，暂未开放`}
-              aria-pressed={theme.available ? theme.themeId === selectedThemeId : undefined}
+              aria-pressed={focusedIndex === theme.index}
               className={`onboarding-theme-card ${theme.available ? "onboarding-theme-card--available" : "onboarding-theme-card--locked"}${focusedIndex === theme.index ? " is-focused" : ""}`}
               data-theme-index={theme.index}
               key={theme.index}
-              onClick={theme.available ? () => onSelect(theme.themeId) : undefined}
+              onClick={theme.available
+                ? () => {
+                    setPreviewIndex(null);
+                    onSelect(theme.themeId);
+                  }
+                : () => setPreviewIndex(theme.index)}
               style={themeCardMotion(theme.index, focusedIndex)}
               type="button"
             >
@@ -201,7 +208,7 @@ export function ThemeSelectionScreen({
       </div>
 
       <footer className="onboarding-theme-footer">
-        <Button onClick={onContinue} variant="primary">
+        <Button disabled={!focusedTheme?.available} onClick={onContinue} variant="primary">
           下一步 <ArrowRight aria-hidden="true" size={18} />
         </Button>
       </footer>

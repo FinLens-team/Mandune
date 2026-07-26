@@ -55,7 +55,7 @@ export function AnalysisConfirmDialog(props: AnalysisConfirmDialogProps) {
         ref={dialogRef}
         role="dialog"
       >
-        <h2 id="analysis-confirm-heading">按当前输入发起今日复盘？</h2>
+        <h2 id="analysis-confirm-heading">是否基于当前数据复盘分析？</h2>
         <div className="analysis-confirm__actions">
           <Button onClick={props.onCancel} variant="secondary">
             取消

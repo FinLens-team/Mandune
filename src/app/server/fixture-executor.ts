@@ -135,52 +135,78 @@ function narrativeFor(analysis: AnalysisResult): ThemeModelOutput | undefined {
   }) ? narrative : undefined;
 }
 
-function unavailableExecution(
+function observationOnlyExecution(
   analysisId: string,
   snapshot: PortfolioSnapshot,
   now: Date,
 ): AnalysisExecution {
   const timestamp = now.toISOString();
+  const evidence = snapshot.lines.map((line) => ({
+    id: `coverage-${line.line_id}`,
+    scope: { kind: "asset" as const, line_id: line.line_id, symbol: line.symbol },
+    metric_or_event_type: "coverage",
+    value: null,
+    source: {
+      name: "fixture-coverage",
+      locator: `internal://fixture-coverage/${encodeURIComponent(line.symbol)}`,
+    },
+    observation_or_event_time: timestamp,
+    fetched_at: timestamp,
+    status: "unverified" as const,
+    limitations: ["没有与当前确认持仓匹配的非实时行情 fixture。"],
+    provenance: "generated" as const,
+  }));
+  const deterministic = deriveAnalysisInputs({
+    snapshot,
+    evidence,
+    latestCompleteTradingDay: timestamp.slice(0, 10),
+  });
+  const unknownRefs = deterministic.unknowns.map((item) => item.id);
+  const firstLine = snapshot.lines[0];
   const analysis: AnalysisResult = {
     contracts_version: CONTRACTS_VERSION,
     analysis_id: analysisId,
     snapshot_id: snapshot.snapshot_id,
-    status: "unavailable",
+    status: deterministic.status,
     analysis_started_at: timestamp,
     analysis_completed_at: timestamp,
     latest_complete_trading_day: timestamp.slice(0, 10),
     evidence_cutoff_at: timestamp,
     theme_id: snapshot.theme_id,
-    coverage: {
-      covered_line_ids: [],
-      uncovered_line_ids: snapshot.lines.map((line) => line.line_id),
-      unsupported_line_ids: [],
-      missing_metrics: ["same_asset_fixture"],
-    },
+    coverage: deterministic.coverage,
     constraints: structuredClone(snapshot.constraints),
-    conclusions: [],
-    advice: [],
-    evidence: [],
-    derived: [],
-    unknowns: snapshot.lines.map((line) => ({
-      id: `unknown-${line.line_id}`,
-      subject: line.line_id,
-      reason: "no_exact_same_asset_fixture",
-      impact: "没有同一确认行与代码的证据，不能形成物质性结论。",
-    })),
-    assumptions: [],
-    limitations: ["实时路径当前不可用，且没有与全部确认行逐项匹配的非实时 fixture。"],
+    conclusions: firstLine ? [{
+      id: "observation-only-boundary",
+      statement: "当前体验持仓已完成输入确认，但没有可核验行情证据支持方向性判断。",
+      provenance: "generated",
+      refs: [{ ref_id: firstLine.line_id, kind: "confirmed_input" }],
+      affected_by_unknowns: true,
+      limited_by: unknownRefs,
+    }] : [],
+    advice: firstLine ? [{
+      id: "observation-only-wait-for-data",
+      kind: "wait_for_data_confirmation",
+      statement: "等待实时数据路径恢复或补齐可核验数据后再形成方向性判断。",
+      trigger_refs: [{ ref_id: firstLine.line_id, kind: "confirmed_input" }],
+      urgency: "routine",
+    }] : [],
+    evidence,
+    derived: deterministic.derived,
+    unknowns: deterministic.unknowns,
+    assumptions: ["本次使用非实时观察边界，不代表任何市场行情。"],
+    limitations: ["当前没有与确认持仓匹配的非实时行情 fixture，未形成方向性结论。"],
     risk_notes: [{
       id: "standard-boundary-notice",
       statement: "本结果不构成投资建议，用户保留最终判断和操作权。",
       is_boundary_notice: true,
     }],
-    recovery_actions: ["恢复实时数据路径，或还原为具有同一行标识和资产代码的体验持仓后重试。"],
+    recovery_actions: ["恢复实时数据路径，或补齐与当前确认持仓匹配的证据后重试。"],
   };
   return {
     analysis,
+    narrative: narrativeFor(analysis),
     rational_analysis_version: RATIONAL_ANALYSIS_SCHEMA_VERSION,
-    source: { kind: "unavailable", is_live: false, label: "无可用实时或同资产 fixture" },
+    source: { kind: "fixture", is_live: false, label: FIXTURE_NON_LIVE_LABEL },
   };
 }
 
@@ -210,20 +236,16 @@ export class FixtureAnalysisExecutor implements AnalysisExecutor {
     input.emit("fetch_structured_data", "running", { message: "逐项匹配非实时示例证据。" });
     resolved = resolveFixtureEvidence(this.scenarioId, input.snapshot);
     if (!resolved) {
-      input.emit("fetch_structured_data", "failed", { message: "没有逐项匹配的同资产 fixture。" });
+      const execution = observationOnlyExecution(input.analysisId, input.snapshot, input.now());
+      input.emit("fetch_structured_data", "succeeded", {
+        covered_count: 0,
+        message: "没有同资产 fixture，保留为观察边界。",
+      });
       stage(input.emit, "discover_and_verify_events", "确认当前无可用事件证据。", () => undefined, 0);
       stage(input.emit, "derive_exposure_and_constraints", "保持未覆盖资产与未知项。", () => undefined, 0);
-      input.emit("form_conclusions_and_advice", "pending", { covered_count: 0 });
-      input.emit("form_conclusions_and_advice", "failed", {
-        covered_count: 0,
-        message: "证据不足，不形成物质性结论。",
-      });
-      input.emit("render_theme_and_validate_output", "pending", { covered_count: 0 });
-      input.emit("render_theme_and_validate_output", "failed", {
-        covered_count: 0,
-        message: "不可用结果不生成主题叙事。",
-      });
-      return unavailableExecution(input.analysisId, input.snapshot, input.now());
+      stage(input.emit, "form_conclusions_and_advice", "形成不含方向性判断的观察边界。", () => undefined, 0);
+      stage(input.emit, "render_theme_and_validate_output", "校验观察边界的主题表达。", () => undefined, 0);
+      return execution;
     }
     input.emit("fetch_structured_data", "succeeded", {
       covered_count: resolved.analysis.coverage.covered_line_ids.length,

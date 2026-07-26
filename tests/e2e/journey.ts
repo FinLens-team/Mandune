@@ -88,7 +88,7 @@ export async function verifyDrawerAndEmptySecondaryViews(
 
 export async function runAnalysisAndOpenResult(page: Page): Promise<Pick<JourneyEvidence, "analysisId" | "cutoff" | "snapshotId">> {
   await page.getByRole("button", { name: "点击兜兜，确认发起今日复盘" }).click();
-  const dialog = page.getByRole("dialog", { name: "按当前输入发起今日复盘？" });
+  const dialog = page.getByRole("dialog", { name: "是否基于当前数据复盘分析？" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("约 90 秒")).toBeVisible();
   await expect(dialog.getByText(/180 秒/)).toBeVisible();
