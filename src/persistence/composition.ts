@@ -66,20 +66,10 @@ export function createDurableServices(config: ServerConfig) {
         ...config.modelFallbacks.map(buildModelGateway),
       ])
     : undefined;
-  // Atlas cards use the separately configured DeepSeek-Pro Ark endpoint when
-  // A2A is enabled. The daily report gateway may point at another model and
-  // must not silently decide the card-generation model.
-  const atlasModelGateway = config.a2a
-    ? createOpenAICompatibleModelGateway({
-        providerName: "volcano-ark-deepseek-pro",
-        baseURL: config.a2a.baseURL,
-        apiKey: config.a2a.apiKey,
-        modelId: config.a2a.modelId,
-        supportsStructuredOutputs: false,
-      })
-    : modelGateway;
-  const atlasCandidateGenerator = atlasModelGateway
-    ? new ModelAtlasCandidateGenerator(atlasModelGateway)
+  // Atlas cards use the same primary DeepSeek gateway and ordered fallbacks as
+  // the daily report, so both outputs share one provider/model contract.
+  const atlasCandidateGenerator = modelGateway
+    ? new ModelAtlasCandidateGenerator(modelGateway)
     : new FixtureAtlasCandidateGenerator();
   const atlas = new AtlasService(new SqliteAtlasStore(database), atlasCandidateGenerator);
   const journeyStore = new SqliteJourneyStore(database);
