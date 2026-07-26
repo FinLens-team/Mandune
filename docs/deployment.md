@@ -1,11 +1,11 @@
 # Deployment
 
-Mandune's maintained production topology is a single Linux host: Nginx terminates HTTPS, one systemd-managed Node.js 22 process listens on `127.0.0.1:8787`, and SQLite stores private state on local disk.
+Mandune's maintained production topology is a single Linux host: Nginx terminates HTTPS, one systemd-managed Node.js 22 process listens on `127.0.0.1:8791`, and SQLite stores private state on local disk.
 
 ```mermaid
 flowchart LR
   User -->|HTTPS 443| Nginx
-  Nginx -->|HTTP 127.0.0.1:8787| Node[Mandune Node service]
+  Nginx -->|HTTP 127.0.0.1:8791| Node[Mandune Node service]
   Node --> SQLite[(SQLite WAL)]
   Timer[systemd purge timer] --> SQLite
 ```
@@ -49,13 +49,15 @@ One-step rollback targets only the immediate predecessor. It first snapshots the
 
 `mandong-purge.timer` runs the compiled maintenance entry point for expired anonymous workspaces. The timer is persistent, randomized, and shares the release lock. The purge service has no network namespace and can write only the application state directory.
 
-## Public Demo
+## Public Sites
 
-The project demo is intended to run at <https://mandune.wuxie233.com>. A live URL is not deployment evidence by itself. Before announcing a release, verify:
+The production site is <https://mandune.wuxie233.com>, and the exhibition display is <https://expo.wuxie233.com>. A live URL is not deployment evidence by itself. Before announcing a release, verify:
 
 ```sh
 curl --fail --silent https://mandune.wuxie233.com/health
 curl --fail --silent https://mandune.wuxie233.com/.well-known/agent-card.json
+curl --fail --silent https://mandune.wuxie233.com/api/metrics/today
+curl --fail --silent https://expo.wuxie233.com/mandune-qr.png --output /tmp/mandune-qr.png
 ```
 
 Run the browser suite against the exact origin:

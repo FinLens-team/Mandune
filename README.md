@@ -3,7 +3,8 @@
   <p><strong>数据有剧情，复盘不无聊。</strong></p>
   <p>把持仓、个人约束和带时点证据，整理成一份能读、能核对、能回看的每日复盘。</p>
   <p>
-    <a href="https://mandune.wuxie233.com"><strong>在线体验</strong></a> ·
+    <a href="https://mandune.wuxie233.com"><strong>正式站</strong></a> ·
+    <a href="https://expo.wuxie233.com"><strong>展会实时数据</strong></a> ·
     <a href="README.en.md">English</a> ·
     <a href="docs/architecture.md">架构</a> ·
     <a href="CONTRIBUTING.md">参与贡献</a>
@@ -38,6 +39,7 @@ Mandune 是 **AdventureX 2026** 黑客松作品，对应 PandaAI「Build the Nex
 | 满懂图鉴 | 从已校验复盘中生成知识卡，保留首次出现与复遇记录 |
 | 多模型网关 | 支持 OpenAI-compatible、Anthropic Messages 和有序 fallback |
 | A2A Agent | 提供公开 Agent Card 与 Bearer 鉴权的 A2A 1.0 深度复盘入口 |
+| 展会实时数据 | 公开展示今日匿名访问、工作区创建与新复盘启动数据，并提供扫码入口 |
 | 自托管 | Node 22 + SQLite 单机部署，附 Nginx、systemd、发布与回滚脚本 |
 
 > [!IMPORTANT]
@@ -50,6 +52,17 @@ Mandune 是 **AdventureX 2026** 黑客松作品，对应 PandaAI「Build the Nex
 </p>
 
 截图使用仓库内的虚构 fixture，不包含真实账户或个人金融数据。
+
+## 展会现场
+
+展会数据屏：<https://expo.wuxie233.com>。左侧显示上海时区当天的实时数据，右侧二维码指向正式站。统计从当天统计功能上线后开始累计，访问按匿名浏览器每日去重。
+
+| 数据 | 口径 |
+| --- | --- |
+| 今日访问 | 每个匿名浏览器每天计 1 次，不保存 IP |
+| 今日服务使用 | 成功创建工作区次数 + 新复盘成功受理次数 |
+
+直接下载体验二维码：<https://expo.wuxie233.com/mandune-qr.png>
 
 ## 工作方式
 
@@ -91,7 +104,7 @@ pnpm build
 pnpm start
 ```
 
-打开 `http://127.0.0.1:8787`。不配置 `MODEL_*` 时会进入 fixture 模式，不需要供应商凭据。
+打开 `http://127.0.0.1:8787`。不配置 `MODEL_*` 时会进入 fixture 模式，不需要供应商凭据。展会屏本地路径为 `http://127.0.0.1:8787/expo`。
 
 开发时分别运行：
 
@@ -139,6 +152,14 @@ E2E 同时覆盖桌面端与 `375 × 812` 移动视口，并检查横向溢出�
 生产部署采用单个 Node 进程、一个本地 SQLite 数据库、systemd 守护和 Nginx HTTPS 反向代理。发布脚本使用不可变 commit 目录、归档白名单、SHA-256 校验、迁移前数据库备份、健康检查和一步回滚。
 
 操作步骤见 [部署文档](docs/deployment.md) 和 [`deploy/README.md`](deploy/README.md)。
+
+今日展会数据 API 为公开聚合接口：
+
+```sh
+curl --fail --silent https://mandune.wuxie233.com/api/metrics/today | jq .
+```
+
+接口只返回当天的访问、工作区创建、新复盘启动和服务使用次数，不返回工作区、持仓、复盘内容或任何身份信息。
 
 ## AdventureX 2026
 
@@ -201,7 +222,7 @@ curl --fail --silent \
 
 ## 项目状态
 
-Mandune 是一个可运行、可自托管的黑客松作品，仍处于早期维护阶段。当前优先事项是：
+Mandune 是一个可运行、可自托管的黑客松作品，正式站已上线并提供展会实时数据页。当前优先事项是：
 
 - 开放手动持仓录入与截图确认流程；
 - 完善自托管部署的可观测性与恢复演练；

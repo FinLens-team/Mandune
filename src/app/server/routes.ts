@@ -30,6 +30,7 @@ export function createJourneyRoutes(input: {
   workspaces: WorkspaceService;
   journey: JourneyAnalysisService;
   history: HistoryService;
+  onReviewStarted?: () => Promise<void>;
 }): Hono {
   const app = new Hono();
   app.use("*", async (c, next) => {
@@ -97,6 +98,7 @@ export function createJourneyRoutes(input: {
     if (!isThemeId(themeId)) return c.json({ error: "invalid_theme" }, 400);
     try {
       const result = await input.journey.start(id, body.experience_source, themeId);
+      if (result.created) await input.onReviewStarted?.();
       return c.json({
         analysis_id: result.run.analysis_id,
         experience_source: result.run.experience_source,

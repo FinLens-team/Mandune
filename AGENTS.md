@@ -37,11 +37,13 @@ pnpm start        # 默认 127.0.0.1:8787
 - 默认 `stream` 分析只调用一次模型；同一次输出包含有边界的理性背面与人物正面，人物正文按快照主题加载定稿 persona skill。Markdown 标题实时投影为等待页进度，两个分区完整校验后才进入结果与历史。
 - A2A 采用 HTTP+JSON 绑定与 ProtoJSON 对象形状；协议 `1.0.x` 对外协商值固定为 `1.0`，请求必须携带 `A2A-Version: 1.0`（缺失按 `0.3` 处理并拒绝）。
 - A2A 结构化行情复用隔离的 PandaAI Python worker 与 SQLite 证据缓存；生产凭据只使用 `PANDA_DATA_USERNAME` / `PANDA_DATA_PASSWORD` 服务端环境变量，worker 子进程内再映射为 SDK 变量。
-- `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store。
+- `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store；`src/metrics/` 与 `src/persistence/metrics-store.ts` 保存上海时区每日匿名访问、工作区创建和新复盘启动聚合。
+- `src/client/ExpoApp.tsx` 与 `src/client/expo.css`：`expo.wuxie233.com` 展会实时数据屏；正式站客户端通过 `POST /api/metrics/visit` 以 HttpOnly 匿名 cookie 做每日浏览器去重，展会页只轮询 `GET /api/metrics/today`。
 - 引导页随机体验持仓与数据管理页共用 `src/portfolio/random-example.ts` 的真实标的字典、方向性仓位和观察日期生成规则；“换一份”排除当前标的，避免原地重复。
 - `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。每次成功复盘的图鉴后置任务最多保存 4 张卡（最多 3 张报告相关专业概念，确定性 35% 概率追加 0-1 张场景梗）；新卡与复遇卡都通过 analysis outcome 回放。
 - `src/theme/`：三主题共享目录与 persona 映射；客户端素材映射独立放在 `src/theme/client.ts`，服务端不得导入媒体资源。
 - `deploy/`：单主机 Nginx/systemd 发布脚本。
+- 正式应用监听 `127.0.0.1:8791`；生产入口为 `https://mandune.wuxie233.com`，展会页复用同一发布包并使用 `https://expo.wuxie233.com`。
 
 ## 红线
 

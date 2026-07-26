@@ -47,8 +47,8 @@ describe("SQLite daily-review evidence cache", () => {
     raw.close();
 
     const { database } = open(dbPath);
-    expect(SQLITE_SCHEMA_VERSION).toBe(5);
-    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 5 });
+    expect(SQLITE_SCHEMA_VERSION).toBe(6);
+    expect(database.prepare("PRAGMA user_version").get()).toEqual({ user_version: 6 });
     expect(database.prepare("SELECT value FROM preserved_atlas_marker").get()).toEqual({ value: "preserved" });
     expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'market_observations'").get())
       .toEqual({ name: "market_observations" });

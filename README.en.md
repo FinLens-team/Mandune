@@ -4,7 +4,8 @@
   <img src="src/client/assets/mandong-logo.webp" width="360" alt="Mandune" />
   <p><strong>A daily portfolio review that keeps the story readable and the evidence inspectable.</strong></p>
   <p>
-    <a href="https://mandune.wuxie233.com"><strong>Live demo</strong></a> ·
+    <a href="https://mandune.wuxie233.com"><strong>Production site</strong></a> ·
+    <a href="https://expo.wuxie233.com"><strong>Live exhibition data</strong></a> ·
     <a href="README.md">简体中文</a> ·
     <a href="docs/architecture.md">Architecture</a> ·
     <a href="CONTRIBUTING.md">Contributing</a>
@@ -28,6 +29,7 @@ Mandune was built for **AdventureX 2026**, in the Portfolio Agent direction of P
 - An Atlas of learning cards generated from validated reviews.
 - OpenAI-compatible and Anthropic Messages gateways with ordered fallbacks.
 - An optional authenticated A2A 1.0 deep-review agent and public Agent Card.
+- A public exhibition dashboard with daily anonymous visit and service-use counters.
 - A single-host Node.js, SQLite, systemd, and Nginx deployment contract.
 
 > [!IMPORTANT]
@@ -40,6 +42,14 @@ Mandune was built for **AdventureX 2026**, in the Portfolio Agent direction of P
 </p>
 
 The screenshot uses fictional repository fixtures and contains no real account data.
+
+## Exhibition Display
+
+The live exhibition dashboard is available at <https://expo.wuxie233.com>. It shows the Shanghai-time daily anonymous visit count, workspace creations, and newly accepted reviews alongside a QR code for the production site.
+
+- Visits are counted once per anonymous browser per day without storing IP addresses.
+- Service use equals successful workspace creations plus newly accepted review starts.
+- QR image download: <https://expo.wuxie233.com/mandune-qr.png>
 
 ## How It Works
 
@@ -75,7 +85,7 @@ pnpm build
 pnpm start
 ```
 
-Open `http://127.0.0.1:8787`. The fixture path works without provider credentials. For development, run `pnpm dev:server` and `pnpm dev` in separate terminals.
+Open `http://127.0.0.1:8787`. The fixture path works without provider credentials. The local exhibition display is at `http://127.0.0.1:8787/expo`. For development, run `pnpm dev:server` and `pnpm dev` in separate terminals.
 
 Configuration details are documented in [docs/configuration.md](docs/configuration.md).
 
@@ -111,13 +121,15 @@ The browser suite covers desktop and a `375 × 812` mobile viewport, runtime fai
 
 Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 
+The public daily metrics API is `GET https://mandune.wuxie233.com/api/metrics/today`. It exposes aggregate counters only and never returns workspace, portfolio, review, or identity data.
+
 ## AdventureX 2026
 
 The PandaAI track asks for a discoverable and callable A2A Remote Agent. Mandune's optional competition module exposes a public Agent Card, an authenticated message endpoint, a bounded tool loop, traceable evidence, explicit unknowns, and a server-owned risk notice. These are implementation facts, not an endorsement by AdventureX, PandaAI, or a financial institution.
 
 ## Project Status
 
-Mandune is a working, self-hostable hackathon project under early-stage maintenance. The next priorities are enabling confirmed manual and screenshot-based input, strengthening operational recovery, expanding evidence adapters, and validating the report boundary with more privacy-safe scenarios.
+Mandune is a working, self-hostable hackathon project with its production site and exhibition dashboard online. The next priorities are enabling confirmed manual and screenshot-based input, strengthening operational recovery, expanding evidence adapters, and validating the report boundary with more privacy-safe scenarios.
 
 ## Contributing
 

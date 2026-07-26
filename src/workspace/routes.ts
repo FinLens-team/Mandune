@@ -20,12 +20,16 @@ function attachLocatorCookie(
 
 export function createWorkspaceRoutes(
   service: WorkspaceService,
-  options: { onDeleted?: (workspaceId: string) => Promise<void> } = {},
+  options: {
+    onCreated?: () => Promise<void>;
+    onDeleted?: (workspaceId: string) => Promise<void>;
+  } = {},
 ): Hono {
   const app = new Hono();
 
   app.post("/", async (c) => {
     const { record, status } = await service.create();
+    await options.onCreated?.();
     attachLocatorCookie(c, record.locator);
     return c.json({ workspace: status }, 201);
   });

@@ -1,0 +1,234 @@
+:root {
+  --expo-ink: #112c28;
+  --expo-ink-soft: #31534b;
+  --expo-paper: #f4f1e8;
+  --expo-paper-deep: #e8e2d4;
+  --expo-coral: #e86e4b;
+  --expo-coral-dark: #b34a32;
+}
+
+.expo-screen {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(25rem, 0.85fr);
+  background: var(--expo-paper);
+  color: var(--expo-ink);
+}
+
+.expo-data {
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 5.5rem) clamp(2rem, 6vw, 7rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.expo-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.expo-logo {
+  width: clamp(9rem, 17vw, 14rem);
+  height: auto;
+  display: block;
+}
+
+.expo-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--expo-ink-soft);
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem);
+  font-weight: 700;
+}
+
+.expo-live span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--expo-coral);
+  box-shadow: 0 0 0 0.25rem rgb(232 110 75 / 16%);
+}
+
+.expo-live.is-online span {
+  background: #23846e;
+  box-shadow: 0 0 0 0.25rem rgb(35 132 110 / 16%);
+}
+
+.expo-title-block {
+  margin-block: clamp(2rem, 7vh, 6rem) clamp(2rem, 5vh, 4rem);
+}
+
+.expo-kicker {
+  margin: 0 0 1.25rem;
+  color: var(--expo-coral-dark);
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.expo-title-block h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: clamp(2.8rem, 5.6vw, 6rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.expo-date {
+  margin: 1.5rem 0 0;
+  color: var(--expo-ink-soft);
+  font-size: clamp(0.9rem, 1.4vw, 1.15rem);
+  font-weight: 600;
+}
+
+.expo-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 3rem);
+  border-top: 2px solid var(--expo-ink);
+  padding-top: clamp(1.25rem, 2vw, 2rem);
+}
+
+.expo-metric {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.expo-metric__label {
+  color: var(--expo-ink-soft);
+  font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+  font-weight: 700;
+}
+
+.expo-metric strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(3rem, 7vw, 7.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.expo-metric--primary strong {
+  color: var(--expo-coral-dark);
+}
+
+.expo-metric__unit {
+  color: var(--expo-ink-soft);
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem);
+}
+
+.expo-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  margin-top: 1.25rem;
+  color: var(--expo-ink-soft);
+  font-size: clamp(0.78rem, 1.1vw, 0.95rem);
+}
+
+.expo-breakdown b {
+  color: var(--expo-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.expo-updated {
+  margin: 1.5rem 0 0;
+  color: var(--expo-ink-soft);
+  font-size: 0.78rem;
+}
+
+.expo-qr-panel {
+  min-height: 100%;
+  padding: clamp(2rem, 5vw, 5.5rem) clamp(2rem, 6vw, 6.5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--expo-ink);
+  color: var(--expo-paper);
+  text-align: center;
+}
+
+.expo-qr-frame {
+  width: min(100%, 34rem);
+  padding: clamp(1rem, 2vw, 1.75rem);
+  background: #fff;
+}
+
+.expo-qr-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.expo-qr-title {
+  margin: clamp(1.75rem, 4vh, 3rem) 0 0;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: clamp(1.4rem, 2.5vw, 2.35rem);
+  line-height: 1.25;
+}
+
+.expo-qr-title strong {
+  color: #f0a184;
+  font-weight: 800;
+}
+
+.expo-qr-url {
+  margin: 1rem 0 0;
+  color: rgb(244 241 232 / 68%);
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 52rem) {
+  .expo-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .expo-data {
+    min-height: 70svh;
+  }
+
+  .expo-qr-panel {
+    min-height: 30svh;
+    padding-block: 3rem 4rem;
+  }
+
+  .expo-qr-frame {
+    width: min(64vw, 20rem);
+  }
+}
+
+@media (max-width: 34rem) {
+  .expo-data {
+    padding: 1.5rem;
+  }
+
+  .expo-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .expo-metric strong {
+    font-size: clamp(3.75rem, 19vw, 6rem);
+  }
+
+  .expo-qr-panel {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expo-live span {
+    box-shadow: none;
+  }
+}

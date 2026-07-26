@@ -169,6 +169,10 @@ export function App(props: AppProps = {}) {
   }, [controller]);
 
   useEffect(() => {
+    void fetch("/api/metrics/visit", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     const active = state.activeAnalysis;
     if (state.phase !== "analysis" || !active || active.terminal) return;
     void controller.refreshAnalysis(active.analysisId);

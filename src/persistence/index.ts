@@ -14,6 +14,7 @@ export { SqliteAtlasStore } from "./atlas-store.js";
 export { SqliteHistoryStore } from "./history-store.js";
 export { SqliteJourneyStore } from "./journey-store.js";
 export { SqliteWorkspaceStore } from "./workspace-store.js";
+export { SqliteMetricsStore } from "./metrics-store.js";
 export {
   SqliteEvidenceCacheStore,
   cacheEntryIsFresh,

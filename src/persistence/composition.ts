@@ -31,6 +31,8 @@ import { SqliteEvidenceCacheStore } from "./evidence-cache-store.js";
 import { SqliteHistoryStore } from "./history-store.js";
 import { SqliteJourneyStore } from "./journey-store.js";
 import { SqliteWorkspaceStore } from "./workspace-store.js";
+import { SqliteMetricsStore } from "./metrics-store.js";
+import { MetricsService } from "../metrics/index.js";
 
 export function createDurableServices(config: ServerConfig) {
   const database = openSqliteDatabase({
@@ -40,6 +42,7 @@ export function createDurableServices(config: ServerConfig) {
   });
   const workspaces = new WorkspaceService(new SqliteWorkspaceStore(database));
   const history = new HistoryService(new SqliteHistoryStore(database));
+  const metrics = new MetricsService(new SqliteMetricsStore(database));
   const buildModelGateway = (model: NonNullable<ServerConfig["model"]>) =>
     model.protocol === "anthropic_messages"
       ? createAnthropicMessagesModelGateway({
@@ -123,6 +126,7 @@ export function createDurableServices(config: ServerConfig) {
     database,
     workspaces,
     history,
+    metrics,
     atlas,
     evidenceCache,
     journey,
