@@ -238,6 +238,18 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
   });
 
+  it("keeps very long model reports in normal document flow", () => {
+    const base = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const input = {
+      ...base,
+      aiText: `${"# 长报告\n\n正文段落。\n\n".repeat(300)}`,
+      narrative: undefined,
+    };
+    const markup = renderToStaticMarkup(createElement(LongCard, { input }));
+
+    expect(markup).toContain('data-long-content="true"');
+  });
+
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {
     const stylesheet = readFileSync("src/features/long-card/LongCard.css", "utf8");
     expect(stylesheet).toContain("var(--content-reading)");

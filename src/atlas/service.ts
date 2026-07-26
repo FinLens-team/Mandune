@@ -16,7 +16,10 @@ import {
 } from "./types.js";
 import { decideAtlasDuplicate, normalizeAtlasText, validateAtlasCandidate } from "./validation.js";
 
-export const ATLAS_DEADLINE_MS = 15_000;
+// Atlas runs after the report is already persisted. Give the model gateway
+// enough time to finish a small structured candidate batch without blocking
+// the report request itself.
+export const ATLAS_DEADLINE_MS = 45_000;
 
 function digest(value: string): Buffer {
   return createHash("sha256").update(value).digest();

@@ -107,6 +107,23 @@
   pointer-events: none;
 }
 
+/* Very long model reports must stay in normal document flow. Keeping an
+   entire mobile report in one preserve-3d compositing layer can silently
+   clip the lower part of the face on mobile GPUs. */
+.mandong-long-card[data-long-content="true"] .mandong-long-card__motion {
+  transform: none;
+  transition: none;
+}
+
+.mandong-long-card[data-long-content="true"] .mandong-long-card__face {
+  transform: none;
+}
+
+.mandong-long-card[data-long-content="true"] .mandong-long-card__face[aria-hidden="true"] {
+  display: none;
+  position: static;
+}
+
 .mandong-long-card__motion:not([data-transitioning="true"]) .mandong-long-card__face[aria-hidden="true"] {
   visibility: hidden;
 }

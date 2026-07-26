@@ -626,6 +626,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const narrativeFaceId = `${id}-narrative-face`;
   const evidenceFaceId = `${id}-evidence-face`;
   const gestureHintId = `${id}-gesture-hint`;
+  const longContent = Math.max(aiText?.length ?? 0, aiThemeText?.length ?? 0) > 4_000;
 
   useLayoutEffect(() => {
     const pending = pendingScrollRestoreRef.current;
@@ -729,6 +730,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
       data-theme={theme.id}
+      data-long-content={longContent || undefined}
       data-reduced-motion={reducedMotion || undefined}
       aria-label="每日复盘报告"
       style={themeCssVariables(theme.id)}
