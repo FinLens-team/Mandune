@@ -95,6 +95,8 @@ describe("atlas accessible card UI", () => {
     expect(source).toContain("本次图鉴");
     expect(source).toContain("再次遇见");
     expect(source).toContain("CLOSE_SWIPE_PX");
+    expect(source).toContain("atlas-reveal-dialog__close");
+    expect(source).toContain("atlas-reveal-dialog__lead");
   });
 
   it("marks meme cards as generated entertainment rather than financial knowledge", async () => {
@@ -112,7 +114,7 @@ describe("atlas accessible card UI", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain(".atlas-card__disclaimer");
     expect(css).toContain("font-size: var(--font-size-xs)");
-    expect(css).toContain("max-height: min(82dvh, 48rem)");
+    expect(css).toContain("max-height: min(78dvh, 44rem)");
     expect(css).not.toContain(".atlas-page {\n  width: min(100%, 74rem);\n  min-height: 100dvh");
   });
 

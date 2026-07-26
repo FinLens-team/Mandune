@@ -430,11 +430,10 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(calc(100% - var(--space-6)), 42rem);
-  max-height: min(82dvh, 48rem);
+  max-height: min(78dvh, 44rem);
   margin-inline: auto;
   overflow: hidden;
   border: 1px solid var(--color-border-strong);
-  border-top: 4px solid var(--theme-accent);
   border-radius: var(--radius-md);
   background: var(--color-bg-letter);
   box-shadow: var(--shadow-overlay);
@@ -450,46 +449,84 @@
 }
 
 .atlas-reveal-dialog__handle {
-  width: 2.75rem;
-  height: 0.25rem;
-  margin: var(--space-2) auto 0;
+  width: 2.5rem;
+  height: 3px;
+  margin: var(--space-2) auto;
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
 }
 
 .atlas-reveal-dialog__sheet > header {
-  padding: var(--space-4) var(--space-5);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
+  background: color-mix(in srgb, var(--theme-surface) 28%, var(--color-bg-letter));
 }
 
-.atlas-reveal-dialog__sheet > header > p:first-child {
-  margin: 0 0 var(--space-1);
-  color: var(--theme-accent);
+.atlas-reveal-dialog__heading {
+  min-width: 0;
+}
+
+.atlas-reveal-dialog__heading > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
   font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-weight: 700;
+}
+
+.atlas-reveal-dialog__heading > p span {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+}
+
+.atlas-reveal-dialog__heading > p span:first-child {
+  color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--color-bg-surface));
 }
 
 .atlas-reveal-dialog__sheet h2 {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-2xl);
+  line-height: 1.25;
+  text-wrap: balance;
 }
 
-.atlas-reveal-dialog__sheet > header > p:last-child {
-  margin: var(--space-2) 0 0;
-  color: var(--color-text-secondary);
-  line-height: 1.55;
+.atlas-reveal-dialog__close {
+  border-color: transparent;
+  background: transparent;
 }
 
 .atlas-reveal-dialog__content {
   min-height: 0;
-  padding: var(--space-2) var(--space-5) var(--space-5);
+  padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .atlas-reveal-dialog__content section {
-  padding-top: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.atlas-reveal-dialog__content section:last-child {
+  border-bottom: 0;
+}
+
+.atlas-reveal-dialog__content .atlas-reveal-dialog__lead {
+  margin-inline: calc(var(--space-4) * -1);
+  padding: var(--space-4);
+  border-bottom-color: color-mix(in srgb, var(--theme-accent) 24%, var(--color-border-subtle));
+  background: color-mix(in srgb, var(--theme-surface) 18%, var(--color-bg-letter));
 }
 
 .atlas-reveal-dialog__content h3,
@@ -498,22 +535,25 @@
 }
 
 .atlas-reveal-dialog__content h3 {
-  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
 }
 
 .atlas-reveal-dialog__content p {
-  margin-top: var(--space-1);
+  max-width: 68ch;
+  margin-top: var(--space-2);
   color: var(--color-text-secondary);
-  line-height: 1.65;
+  font-size: var(--font-size-sm);
+  line-height: 1.75;
+  text-wrap: pretty;
 }
 
 .atlas-reveal-dialog__content blockquote {
-  margin: var(--space-4) 0 0;
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--theme-accent);
+  margin: 0;
   font-family: var(--font-serif);
   font-size: var(--font-size-lg);
-  line-height: 1.55;
+  line-height: 1.65;
 }
 
 @keyframes atlas-banner-enter {
@@ -555,6 +595,12 @@
   .atlas-card { min-height: 29rem; }
   .atlas-reveal { width: 100%; }
   .atlas-reveal__banner { padding-inline: var(--space-3); }
+  .atlas-reveal-dialog__sheet {
+    inset-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
+    bottom: max(var(--space-2), env(safe-area-inset-bottom));
+    width: min(calc(100% - var(--space-4)), 42rem);
+    max-height: 76dvh;
+  }
   .atlas-delete-dialog > div { flex-direction: column-reverse; }
   .atlas-delete-dialog .ui-button { width: 100%; }
 }

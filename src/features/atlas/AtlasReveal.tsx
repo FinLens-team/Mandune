@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import type { AtlasCardDetail, AtlasOutcomeCard } from "../../atlas/index.js";
 import type { AtlasGateway } from "../../app/client/gateway.js";
+import { IconButton } from "../../client/ui/index.js";
 import { themeCssVariables } from "../../theme/client.js";
 
 const CLOSE_SWIPE_PX = 72;
@@ -84,25 +85,24 @@ function AtlasRevealDetail({
         onPointerUp={pointerUp}
       >
         <div aria-hidden="true" className="atlas-reveal-dialog__handle" />
-        <header
-          aria-label={`收起${card.canonical_name}详情`}
-          onClick={onClose}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              onClose();
-            }
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <p>{item.disposition === "new_card" ? "本次获得" : "再次遇见"} · {card.kind === "professional_term" ? "专业概念" : "场景梗"}</p>
-          <h2 id="atlas-reveal-detail-heading">{card.canonical_name}</h2>
-          <p>{item.encounterText}</p>
+        <header>
+          <div className="atlas-reveal-dialog__heading">
+            <p>
+              <span>{item.disposition === "new_card" ? "本次获得" : "再次遇见"}</span>
+              <span>{card.kind === "professional_term" ? "专业概念" : "场景梗"}</span>
+            </p>
+            <h2 id="atlas-reveal-detail-heading">{card.canonical_name}</h2>
+          </div>
+          <IconButton
+            className="atlas-reveal-dialog__close"
+            icon={X}
+            label={`收起${card.canonical_name}详情`}
+            onClick={onClose}
+          />
         </header>
         {card.professional ? (
           <div className="atlas-reveal-dialog__content">
-            <section><h3>白话解释</h3><p>{card.professional.plain_explanation}</p></section>
+            <section className="atlas-reveal-dialog__lead"><h3>白话解释</h3><p>{card.professional.plain_explanation}</p></section>
             <section><h3>今天为什么遇见</h3><p>{item.encounterText || card.professional.why_today}</p></section>
             <section><h3>与本次复盘的关系</h3><p>{card.professional.relation}</p></section>
             <section><h3>常见误解</h3><p>{card.professional.misconception}</p></section>
@@ -110,7 +110,7 @@ function AtlasRevealDetail({
           </div>
         ) : (
           <div className="atlas-reveal-dialog__content">
-            <blockquote>{card.meme?.meme_text}</blockquote>
+            <blockquote className="atlas-reveal-dialog__lead">{card.meme?.meme_text}</blockquote>
             <section><h3>这个梗在说什么</h3><p>{card.meme?.plain_explanation}</p></section>
           </div>
         )}
