@@ -500,11 +500,6 @@
   text-wrap: balance;
 }
 
-.atlas-reveal-dialog__close {
-  border-color: transparent;
-  background: transparent;
-}
-
 .atlas-reveal-dialog__content {
   min-height: 0;
   padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));

@@ -95,7 +95,6 @@ describe("atlas accessible card UI", () => {
     expect(source).toContain("本次图鉴");
     expect(source).toContain("再次遇见");
     expect(source).toContain("CLOSE_SWIPE_PX");
-    expect(source).toContain("atlas-reveal-dialog__close");
     expect(source).toContain("atlas-reveal-dialog__lead");
   });
 

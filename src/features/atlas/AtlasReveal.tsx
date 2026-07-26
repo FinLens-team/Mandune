@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { AtlasCardDetail, AtlasOutcomeCard } from "../../atlas/index.js";
 import type { AtlasGateway } from "../../app/client/gateway.js";
-import { IconButton } from "../../client/ui/index.js";
 import { themeCssVariables } from "../../theme/client.js";
 
 const CLOSE_SWIPE_PX = 72;
@@ -93,12 +92,6 @@ function AtlasRevealDetail({
             </p>
             <h2 id="atlas-reveal-detail-heading">{card.canonical_name}</h2>
           </div>
-          <IconButton
-            className="atlas-reveal-dialog__close"
-            icon={X}
-            label={`收起${card.canonical_name}详情`}
-            onClick={onClose}
-          />
         </header>
         {card.professional ? (
           <div className="atlas-reveal-dialog__content">
