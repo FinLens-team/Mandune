@@ -27,6 +27,12 @@ describe("A2A server config", () => {
     expect(loadServerConfig(baseEnv()).a2a).toBeUndefined();
   });
 
+  it("rejects a production process without a model gateway", () => {
+    expect(() => loadServerConfig({ ...baseEnv(), NODE_ENV: "production" })).toThrow(
+      /Production model configuration required/u,
+    );
+  });
+
   it("uses the fixed Volcano Ark DeepSeek-Pro endpoint with independent credentials", () => {
     const config = loadServerConfig({
       ...baseEnv(),

@@ -52,7 +52,7 @@ MANDONG_ANALYSIS_MODE=stream
 | --- | --- | --- |
 | unset / `stream` | `MODEL_*` | Public market evidence plus one streaming text generation |
 | `v2` | `MODEL_*`, PandaAI runtime, Bocha credential | Strict evidence cache, deterministic ReviewPacket, structured generation |
-| fixture | no `MODEL_*` | Deterministic local/test result, clearly marked non-live |
+| fixture | no `MODEL_*` outside production | Deterministic local/test result; production rejects missing model config |
 
 Strict V2 variables:
 

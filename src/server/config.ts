@@ -80,6 +80,11 @@ export function loadServerConfig(
   }
 
   const model = loadModelConfig(env);
+  if (env.NODE_ENV === "production" && !model) {
+    throw new Error(
+      "Production model configuration required: MODEL_BASE_URL, MODEL_API_KEY and MODEL_ID.",
+    );
+  }
   const analysisMode = loadAnalysisMode(env);
   const rawDeadline = env.MANDONG_ANALYSIS_DEADLINE_MS?.trim();
   const analysisDeadlineMs = rawDeadline ? Number(rawDeadline) : 180_000;
@@ -168,8 +173,10 @@ function loadAnalysisMode(env: NodeJS.ProcessEnv): AnalysisMode {
 
 /**
  * Reads the server-only model gateway configuration. Returns undefined when the
- * required MODEL_* variables are absent so the runtime falls back to fixtures.
- * These values must never enter VITE_*, the browser bundle, logs, or /health.
+ * required MODEL_* variables are absent so local/test runtimes can use the
+ * deterministic fixture executor. Production rejects this absence before
+ * opening storage or binding a port. These values must never enter VITE_*,
+ * the browser bundle, logs, or /health.
  */
 function loadModelConfig(env: NodeJS.ProcessEnv): ModelGatewayConfig | undefined {
   return loadModelConfigWithPrefix(env, "MODEL_");
