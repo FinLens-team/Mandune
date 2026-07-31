@@ -210,9 +210,20 @@ export function App(props: AppProps = {}) {
     return () => window.cancelAnimationFrame(frame);
   }, [state.phase]);
 
-  // While booting, render nothing (bootstrap is near-instant).
   if (state.phase === "booting") {
-    return null;
+    return (
+      <div className="journey-state-page journey-boot">
+        <BrandBanner />
+        <main className="journey-boot__content" id="main" role="status" aria-live="polite">
+          <div className="journey-boot__mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p>正在连接服务</p>
+        </main>
+      </div>
+    );
   }
 
   if (state.phase === "workspace_error") {
