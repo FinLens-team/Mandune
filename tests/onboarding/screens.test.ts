@@ -19,8 +19,9 @@ interface OnboardingModule {
   SourceSelectionScreen: ComponentType<{
     placeholderMessage: string | null;
     onBack: () => void;
+    onChooseManual: () => void;
     onChooseRandom: () => void;
-    onPlaceholder: (source: "manual" | "screenshot") => void;
+    onChooseScreenshot: () => void;
   }>;
   ExperienceSummaryScreen: ComponentType<{
     identity: DemoExperienceIdentity;
@@ -70,7 +71,7 @@ describe("S0-S3 onboarding screens", () => {
     }));
 
     expect(html.match(/onboarding-theme-card/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(html.match(/<img/g)).toHaveLength(4);
+    expect(html.match(/<img/g)).toHaveLength(8);
     expect(html).toContain("我是龙");
     expect(html).toContain("查看鸿运当头主题预览，暂未开放");
     expect(html).toContain("选择我是龙主题");
@@ -95,12 +96,13 @@ describe("S0-S3 onboarding screens", () => {
     expect(html).toContain("吉星高照");
   });
 
-  it("keeps manual and screenshot sources as honest inline placeholders", async () => {
+  it("offers manual entry and local OCR as available initialization paths", async () => {
     const { SourceSelectionScreen } = await loadOnboarding();
     const html = renderToStaticMarkup(createElement(SourceSelectionScreen, {
       onBack: noop,
+      onChooseManual: noop,
       onChooseRandom: noop,
-      onPlaceholder: noop,
+      onChooseScreenshot: noop,
       placeholderMessage: null,
     }));
 
@@ -108,9 +110,9 @@ describe("S0-S3 onboarding screens", () => {
     expect(html).toContain("生成体验持仓");
     expect(html).toContain("手动填写持仓");
     expect(html).toContain("截图识别持仓");
-    expect(html.match(/即将开放/g)).toHaveLength(2);
-    expect(html).not.toContain('type="file"');
-    expect(html).not.toContain("<form");
+    expect(html).toContain("一次添加多项持仓和个人偏好");
+    expect(html).toContain("本机 OCR 识别后逐项校对");
+    expect(html).not.toContain("即将开放");
   });
 
   it("shows the random instrument holding, its draft state, and four constraints", async () => {
@@ -131,7 +133,7 @@ describe("S0-S3 onboarding screens", () => {
     expect(html).toContain("持仓尺度");
     expect(html).toContain("数据状态");
     expect(html).toContain("等待复盘");
-    expect(html).toContain("数据日期");
+    expect(html).toContain("持仓确认日");
     expect(html).toContain("数据来源");
     expect(html).toContain("随机生成");
     expect(html).toContain("本次模拟偏好");
@@ -180,6 +182,22 @@ describe("onboarding responsive and motion styles", () => {
     expect(stylesheet).toContain("height: calc(5rem + env(safe-area-inset-bottom));");
     expect(stylesheet).toContain("touch-action: manipulation;");
     expect(stylesheet).not.toContain("translate3d(0, 70vh, 0)");
+  });
+
+  it("keeps all theme cards in a responsive grid with an independent detail row", () => {
+    const finalContract = stylesheet.split("/* Final theme grid contract:")[1] ?? "";
+    expect(finalContract).toContain("grid-template-columns: repeat(4, minmax(0, 1fr));");
+    expect(finalContract).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(finalContract).toContain("grid-template-rows: auto auto auto auto;");
+    expect(finalContract).toContain("position: relative;");
+    expect(finalContract).toContain("z-index: auto;");
+    expect(finalContract).not.toContain("var(--card-x)");
+  });
+
+  it("shows the complete portrait artwork without cropping its edges", () => {
+    expect(stylesheet).toContain("aspect-ratio: 732 / 1244;");
+    expect(stylesheet).toContain("object-fit: contain;");
+    expect(stylesheet).toContain(".onboarding-theme-card.is-focused .onboarding-theme-card__artwork img {\n  transform: none;");
   });
 
   it("supports 375, 768, 1280 and reduced-motion layouts without viewport-scaled type", () => {

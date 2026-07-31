@@ -3,11 +3,37 @@ import {
   EphemeralImageStore,
   MockMultimodalExtractor,
   ScreenshotExtractionService,
+  candidatesFromOcrText,
 } from "../../src/extraction/index.js";
 
 function encode(text: string): Uint8Array {
   return new TextEncoder().encode(text);
 }
+
+describe("simple OCR parsing", () => {
+  it("maps known stock and ETF codes, captures scale hints, and deduplicates symbols", () => {
+    const candidates = candidatesFromOcrText([
+      "贵州茅台 600519 仓位 18.5%",
+      "沪深300ETF 510300 2400份",
+      "重复 600519 10%",
+    ].join("\n"));
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]).toMatchObject({
+      name: "贵州茅台",
+      symbol: "600519.SH",
+      asset_class: "a_share",
+    });
+    expect(candidates[1]).toMatchObject({
+      symbol: "510300.SH",
+      asset_class: "etf",
+    });
+    expect(candidates[1]?.size_basis).toContain("2400份");
+  });
+
+  it("returns no draft candidates when no supported six-digit code is present", () => {
+    expect(candidatesFromOcrText("总资产 12345.67 今日收益 88.00")).toEqual([]);
+  });
+});
 
 describe("screenshot extraction deletion guarantees", () => {
   it("requires consent and never keeps images without consent path", async () => {

@@ -7,20 +7,29 @@ import type { AtlasService } from "./service.js";
 const UNAUTHORIZED = { error: "unauthorized" } as const;
 const IDENTIFIER = /^[A-Za-z0-9_-]{1,160}$/;
 
-async function workspaceId(c: Context, workspaces: WorkspaceService): Promise<string | null> {
-  const access = await workspaces.authorize(getCookie(c, WORKSPACE_COOKIE));
+async function workspaceId(
+  c: Context,
+  workspaces: WorkspaceService,
+  cookieName: string,
+): Promise<string | null> {
+  const access = await workspaces.authorize(getCookie(c, cookieName));
   return access.ok ? access.workspace.workspace_id : null;
 }
 
-export function createAtlasRoutes(input: { workspaces: WorkspaceService; atlas: AtlasService }): Hono {
+export function createAtlasRoutes(input: {
+  workspaces: WorkspaceService;
+  atlas: AtlasService;
+  cookieName?: string;
+}): Hono {
   const app = new Hono();
+  const cookieName = input.cookieName ?? WORKSPACE_COOKIE;
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
     await next();
   });
 
   app.get("/outcomes/:analysisId", async (c) => {
-    const id = await workspaceId(c, input.workspaces);
+    const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
     const analysisId = c.req.param("analysisId");
     if (!IDENTIFIER.test(analysisId)) return c.json({ error: "not_found" }, 404);
@@ -29,13 +38,13 @@ export function createAtlasRoutes(input: { workspaces: WorkspaceService; atlas: 
   });
 
   app.get("/cards", async (c) => {
-    const id = await workspaceId(c, input.workspaces);
+    const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
     return c.json({ cards: await input.atlas.listCards(id) });
   });
 
   app.get("/cards/:cardId", async (c) => {
-    const id = await workspaceId(c, input.workspaces);
+    const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
     const cardId = c.req.param("cardId");
     if (!IDENTIFIER.test(cardId)) return c.json({ error: "not_found" }, 404);
@@ -44,7 +53,7 @@ export function createAtlasRoutes(input: { workspaces: WorkspaceService; atlas: 
   });
 
   app.delete("/cards/:cardId", async (c) => {
-    const id = await workspaceId(c, input.workspaces);
+    const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
     const cardId = c.req.param("cardId");
     if (!IDENTIFIER.test(cardId)) return c.json({ error: "not_found" }, 404);

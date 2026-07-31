@@ -14,11 +14,13 @@ import {
 } from "../../src/app/client/index.js";
 import type { ThemeId } from "../../src/theme/index.js";
 
+
 interface OnboardingScreensModule {
   SourceSelectionScreen: ComponentType<{
     onBack: () => void;
+    onChooseManual: () => void;
     onChooseRandom: () => void;
-    onPlaceholder: (source: "manual" | "screenshot") => void;
+    onChooseScreenshot: () => void;
     placeholderMessage: string | null;
     titleRef: RefObject<HTMLHeadingElement | null>;
   }>;
@@ -39,6 +41,7 @@ async function loadOnboardingScreens(): Promise<OnboardingScreensModule> {
 }
 
 describe("journey identity and pure state", () => {
+
   it("converts the confirmed random identity without replacing line, symbol, constraints, or labels", () => {
     const identity = createDemoExperienceFromSeed(
       42,
@@ -56,7 +59,7 @@ describe("journey identity and pure state", () => {
       expect(line).toMatchObject({
         line_id: holding.line_id,
         symbol: holding.symbol,
-        market: holding.market,
+        ...(holding.market ? { market: holding.market } : {}),
         size_basis: holding.size_basis,
         observation_date: holding.observation_date,
         entry_method: "example",
@@ -176,7 +179,7 @@ describe("journey local preferences", () => {
 });
 
 describe("ordinary-entry theme selection", () => {
-  it("offers three themes while manual and screenshot sources stay disabled", async () => {
+  it("offers seven themes with manual and local OCR initialization enabled", async () => {
     const { SourceSelectionScreen, ThemeSelectionScreen } = await loadOnboardingScreens();
     const theme = renderToStaticMarkup(createElement(ThemeSelectionScreen, {
       onContinue: vi.fn(),
@@ -186,8 +189,9 @@ describe("ordinary-entry theme selection", () => {
     }));
     const source = renderToStaticMarkup(createElement(SourceSelectionScreen, {
       onBack: vi.fn(),
+      onChooseManual: vi.fn(),
       onChooseRandom: vi.fn(),
-      onPlaceholder: vi.fn(),
+      onChooseScreenshot: vi.fn(),
       placeholderMessage: null,
       titleRef: { current: null },
     }));
@@ -196,9 +200,13 @@ describe("ordinary-entry theme selection", () => {
     expect(theme).toContain("我是龙");
     expect(theme).toContain("吉星高照");
     expect(theme).toContain("孙哥");
+    expect(theme).toContain("周礼");
+    expect(theme).toContain("贴吧老哥");
+    expect(theme).toContain("男魅魔");
+    expect(theme).toContain("女魅魔");
     expect(source).toContain("手动填写持仓");
     expect(source).toContain("截图识别持仓");
-    expect(source.match(/即将开放/g)).toHaveLength(2);
-    expect(source).toContain("手动填写与截图识别将在后续版本开放");
+    expect(source).not.toContain("即将开放");
+    expect(source).toContain("可手动录入多项持仓，也可用本机 OCR 生成待确认草稿");
   });
 });

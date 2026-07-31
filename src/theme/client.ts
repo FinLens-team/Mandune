@@ -8,6 +8,10 @@ import sungeRest from "../client/assets/mascot/sunge/rest.webp";
 import nailongThemeCard from "../client/assets/themes/theme-card-2.webp";
 import doudouThemeCard from "../client/assets/themes/theme-card-3.webp";
 import sungeThemeCard from "../client/assets/themes/theme-card-4.webp";
+import femaleSuccubusThemeCard from "../client/assets/themes/theme-card-female-succubus.webp";
+import maleSuccubusThemeCard from "../client/assets/themes/theme-card-male-succubus.webp";
+import tiebaThemeCard from "../client/assets/themes/theme-card-tieba.webp";
+import zhouliThemeCard from "../client/assets/themes/theme-card-zhouli.webp";
 import { themeForId, type ThemeId } from "./catalog.js";
 
 export interface ThemeClientAssets {
@@ -36,6 +40,26 @@ export const THEME_CLIENT_ASSETS: Readonly<Record<ThemeId, ThemeClientAssets>> =
     selection: { src: sungeThemeCard, width: 730, height: 1244 },
     rest: { src: sungeRest, width: 512, height: 512 },
     progressAnimation: { kind: "video", src: sungeIntro },
+  },
+  zhouli: {
+    home: { src: zhouliThemeCard, width: 732, height: 1244 },
+    selection: { src: zhouliThemeCard, width: 732, height: 1244 },
+    rest: { src: zhouliThemeCard, width: 732, height: 1244 },
+  },
+  tieba_laoge: {
+    home: { src: tiebaThemeCard, width: 732, height: 1244 },
+    selection: { src: tiebaThemeCard, width: 732, height: 1244 },
+    rest: { src: tiebaThemeCard, width: 732, height: 1244 },
+  },
+  male_succubus: {
+    home: { src: maleSuccubusThemeCard, width: 732, height: 1244 },
+    selection: { src: maleSuccubusThemeCard, width: 732, height: 1244 },
+    rest: { src: maleSuccubusThemeCard, width: 732, height: 1244 },
+  },
+  female_succubus: {
+    home: { src: femaleSuccubusThemeCard, width: 732, height: 1244 },
+    selection: { src: femaleSuccubusThemeCard, width: 732, height: 1244 },
+    rest: { src: femaleSuccubusThemeCard, width: 732, height: 1244 },
   },
 };
 

@@ -92,7 +92,7 @@ export function WorkspaceShell({
   themeId = "eastern_observation",
 }: WorkspaceShellProps) {
   const [uncontrolledDraft, setUncontrolledDraft] = useState(
-    () => initialDraft ?? createExampleDraft(),
+    () => initialDraft ?? controlledDraft ?? createExampleDraft(),
   );
   const [view, setView] = useState<WorkspaceView>(initialView ?? "home");
   const [drawerOpen, setDrawerOpen] = useState(false);

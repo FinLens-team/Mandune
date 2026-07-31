@@ -26,6 +26,7 @@ import {
 import type { ServerConfig } from "./config.js";
 import { createA2ARoutes, type DeepReviewRunner } from "../a2a/index.js";
 import { createMetricsRoutes, MetricsService } from "../metrics/index.js";
+import { createExtractionRoutes } from "../extraction/index.js";
 
 const startedAt = Date.now();
 
@@ -34,7 +35,8 @@ function resolveClientRoot(moduleDir: string): string {
 }
 
 export function createApp(
-  config: Pick<ServerConfig, "version"> & Partial<Pick<ServerConfig, "port">>,
+  config: Pick<ServerConfig, "version"> &
+    Partial<Pick<ServerConfig, "port" | "workspaceCookie">>,
   workspaceService: WorkspaceService = new WorkspaceService(),
   backend?: {
     history: HistoryService;
@@ -86,17 +88,27 @@ export function createApp(
   }
 
   app.route("/api/metrics", createMetricsRoutes(metrics));
+  app.route("/api", createExtractionRoutes({
+    workspaces: workspaceService,
+    ...(config.workspaceCookie ? { cookieName: config.workspaceCookie.name } : {}),
+  }));
   app.route("/api/workspaces", createWorkspaceRoutes(workspaceService, {
     onCreated: async () => { await metrics.increment("workspace_creations"); },
     onDeleted: async (workspaceId) => { await atlas.eraseWorkspace(workspaceId); },
+    ...(config.workspaceCookie ? { cookie: config.workspaceCookie } : {}),
   }));
   app.route("/api", createJourneyRoutes({
     workspaces: workspaceService,
     journey,
     history,
     onReviewStarted: async () => { await metrics.increment("review_starts"); },
+    ...(config.workspaceCookie ? { cookieName: config.workspaceCookie.name } : {}),
   }));
-  app.route("/api/atlas", createAtlasRoutes({ workspaces: workspaceService, atlas }));
+  app.route("/api/atlas", createAtlasRoutes({
+    workspaces: workspaceService,
+    atlas,
+    ...(config.workspaceCookie ? { cookieName: config.workspaceCookie.name } : {}),
+  }));
 
   // Unknown /api/* must not fall through to SPA HTML (would look like enumeration).
   app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));

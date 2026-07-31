@@ -48,5 +48,17 @@ describe("daily review V2 server config", () => {
     const config = loadServerConfig(BASE);
     expect(config.model).toBeUndefined();
     expect(config.bochaApiKey).toBeUndefined();
+    expect(config.workspaceCookie).toEqual({ name: "md_workspace", secure: false });
+  });
+
+  it("keeps the __Host Secure cookie contract in production", () => {
+    const config = loadServerConfig({
+      ...BASE,
+      NODE_ENV: "production",
+      MODEL_BASE_URL: "https://models.example.test/v1",
+      MODEL_API_KEY: "test-secret-value",
+      MODEL_ID: "test-model",
+    });
+    expect(config.workspaceCookie).toEqual({ name: "__Host-md_workspace", secure: true });
   });
 });

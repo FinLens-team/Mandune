@@ -703,6 +703,49 @@
   order: 0;
 }
 
+.onboarding-page--editor {
+  width: min(100%, 72rem);
+}
+
+.onboarding-page--editor .portfolio-editor {
+  width: 100%;
+}
+
+.onboarding-import {
+  width: min(100%, 44rem);
+}
+
+.onboarding-consent-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-block: var(--space-5);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.onboarding-consent-row input {
+  flex: 0 0 auto;
+  margin-top: 0.3rem;
+}
+
+.onboarding-import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.onboarding-import .file-btn {
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.onboarding-import .file-btn.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @keyframes onboarding-logo-enter {
   from {
     opacity: 0;
@@ -1175,12 +1218,12 @@
 .onboarding-theme-card__artwork img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .onboarding-theme-card.is-focused .onboarding-theme-card__artwork img {
-  transform: scale(1.06);
+  transform: none;
 }
 
 .onboarding-theme-card--locked .onboarding-theme-card__artwork img {
@@ -1236,7 +1279,7 @@
 @keyframes onboarding-card-deal {
   from {
     opacity: 0;
-    transform: translate3d(var(--card-x), calc(var(--card-y) + 32px), 0) rotate(var(--card-r)) scale(0.94);
+    transform: translateY(12px);
   }
 }
 
@@ -1564,5 +1607,152 @@
       translate3d(var(--card-x), calc(var(--card-y) * var(--fan-y-scale)), 0)
       rotate(var(--card-r))
       scale(var(--card-scale));
+  }
+}
+
+/* Final theme grid contract: must remain after legacy motion compatibility rules. */
+.onboarding-theme-screen {
+  grid-template-rows: auto auto auto auto;
+  gap: var(--space-5);
+  overflow: visible;
+}
+
+.onboarding-theme-screen .onboarding-theme-stage {
+  width: 100%;
+  min-height: 0;
+  display: block;
+  perspective: none;
+}
+
+.onboarding-theme-screen .onboarding-theme-deck,
+.onboarding--keyboard .onboarding-theme-deck,
+.onboarding--reduced-motion .onboarding-theme-deck {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  place-items: stretch;
+  gap: var(--space-4);
+}
+
+.onboarding-theme-screen .onboarding-theme-card,
+.onboarding-theme-screen .onboarding-theme-card--available,
+.onboarding-theme-screen .onboarding-theme-card--locked,
+.onboarding-theme-screen .onboarding-theme-card.is-focused,
+.onboarding--keyboard .onboarding-theme-card,
+.onboarding--reduced-motion .onboarding-theme-card {
+  position: relative;
+  z-index: auto;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  aspect-ratio: 732 / 1244;
+  padding: 0;
+  overflow: hidden;
+  grid-template-columns: none;
+  grid-template-rows: minmax(0, 1fr);
+  transform: none;
+}
+
+.onboarding-theme-screen .onboarding-theme-card.is-focused {
+  transform: translateY(-4px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .onboarding-theme-screen .onboarding-theme-card:not(.is-focused):hover {
+    transform: translateY(-2px);
+  }
+}
+
+.onboarding-theme-screen .onboarding-theme-detail {
+  position: relative;
+  z-index: auto;
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 62rem) {
+  .onboarding-theme-screen .onboarding-theme-deck,
+  .onboarding--keyboard .onboarding-theme-deck,
+  .onboarding--reduced-motion .onboarding-theme-deck {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .onboarding-theme-screen {
+    padding: var(--space-4);
+    grid-template-rows: auto auto auto auto;
+    gap: var(--space-4);
+  }
+
+  .onboarding-theme-screen .onboarding-theme-stage,
+  .onboarding-theme-screen .onboarding-theme-deck,
+  .onboarding--keyboard .onboarding-theme-deck,
+  .onboarding--reduced-motion .onboarding-theme-deck {
+    min-height: 0;
+  }
+
+  .onboarding-theme-screen .onboarding-theme-deck,
+  .onboarding--keyboard .onboarding-theme-deck,
+  .onboarding--reduced-motion .onboarding-theme-deck {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .onboarding-theme-screen .onboarding-theme-card,
+  .onboarding--keyboard .onboarding-theme-card,
+  .onboarding--reduced-motion .onboarding-theme-card {
+    width: 100%;
+    transform: none;
+  }
+
+  .onboarding-theme-screen .onboarding-theme-detail {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .onboarding-theme-screen .onboarding-theme-detail__lock {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .onboarding-theme-screen .onboarding-theme-footer,
+  .onboarding-theme-screen .onboarding-theme-footer .ui-button {
+    width: 100%;
+  }
+}
+
+/* Mobile override: legacy selected-card rules must never recreate the deck. */
+@media (max-width: 47.999rem) {
+  .onboarding-theme-screen .onboarding-theme-deck,
+  .onboarding-theme-screen .onboarding-theme-grid,
+  .onboarding--keyboard .onboarding-theme-deck,
+  .onboarding--reduced-motion .onboarding-theme-deck {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: var(--space-3) !important;
+    min-height: 0 !important;
+    place-items: stretch !important;
+  }
+
+  .onboarding-theme-screen .onboarding-theme-card,
+  .onboarding-theme-screen .onboarding-theme-card--available,
+  .onboarding-theme-screen .onboarding-theme-card--locked,
+  .onboarding-theme-screen .onboarding-theme-card.is-focused,
+  .onboarding-theme-screen .onboarding-theme-grid.is-selected .onboarding-theme-card,
+  .onboarding--keyboard .onboarding-theme-card,
+  .onboarding--reduced-motion .onboarding-theme-card {
+    position: relative !important;
+    inset: auto !important;
+    grid-area: auto !important;
+    order: 0 !important;
+    z-index: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    transform: none !important;
   }
 }

@@ -1,3 +1,4 @@
+import type { PortfolioDraft } from "../../contracts/index.js";
 import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
 import {
   journeyLongCardIsDisplayable,
@@ -8,7 +9,6 @@ import type {
   AnalysisProgressTerminalReason,
 } from "../../features/analysis-progress/projection.js";
 import type { HistoryRecordV1 } from "../../history/index.js";
-import type { PortfolioDraft } from "../../contracts/index.js";
 import { identityToPortfolioDraft } from "./identity.js";
 import type {
   AnalysisResultResponse,
@@ -36,6 +36,7 @@ export interface JourneyControllerOptions {
 
 export interface JourneyOnboardingExit {
   identity: DemoExperienceIdentity | null;
+  draft?: PortfolioDraft;
   returning: boolean;
   themeId?: ThemeId;
 }
@@ -179,7 +180,13 @@ export class JourneyController {
     const themeId = exit.themeId ?? state.currentThemeId;
     this.options.persistence.setTheme(state.workspace.workspace_id, themeId);
     let draft = state.draft;
-    if (exit.identity) {
+    if (exit.draft) {
+      const saved = await this.persistDraft(exit.draft, ++this.draftRevision);
+      if (!saved) return;
+      draft = saved;
+      this.options.persistence.setExperienceSource(state.workspace.workspace_id, "edited");
+      this.options.dispatch({ type: "EXPERIENCE_SOURCE_CHANGED", source: "edited" });
+    } else if (exit.identity) {
       draft = identityToPortfolioDraft(exit.identity);
       const saved = await this.persistDraft(draft, ++this.draftRevision);
       if (!saved) return;

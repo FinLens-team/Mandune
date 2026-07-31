@@ -1,9 +1,24 @@
 export const DEFAULT_THEME_ID = "eastern_observation" as const;
 
-export const THEME_IDS = [DEFAULT_THEME_ID, "jixing_doudou", "sunge"] as const;
+export const THEME_IDS = [
+  DEFAULT_THEME_ID,
+  "jixing_doudou",
+  "sunge",
+  "zhouli",
+  "tieba_laoge",
+  "male_succubus",
+  "female_succubus",
+] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
-export type ThemePersonaId = "doudou" | "nailong" | "sunge";
+export type ThemePersonaId =
+  | "doudou"
+  | "nailong"
+  | "sunge"
+  | "zhouli"
+  | "tieba_laoge"
+  | "male_succubus"
+  | "female_succubus";
 
 export interface ThemeTokens {
   accent: string;
@@ -187,6 +202,42 @@ export const THEMES: Readonly<Record<ThemeId, ThemeDefinition>> = {
       surface: "#4b191a",
       surfaceRaised: "#622222",
     },
+  },
+  zhouli: {
+    id: "zhouli", label: "周礼", description: "凡仓中之事，先正名分，再问是否合乎周礼", personaId: "zhouli",
+    mascot: { name: "周礼先生", alt: "执玉笏的周礼先生", caption: "此方合乎周礼" },
+    copy: {
+      homeAction: "请先生议礼", resumeAction: "礼官议仓中", resultTitle: "周礼先生论今日持仓",
+      danmaku: ["我曾听闻，仓有仓礼", "古人有言，名不正则仓不顺", "或问曰，此涨合礼否", "先列鼎，再列持仓", "一仓独大，恐失宾主之序", "礼书未载，不可强断", "此非亏损，乃礼数未周", "依礼而言，当先正名", "今日开盘，百官就位", "红绿虽异，各有其名", "盈亏有序，方成其礼", "仓位失序，礼崩乐坏", "数据未至，礼官不书", "先定君臣，再论涨跌", "凡事过犹不及", "此等结构，古已有之", "账可乱，名分不可乱", "复盘如朝聘，不可草率", "礼成而后论得失", "如此方合乎周礼"],
+    },
+    tokens: { accent: "#d6ad61", background: "#2b1112", backgroundDeep: "#16090a", border: "rgb(255 239 211 / 20%)", focus: "#f1cc82", ink: "#fff7ea", inkSoft: "rgb(255 247 234 / 80%)", onAccent: "#271416", surface: "#461c1c", surfaceRaised: "#612626" },
+  },
+  tieba_laoge: {
+    id: "tieba_laoge", label: "贴吧老哥", description: "楼主这仓位多少沾点，老哥先喷完再给你拆", personaId: "tieba_laoge",
+    mascot: { name: "贴吧老哥", alt: "坐在老网吧里的贴吧老哥", caption: "典中典，先上数据" },
+    copy: {
+      homeAction: "让老哥锐评", resumeAction: "老哥对线中", resultTitle: "贴吧老哥一层锐评",
+      danmaku: ["典，太典了", "老哥稳", "楼主多少沾点", "有一说一先看仓位", "绷不住了", "插眼等后续", "这波属于是反向封神", "没图没数据说个鸡毛", "小登别急", "老登又嘴硬", "就这也敢梭哈", "裤衩还在就算成功", "你这仓位是人能配的", "别装死，逐个说", "高赞预定", "建议改名戒赌吧", "急了急了", "笑麻了但数据是真的", "喷归喷，账得算明白", "封楼前再补一刀"],
+    },
+    tokens: { accent: "#df4a3d", background: "#151917", backgroundDeep: "#090c0a", border: "rgb(214 235 220 / 18%)", focus: "#8ebd92", ink: "#eff7f0", inkSoft: "rgb(239 247 240 / 78%)", onAccent: "#170c0b", surface: "#26322b", surfaceRaised: "#34463b" },
+  },
+  male_succubus: {
+    id: "male_succubus", label: "男魅魔", description: "看着我，别让那点涨跌替你说谎", personaId: "male_succubus",
+    mascot: { name: "男魅魔", alt: "黑红礼服的男魅魔", caption: "把注意力交给我" },
+    copy: {
+      homeAction: "接受他的审阅", resumeAction: "耳语分析中", resultTitle: "男魅魔的私人审阅",
+      danmaku: ["看着我", "乖一点，把仓位摊开", "别躲，我看见你的贪心了", "小可怜，又在嘴硬", "先说你最舍不得哪一只", "涨了就想要奖励吗", "亏损也可以很诚实", "靠近一点再看数据", "你对它可真专一", "别让恐惧替你回答", "每个数字都在告密", "我喜欢听真话", "集中度像一场迷恋", "呼吸，慢慢看", "今天不许敷衍我", "这只票比我还会吊你胃口", "把侥幸交出来", "你的目光停得太久了", "再检查一遍，宝贝", "晚安之前把账说清"],
+    },
+    tokens: { accent: "#b7253f", background: "#100d12", backgroundDeep: "#080609", border: "rgb(244 216 225 / 18%)", focus: "#e15a72", ink: "#fff3f6", inkSoft: "rgb(255 243 246 / 78%)", onAccent: "#18080d", surface: "#27151c", surfaceRaised: "#3b1e29" },
+  },
+  female_succubus: {
+    id: "female_succubus", label: "女魅魔", description: "过来，让我看看是谁又被贪心牵着走", personaId: "female_succubus",
+    mascot: { name: "女魅魔", alt: "黑玫红礼服的女魅魔", caption: "抬头，接受审判" },
+    copy: {
+      homeAction: "接受她的召见", resumeAction: "欲望审判中", resultTitle: "女魅魔的欲望审判",
+      danmaku: ["过来", "抬头看我", "乖孩子先交代仓位", "小狗又在偷偷加码", "你以为我看不出贪心吗", "涨一点就得意了", "嘴硬可藏不住亏损", "让我看看你最忠诚哪一只", "这份集中度真可爱", "胆小鬼也要看完", "甜言蜜语骗不了账本", "别急着求饶", "数据比你诚实", "把侥幸一项项说出来", "今天允许你紧张", "谁准你移开视线", "你的欲望正在失控", "乖，复盘完再走", "最后一项也不许藏", "现在，接受结论"],
+    },
+    tokens: { accent: "#dd3b83", background: "#120c14", backgroundDeep: "#09060a", border: "rgb(255 222 242 / 18%)", focus: "#f06ca8", ink: "#fff3fa", inkSoft: "rgb(255 243 250 / 78%)", onAccent: "#1d0914", surface: "#2b1425", surfaceRaised: "#451d3a" },
   },
 };
 

@@ -2,6 +2,7 @@ import { serve, type ServerType } from "@hono/node-server";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/server/app.js";
 import {
+  DEVELOPMENT_WORKSPACE_COOKIE,
   FakeClock,
   MemoryWorkspaceStore,
   WORKSPACE_COOKIE,
@@ -111,6 +112,25 @@ describe("WorkspaceService isolation and TTL", () => {
 });
 
 describe("workspace HTTP API", () => {
+  it("supports cookie-bound workspaces on explicit HTTP development routes", async () => {
+    const app = createApp({
+      version: "http-development",
+      workspaceCookie: { name: DEVELOPMENT_WORKSPACE_COOKIE, secure: false },
+    });
+    const created = await app.request("http://tailnet.test/api/workspaces", { method: "POST" });
+    const setCookie = created.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain(`${DEVELOPMENT_WORKSPACE_COOKIE}=`);
+    expect(setCookie).toMatch(/; HttpOnly/i);
+    expect(setCookie).not.toMatch(/; Secure/i);
+
+    const cookie = setCookie.split(";", 1)[0] ?? "";
+    const draft = await app.request("http://tailnet.test/api/current-draft", {
+      headers: { cookie },
+    });
+    expect(draft.status).toBe(200);
+    expect(await draft.json()).toEqual({ draft: null });
+  });
+
   it("creates cookie-bound workspace and hides existence on bad locator", async () => {
     const base = await listen();
     const created = await fetch(`${base}/api/workspaces`, { method: "POST" });

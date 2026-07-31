@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { DraftLine, PortfolioDraft } from "../../contracts/index.js";
+import { addLine, createEmptyDraft } from "../../portfolio/index.js";
+import { PortfolioEditor } from "../review/ReviewPage.js";
+import { ScreenshotImportPanel } from "../screenshot-import/ScreenshotImportPanel.js";
 import {
   createRandomDemoExperience,
   rerollDemoExperience,
@@ -45,8 +49,8 @@ export function OnboardingFlow({
   const [splashLeaving, setSplashLeaving] = useState(false);
   const [splashReady, setSplashReady] = useState(false);
   const [selectedThemeId, setSelectedThemeId] = useState<ThemeId>(initialThemeId);
-  const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
   const [identity, setIdentity] = useState<DemoExperienceIdentity | null>(null);
+  const [draft, setDraft] = useState<PortfolioDraft | null>(null);
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
   const [motionDirection, setMotionDirection] = useState<"back" | "forward">("forward");
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
@@ -110,7 +114,7 @@ export function OnboardingFlow({
   }, [selectedThemeId, splashLeaving, onEnterApp]);
 
   useEffect(() => {
-    if (step === "s1" || step === "s2" || step === "s3") {
+    if (step === "s1" || step === "s2" || step === "s3" || step === "editor" || step === "ocr") {
       titleRef.current?.focus();
     }
   }, [step]);
@@ -135,6 +139,30 @@ export function OnboardingFlow({
     notifiedReturningVisit.current = true;
     setStep("complete");
     onEnterApp({ identity, returning: false, themeId: selectedThemeId });
+  }
+
+  function confirmDraft(confirmedDraft: PortfolioDraft): void {
+    markOnboardingCompleted(storage, workspaceId, now().toISOString());
+    notifiedReturningVisit.current = true;
+    setStep("complete");
+    onEnterApp({ identity: null, draft: confirmedDraft, returning: false, themeId: selectedThemeId });
+  }
+
+  function startManualEntry(): void {
+    setDraft(createEmptyDraft({ source_label: "用户自主录入", entry_method: "manual" }));
+    goToStep("editor", "forward");
+  }
+
+  function mergeOcrLines(lines: DraftLine[]): void {
+    const current = draft ?? createEmptyDraft({ source_label: "本机 OCR 识别草稿", entry_method: "screenshot_extract" });
+    const symbols = new Set(current.lines.map((line) => line.symbol));
+    const merged = lines.reduce((next, line) => {
+      if (symbols.has(line.symbol)) return next;
+      symbols.add(line.symbol);
+      return addLine(next, line);
+    }, current);
+    setDraft(merged);
+    goToStep("editor", "forward");
   }
 
   return (
@@ -175,15 +203,13 @@ export function OnboardingFlow({
           <div className={`onboarding-page onboarding-page--${motionDirection}`}>
             <SourceSelectionScreen
               onBack={() => goToStep("s1", "back")}
+              onChooseManual={startManualEntry}
               onChooseRandom={chooseRandomExperience}
-              onPlaceholder={(source) => {
-                setPlaceholderMessage(
-                  source === "manual"
-                    ? "手工录入暂未开放，请使用随机体验身份。"
-                    : "截图识别持仓暂未开放。",
-                );
+              onChooseScreenshot={() => {
+                if (!draft) setDraft(createEmptyDraft({ source_label: "本机 OCR 识别草稿", entry_method: "screenshot_extract" }));
+                goToStep("ocr", "forward");
               }}
-              placeholderMessage={placeholderMessage}
+              placeholderMessage={null}
               titleRef={titleRef}
             />
           </div>
@@ -196,6 +222,24 @@ export function OnboardingFlow({
               onConfirm={confirmIdentity}
               onReroll={() => setIdentity(rerollDemoExperience(identity, random, now))}
               titleRef={titleRef}
+            />
+          </div>
+        ) : null}
+        {step === "ocr" ? (
+          <div className={`onboarding-page onboarding-page--${motionDirection}`}>
+            <ScreenshotImportPanel
+              onCancel={() => goToStep("s2", "back")}
+              onDraftLines={(lines) => mergeOcrLines(lines)}
+            />
+          </div>
+        ) : null}
+        {step === "editor" && draft ? (
+          <div className={`onboarding-page onboarding-page--${motionDirection} onboarding-page--editor`}>
+            <PortfolioEditor
+              draft={draft}
+              onCancel={() => goToStep("s2", "back")}
+              onChange={setDraft}
+              onConfirmDraft={confirmDraft}
             />
           </div>
         ) : null}
