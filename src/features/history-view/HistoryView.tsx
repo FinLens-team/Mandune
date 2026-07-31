@@ -285,7 +285,7 @@ function FoundDetail({
             <li key={line.line_id}>
               <strong>{line.name}</strong>
               <span>{ASSET_CLASS_LABELS[line.asset_class]} · {line.symbol}</span>
-              <span>观察日期：{typeof line.observation_date === "string" ? line.observation_date : "未知"}</span>
+              <span>持仓信息日期：{typeof line.observation_date === "string" ? line.observation_date : "未知"}</span>
             </li>
           ))}
         </ul>

@@ -164,6 +164,8 @@ describe("S10 history list and detail", () => {
 
     expect(markup).toContain("本次复盘边界");
     expect(markup).toContain("虚构宽基 ETF");
+    expect(markup).toContain("持仓信息日期：");
+    expect(markup).not.toContain("观察日期：");
     expect(markup).toContain("近期流动性需求");
     expect(markup).toContain("未知／尚未决定");
     expect(markup).toContain("不请求供应商，也不采用后来数据");
