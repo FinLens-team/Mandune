@@ -1,11 +1,8 @@
 import { useState } from "react";
 import type { DraftLine } from "../../contracts/index.js";
-import {
-  ScreenshotExtractionService,
-  type ScreenshotImportResult,
-} from "../../extraction/index.js";
-
-const extractor = new ScreenshotExtractionService();
+import type { ScreenshotImportResult } from "../../extraction/index.js";
+import { Button } from "../../client/ui/index.js";
+import { ImageUp, X } from "lucide-react";
 
 export function ScreenshotImportPanel(props: {
   onDraftLines: (lines: DraftLine[], meta: ScreenshotImportResult) => void;
@@ -22,20 +19,41 @@ export function ScreenshotImportPanel(props: {
       setMessage("请先勾选知情同意，再上传截图。");
       return;
     }
+    if (!new Set(["image/png", "image/jpeg", "image/webp"]).has(file.type)) {
+      setMessage("仅支持 PNG、JPEG 或 WebP 图片。");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setMessage("图片不能超过 8 MB。");
+      return;
+    }
+
     setBusy(true);
-    setMessage("正在提取草稿…");
+    setMessage("正在本机识别截图...");
     const abort = new AbortController();
     setController(abort);
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await extractor.importScreenshot({
-        consent_given: true,
-        media_type: file.type || "image/png",
-        image_bytes: bytes,
+      const response = await fetch("/api/screenshot-ocr", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "content-type": file.type,
+          "x-ocr-consent": "true",
+        },
+        body: file,
         signal: abort.signal,
       });
+      const result = await response.json() as ScreenshotImportResult | { error: string };
+      if (!("draft_lines" in result)) {
+        setMessage(response.status === 413 ? "图片不能超过 8 MB。" : "OCR 识别失败，可改用手动填写。");
+        return;
+      }
       setMessage(result.message);
-      props.onDraftLines(result.draft_lines, result);
+      if (result.draft_lines.length > 0) props.onDraftLines(result.draft_lines, result);
+    } catch (error) {
+      setMessage(error instanceof Error && error.name === "AbortError"
+        ? "已中止识别。"
+        : "OCR 服务暂不可用，可改用手动填写。");
     } finally {
       setBusy(false);
       setController(null);
@@ -43,31 +61,29 @@ export function ScreenshotImportPanel(props: {
   }
 
   return (
-    <section className="panel" aria-labelledby="screenshot-heading">
-      <div className="panel-head">
-        <h2 id="screenshot-heading">截图导入</h2>
-        <p className="panel-note">
-          截图将临时交给多模态模型生成待复核草稿，可能包含敏感金融信息。原图在成功、失败或中止后删除，不会进入分析模型或历史。
-        </p>
-      </div>
+    <section className="onboarding-screen onboarding-import" aria-labelledby="screenshot-heading">
+      <header className="onboarding-heading">
+        <p className="onboarding-step">首次引导 · 图片识别</p>
+        <h1 id="screenshot-heading">识别持仓截图</h1>
+        <p>本机 OCR 会尝试识别 A 股和 ETF 代码。识别结果只是草稿，保存前可逐项修改。</p>
+      </header>
 
-      <label className="consent-row">
+      <label className="onboarding-consent-row">
         <input
           type="checkbox"
           checked={consent}
           onChange={(event) => setConsent(event.target.checked)}
         />
-        <span>
-          我已知晓并同意：截图仅用于生成草稿，提取结束后删除原图，结果需我人工确认。
-        </span>
+        <span>我已知晓：截图仅在本机内存中用于 OCR，处理完成后删除，识别结果需要人工确认。</span>
       </label>
 
-      <div className="action-row">
-        <label className="btn primary file-btn">
+      <div className="onboarding-import__actions">
+        <label className={`btn primary file-btn${!consent || busy ? " is-disabled" : ""}`}>
+          <ImageUp aria-hidden="true" size={19} />
           选择截图
           <input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             disabled={!consent || busy}
             hidden
             onChange={(event) => {
@@ -77,24 +93,15 @@ export function ScreenshotImportPanel(props: {
             }}
           />
         </label>
-        <button
-          type="button"
-          className="btn"
-          disabled={!busy || !controller}
-          onClick={() => controller?.abort()}
-        >
-          中止提取
-        </button>
-        <button type="button" className="btn" onClick={props.onCancel}>
-          返回
-        </button>
+        {busy ? (
+          <Button onClick={() => controller?.abort()} variant="secondary">
+            <X aria-hidden="true" size={18} />中止识别
+          </Button>
+        ) : null}
+        <Button onClick={props.onCancel} variant="secondary">返回</Button>
       </div>
 
-      {message ? (
-        <p className="status-message" role="status">
-          {message}
-        </p>
-      ) : null}
+      {message ? <p className="onboarding-source__feedback" role="status">{message}</p> : null}
     </section>
   );
 }

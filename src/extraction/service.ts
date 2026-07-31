@@ -65,7 +65,7 @@ export class ScreenshotExtractionService {
         ok: false,
         outcome: "aborted",
         draft_lines: [],
-        message: "需要先确认截图将交给多模态模型提取，并可能包含敏感金融信息。",
+        message: "需要先确认截图将在本机进行 OCR 识别，并可能包含敏感金融信息。",
         deletion: audit("none", "aborted", "consent_not_given"),
       };
     }
@@ -111,7 +111,7 @@ export class ScreenshotExtractionService {
         message = "提取超时；原图已删除，可重试或手工录入。";
       } else {
         outcome = "failed";
-        message = "模型提取失败；原图已删除，草稿未自动确认。";
+        message = "OCR 识别失败；原图已删除，草稿未自动确认。";
       }
     } finally {
       this.images.delete(stored.image_id);

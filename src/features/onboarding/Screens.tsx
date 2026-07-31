@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   ImageUp,
-  LockKeyhole,
   PenLine,
   RefreshCw,
   Sparkles,
@@ -13,10 +12,8 @@ import type { DemoExperienceIdentity } from "../../demo-experience/index.js";
 import { Button } from "../../client/ui/index.js";
 import mandongLogo from "../../client/assets/mandong-logo.webp";
 import themeCardOne from "../../client/assets/themes/theme-card-1.webp";
-import themeCardTwo from "../../client/assets/themes/theme-card-2.webp";
-import themeCardThree from "../../client/assets/themes/theme-card-3.webp";
-import themeCardFour from "../../client/assets/themes/theme-card-4.webp";
-import type { ThemeId } from "../../theme/index.js";
+import { THEMES, THEME_IDS, type ThemeId } from "../../theme/index.js";
+import { themeClientAssets } from "../../theme/client.js";
 
 interface ScreenTitleProps {
   titleRef?: Ref<HTMLHeadingElement>;
@@ -69,75 +66,21 @@ const THEME_CARDS = [
     name: "鸿运当头",
     width: 368,
   },
-  {
-    available: true,
-    description: "我是奶龙！哈哈哈哈哈",
-    height: 622,
-    image: themeCardTwo,
-    index: 2,
-    name: "我是龙",
-    themeId: "eastern_observation",
-    width: 366,
-  },
-  {
-    available: true,
-    description: "吉星高照，和AI一起寻找值得留意的信号",
-    height: 622,
-    image: themeCardThree,
-    index: 3,
-    name: "吉星高照",
-    themeId: "jixing_doudou",
-    width: 364,
-  },
-  {
-    available: true,
-    description: "能和AI聊天就不要和人类聊天",
-    height: 1244,
-    image: themeCardFour,
-    index: 4,
-    name: "孙哥",
-    themeId: "sunge",
-    width: 730,
-  },
+  ...THEME_IDS.map((themeId, position) => {
+    const theme = THEMES[themeId];
+    const artwork = themeClientAssets(themeId).selection;
+    return {
+      available: true as const,
+      description: theme.description,
+      height: artwork.height,
+      image: artwork.src,
+      index: position + 2,
+      name: theme.label,
+      themeId,
+      width: artwork.width,
+    };
+  }),
 ] as const;
-
-function themeCardMotion(index: number, focusedIndex: number | null): CSSProperties {
-  const initialX = [-1.5, -0.5, 0.5, 1.5][index - 1] ?? 0;
-  const initialRotation = [-10, -3.5, 3.5, 10][index - 1] ?? 0;
-  let x = initialX;
-  let y = 92 + Math.abs(initialX) * 8;
-  let rotation = initialRotation;
-  let scale = 1;
-  let z = index === 2 ? 8 : index;
-
-  if (focusedIndex !== null) {
-    if (index === focusedIndex) {
-      x = 0;
-      y = 8;
-      rotation = 0;
-      scale = 1.08;
-      z = 10;
-    } else {
-      const remainingCards = THEME_CARDS.filter((card) => card.index !== focusedIndex);
-      const remainingPosition = remainingCards.findIndex((card) => card.index === index);
-      const centeredPosition = remainingPosition - (remainingCards.length - 1) / 2;
-      x = centeredPosition * 1.05;
-      y = 126 + Math.abs(centeredPosition) * 8;
-      rotation = centeredPosition * 7;
-      scale = 0.82;
-      z = 5 + remainingPosition;
-    }
-  }
-
-  return {
-    "--card-delay": `${70 + index * 65}ms`,
-    "--card-r": `${rotation}deg`,
-    "--card-scale": scale,
-    "--card-x": `calc(${x} * var(--fan-unit))`,
-    "--card-y": `${y}px`,
-    "--card-z": z,
-  } as CSSProperties;
-}
 
 export function ThemeSelectionScreen({
   selectedThemeId,
@@ -176,7 +119,6 @@ export function ThemeSelectionScreen({
                     onSelect(theme.themeId);
                   }
                 : () => setPreviewIndex(theme.index)}
-              style={themeCardMotion(theme.index, focusedIndex)}
               type="button"
             >
               <span className="onboarding-theme-card__artwork">
@@ -219,16 +161,18 @@ export function ThemeSelectionScreen({
 export interface SourceSelectionScreenProps extends ScreenTitleProps {
   placeholderMessage: string | null;
   onBack: () => void;
+  onChooseManual: () => void;
   onChooseRandom: () => void;
-  onPlaceholder: (source: "manual" | "screenshot") => void;
+  onChooseScreenshot: () => void;
 }
 
 export function SourceSelectionScreen({
   placeholderMessage,
   titleRef,
   onBack,
+  onChooseManual,
   onChooseRandom,
-  onPlaceholder,
+  onChooseScreenshot,
 }: SourceSelectionScreenProps) {
   return (
     <section className="onboarding-screen onboarding-source" aria-labelledby="s2-title">
@@ -256,9 +200,8 @@ export function SourceSelectionScreen({
         </button>
 
         <button
-          aria-describedby="onboarding-source-feedback"
-          className="onboarding-source-option"
-          onClick={() => onPlaceholder("manual")}
+          className="onboarding-source-option onboarding-source-option--available"
+          onClick={onChooseManual}
           type="button"
         >
           <span className="onboarding-source-option__icon">
@@ -266,17 +209,14 @@ export function SourceSelectionScreen({
           </span>
           <span className="onboarding-source-option__copy">
             <strong>手动填写持仓</strong>
-            <small>逐项添加并检查持仓信息</small>
+            <small>一次添加多项持仓和个人偏好</small>
           </span>
-          <span className="onboarding-source-option__status">
-            即将开放 <LockKeyhole aria-hidden="true" size={15} />
-          </span>
+          <ArrowRight aria-hidden="true" size={19} />
         </button>
 
         <button
-          aria-describedby="onboarding-source-feedback"
-          className="onboarding-source-option"
-          onClick={() => onPlaceholder("screenshot")}
+          className="onboarding-source-option onboarding-source-option--available"
+          onClick={onChooseScreenshot}
           type="button"
         >
           <span className="onboarding-source-option__icon">
@@ -284,11 +224,9 @@ export function SourceSelectionScreen({
           </span>
           <span className="onboarding-source-option__copy">
             <strong>截图识别持仓</strong>
-            <small>识别后仍由你逐项确认</small>
+            <small>本机 OCR 识别后逐项校对</small>
           </span>
-          <span className="onboarding-source-option__status">
-            即将开放 <LockKeyhole aria-hidden="true" size={15} />
-          </span>
+          <ArrowRight aria-hidden="true" size={19} />
         </button>
       </div>
 
@@ -297,7 +235,7 @@ export function SourceSelectionScreen({
         id="onboarding-source-feedback"
         aria-live="polite"
       >
-        {placeholderMessage ?? "手动填写与截图识别将在后续版本开放。"}
+        {placeholderMessage ?? "可手动录入多项持仓，也可用本机 OCR 生成待确认草稿。"}
       </p>
 
       <div className="onboarding-source__back">
@@ -501,7 +439,7 @@ export function ExperienceSummaryScreen({
                   </dl>
                   <dl className="onboarding-holding__meta">
                     <div>
-                      <dt>数据日期</dt>
+                      <dt>持仓确认日</dt>
                       <dd>{holding.observation_date}</dd>
                     </div>
                     <div>

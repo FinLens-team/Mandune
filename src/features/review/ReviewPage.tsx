@@ -28,6 +28,7 @@ export interface PortfolioEditorProps {
   onChange: (draft: PortfolioDraft) => void;
   onSave?: (snapshot: PortfolioSnapshot) => void;
   onCancel?: () => void;
+  onConfirmDraft?: (draft: PortfolioDraft) => void;
 }
 
 const EMPTY_HOLDING = {
@@ -135,7 +136,7 @@ function HoldingLineFields({ line, onPatch }: HoldingLineFieldsProps) {
   );
 }
 
-export function PortfolioEditor({ draft, onCancel, onChange, onSave }: PortfolioEditorProps) {
+export function PortfolioEditor({ draft, onCancel, onChange, onConfirmDraft, onSave }: PortfolioEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
   const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
   const [message, setMessage] = useState<string | null>(null);
@@ -149,8 +150,9 @@ export function PortfolioEditor({ draft, onCancel, onChange, onSave }: Portfolio
       return;
     }
     const skipped = result.skippedCount > 0 ? `；${result.skippedCount} 条未决行保持未知` : "";
-    setMessage(`已保存下一次复盘输入${skipped}。历史复盘不会改写。`);
+    setMessage(`已保存下一次复盘输入${skipped}。`);
     onSave?.(result.snapshot);
+    onConfirmDraft?.(draft);
   }
 
   function addRandomHoldings() {

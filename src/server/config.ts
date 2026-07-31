@@ -1,5 +1,6 @@
 import path from "node:path";
 import { A2A_DEEP_REVIEW_MODEL_ID } from "../a2a/types.js";
+import { DEVELOPMENT_WORKSPACE_COOKIE, WORKSPACE_COOKIE } from "../workspace/index.js";
 
 const ARK_OPENAI_COMPATIBLE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
@@ -38,6 +39,7 @@ export interface ServerConfig {
   dbPath: string;
   migrationsDirectory: string;
   dbBusyTimeoutMs: number;
+  workspaceCookie: { name: string; secure: boolean };
   /** Executor selection when a model is configured. Defaults to stream. */
   analysisMode: AnalysisMode;
   /** Overall per-analysis hard deadline in ms. Demo may relax beyond 180s. */
@@ -50,6 +52,8 @@ export interface ServerConfig {
   bochaApiKey?: string;
   /** Python 3.12 executable used only by the isolated PandaAI batch worker. */
   pandaPythonExecutable: string;
+  /** Isolated Python executable containing AKShare. */
+  aksharePythonExecutable: string;
   /** Independent A2A DeepSeek-Pro-on-Ark agent config. Secrets never enter Card or responses. */
   a2a?: A2ADeepAgentConfig;
 }
@@ -65,6 +69,7 @@ export function loadServerConfig(
   const migrationsDirectory = env.MANDONG_MIGRATIONS_DIR?.trim() || path.resolve("migrations");
   const rawBusyTimeout = env.MANDONG_DB_BUSY_TIMEOUT_MS?.trim();
   const dbBusyTimeoutMs = rawBusyTimeout ? Number(rawBusyTimeout) : 1_000;
+  const production = env.NODE_ENV === "production";
 
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error("Invalid PORT: expected an integer between 1 and 65535.");
@@ -80,7 +85,7 @@ export function loadServerConfig(
   }
 
   const model = loadModelConfig(env);
-  if (env.NODE_ENV === "production" && !model) {
+  if (production && !model) {
     throw new Error(
       "Production model configuration required: MODEL_BASE_URL, MODEL_API_KEY and MODEL_ID.",
     );
@@ -94,9 +99,14 @@ export function loadServerConfig(
   const modelFallbacks = model ? loadModelFallbacks(env) : [];
   const bochaApiKey = env.BOCHA_API_KEY?.trim();
   const pandaPythonExecutable = env.PANDA_PYTHON_EXECUTABLE?.trim() || "python3.12";
+  const aksharePythonExecutable = env.AKSHARE_PYTHON_EXECUTABLE?.trim() ||
+    "/home/evil/.local/share/mandune-dev/akshare-venv/bin/python";
   const a2a = loadA2AConfig(env);
   if (/\r|\n|\0/u.test(pandaPythonExecutable)) {
     throw new Error("Invalid PANDA_PYTHON_EXECUTABLE.");
+  }
+  if (/\r|\n|\0/u.test(aksharePythonExecutable)) {
+    throw new Error("Invalid AKSHARE_PYTHON_EXECUTABLE.");
   }
 
   return {
@@ -106,10 +116,14 @@ export function loadServerConfig(
     dbPath,
     migrationsDirectory,
     dbBusyTimeoutMs,
+    workspaceCookie: production
+      ? { name: WORKSPACE_COOKIE, secure: true }
+      : { name: DEVELOPMENT_WORKSPACE_COOKIE, secure: false },
     analysisMode,
     analysisDeadlineMs,
     modelFallbacks,
     pandaPythonExecutable,
+    aksharePythonExecutable,
     ...(model ? { model } : {}),
     ...(bochaApiKey ? { bochaApiKey } : {}),
     ...(a2a ? { a2a } : {}),
