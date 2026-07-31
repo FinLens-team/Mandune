@@ -38,4 +38,5 @@ export {
   type PandaMarketCache,
 } from "./panda-cache.js";
 export { TencentMarketEvidenceSource } from "./tencent-market.js";
-export { SupplementedMarketEvidenceCollector } from "./market-fallback.js";
+export { AkshareMarketEvidenceSource, type AkshareMarketEvidenceSourceOptions } from "./akshare-market.js";
+export { SupplementedMarketEvidenceCollector, FallbackMarketEvidenceSource } from "./market-fallback.js";

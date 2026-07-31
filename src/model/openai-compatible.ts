@@ -46,12 +46,20 @@ export function createOpenAICompatibleModelGateway(
   config: OpenAICompatibleModelGatewayConfig,
 ): ModelGateway {
   const configured = validServerConfig(config);
+  const deepSeekOfficial = configured && new URL(config.baseURL).hostname === "api.deepseek.com";
   const provider = configured
     ? createOpenAICompatible({
         name: config.providerName,
         baseURL: config.baseURL,
         apiKey: config.apiKey,
         supportsStructuredOutputs: config.supportsStructuredOutputs,
+        ...(deepSeekOfficial ? {
+          transformRequestBody: (body: Record<string, unknown>) => ({
+            ...body,
+            thinking: { type: "enabled" },
+            reasoning_effort: "high",
+          }),
+        } : {}),
         ...(config.fetch ? { fetch: config.fetch } : {}),
       })
     : undefined;
@@ -149,6 +157,11 @@ export function createOpenAICompatibleModelGateway(
           abortSignal: combinedSignal,
           maxRetries: 0,
           temperature: 0.4,
+          maxOutputTokens: request.maxOutputTokens ?? 8_192,
+          onChunk: ({ chunk }) => {
+            request.onConnected?.();
+            if (chunk.type === "reasoning-start") request.onReasoningStarted?.();
+          },
         });
         let text = "";
         for await (const delta of result.textStream) {

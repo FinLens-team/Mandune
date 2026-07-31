@@ -7,6 +7,7 @@ import type {
   UnknownItem,
   UnknownFieldState,
 } from "../contracts/index.js";
+import { compileModelMarketContext } from "./market-context.js";
 
 export interface DerivationInput {
   snapshot: PortfolioSnapshot;
@@ -333,11 +334,66 @@ export function deriveAnalysisInputs(input: DerivationInput): AnalysisDerivation
         },
       ]
     : [];
+  const longHorizonDerivations = compileModelMarketContext(evidence).assets.flatMap<DerivedResult>((asset) =>
+    asset.windows.flatMap<DerivedResult>((window) => {
+      if (window.status !== "available" || window.return_pct === undefined) return [];
+      const horizon = window.label === "近3个交易日" ? "3-session" : window.label === "近1个月" ? "1-month" : "1-year";
+      const base = `market-${horizon}-${asset.line_id}`;
+      const common = {
+        input_refs: [asset.line_id],
+        evidence_refs: window.evidence_refs,
+        provenance: "derived" as const,
+      };
+      return [
+        {
+          id: `${base}-return-pct`,
+          label: `${asset.line_id} ${window.label}区间涨跌幅`,
+          value: window.return_pct,
+          unit: "%",
+          ...common,
+          formula_or_rule: "(latest observation - first observation in bounded same-provider window) / abs(first observation) * 100.",
+        },
+        {
+          id: `${base}-range-high`,
+          label: `${asset.line_id} ${window.label}区间最高值`,
+          value: window.high ?? null,
+          unit: asset.unit,
+          ...common,
+          formula_or_rule: "Maximum provider-native value in the bounded same-provider window.",
+        },
+        {
+          id: `${base}-range-low`,
+          label: `${asset.line_id} ${window.label}区间最低值`,
+          value: window.low ?? null,
+          unit: asset.unit,
+          ...common,
+          formula_or_rule: "Minimum provider-native value in the bounded same-provider window.",
+        },
+        {
+          id: `${base}-max-drawdown-pct`,
+          label: `${asset.line_id} ${window.label}最大回撤`,
+          value: window.max_drawdown_pct ?? null,
+          unit: "%",
+          ...common,
+          formula_or_rule: "Minimum of (observation - running peak) / running peak * 100 within the bounded same-provider window.",
+        },
+        {
+          id: `${base}-sample-count`,
+          label: `${asset.line_id} ${window.label}有效交易日样本数`,
+          value: window.sample_count,
+          unit: "session",
+          ...common,
+          formula_or_rule: "Count valid unique trading-day observations in the bounded same-provider window.",
+        },
+      ];
+    }),
+  );
   const derived: DerivedResult[] = [
     coverageCount,
     ...percentageDerivations,
     ...dailyChangeDerivations,
     ...recentPeriodDerivations,
+    ...longHorizonDerivations,
     ...contributionDerivations,
     ...contributionSummary,
     ...[...classCounts.entries()].map<DerivedResult>(([assetClass, count]) => ({

@@ -12,6 +12,7 @@ type FetchLike = typeof fetch;
 const TENCENT_KLINE_ENDPOINT = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get";
 const DEFAULT_TIMEOUT_MS = 8_000;
 const REQUIRED_TRADING_DAYS = 3;
+const REQUESTED_TRADING_DAYS = 260;
 
 function evidenceId(lineId: string, suffix: string): string {
   return `tencent-market-${lineId}-${suffix}`;
@@ -61,7 +62,7 @@ function parseKlines(payload: unknown, code: string, cutoff: string): ParsedKlin
   }
   return [...byDate.values()]
     .sort((left, right) => left.observedDate.localeCompare(right.observedDate))
-    .slice(-REQUIRED_TRADING_DAYS);
+    .slice(-REQUESTED_TRADING_DAYS);
 }
 
 export class TencentMarketEvidenceSource implements MarketEvidenceSource {
@@ -119,7 +120,7 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
 
     try {
       const timeout = AbortSignal.timeout(this.timeoutMs);
-      const query = new URLSearchParams({ param: `${code},day,,,10,qfq` });
+      const query = new URLSearchParams({ param: `${code},day,,,${REQUESTED_TRADING_DAYS},qfq` });
       const response = await this.fetchImpl(`${TENCENT_KLINE_ENDPOINT}?${query}`, {
         method: "GET",
         signal: AbortSignal.any([input.signal, timeout]),
@@ -150,8 +151,8 @@ export class TencentMarketEvidenceSource implements MarketEvidenceSource {
           fetched_at: input.acquiredAt,
           status: isLatest ? "available" as const : "ambiguous" as const,
           limitations: isLatest
-            ? ["最近三个有效交易日的收盘价来自公开延迟日 K 行情，单位按交易所人民币计价。"]
-            : ["历史收盘价仅与同一行情方法的连续观察值共同用于派生涨跌幅。"],
+            ? [`最多 ${REQUESTED_TRADING_DAYS} 个有效交易日的收盘价来自公开延迟日 K 行情，单位按交易所人民币计价。`]
+            : ["历史收盘价仅与同一行情方法的连续观察值共同用于派生涨跌幅和分层周期摘要。"],
           provenance: "observed" as const,
         };
       });

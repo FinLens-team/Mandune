@@ -12,3 +12,7 @@ await copyFile(
   path.resolve("src/providers/panda-worker.py"),
   path.resolve("dist/providers/panda-worker.py"),
 );
+await copyFile(
+  path.resolve("src/providers/akshare-worker.py"),
+  path.resolve("dist/providers/akshare-worker.py"),
+);
