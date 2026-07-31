@@ -116,6 +116,13 @@ export function createApp(
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const clientRoot = resolveClientRoot(moduleDir);
 
+  // Vite serves source public assets from src/client/public during development,
+  // while production copies them directly under dist/client.
+  app.use(
+    "/daily-briefings/*",
+    serveStatic({ root: path.join(clientRoot, "public") }),
+  );
+
   app.use(
     "/*",
     serveStatic({
