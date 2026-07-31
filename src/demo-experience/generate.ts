@@ -1,5 +1,8 @@
 import type { PersonalConstraints } from "../contracts/index.js";
-import { createRandomExampleLines } from "../portfolio/index.js";
+import {
+  INSTRUMENT_DICTIONARY,
+  type InstrumentEntry,
+} from "../instruments/index.js";
 import {
   DEMO_EXPERIENCE_SOURCE_LABEL,
   type DemoExperienceHolding,
@@ -35,6 +38,59 @@ function pick<T>(items: readonly T[], random: () => number): T {
   return value;
 }
 
+function takeRandom<T>(items: T[], random: () => number): T {
+  const index = Math.floor(random() * items.length);
+  const [value] = items.splice(index, 1);
+  if (value === undefined) {
+    throw new Error("demo_experience_empty_candidate_pool");
+  }
+  return value;
+}
+
+function generatePortfolio(
+  random: () => number,
+  excludedSymbols: ReadonlySet<string>,
+): Array<{ instrument: InstrumentEntry; sizeBasis: string }> {
+  const available = INSTRUMENT_DICTIONARY.filter(
+    (instrument) => !excludedSymbols.has(instrument.symbol),
+  );
+  const stocks = available.filter((instrument) => instrument.asset_class === "a_share");
+  const etfs = available.filter((instrument) => instrument.asset_class === "etf");
+  const funds = available.filter((instrument) => instrument.asset_class === "fund");
+  if (stocks.length < 2 || etfs.length < 1 || funds.length < 1) {
+    throw new Error("demo_experience_has_no_diversified_portfolio_candidates");
+  }
+
+  const selected = [
+    takeRandom(stocks, random),
+    takeRandom(stocks, random),
+    takeRandom(etfs, random),
+    takeRandom(funds, random),
+  ];
+  const selectedSymbols = new Set(selected.map((instrument) => instrument.symbol));
+  const remaining = available.filter(
+    (instrument) => !selectedSymbols.has(instrument.symbol),
+  );
+  const targetCount = 4 + Math.floor(random() * 3);
+  while (selected.length < targetCount && remaining.length > 0) {
+    selected.push(takeRandom(remaining, random));
+  }
+
+  for (let index = selected.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [selected[index], selected[swapIndex]] = [selected[swapIndex]!, selected[index]!];
+  }
+
+  return selected.map((instrument, index) => ({
+    instrument,
+    sizeBasis: index === 0
+      ? "核心仓位，约占组合两成以上"
+      : index <= 2
+        ? "中等仓位，约占组合一到两成"
+        : "小仓位，约占组合一成以内",
+  }));
+}
+
 function generateConstraints(random: () => number): PersonalConstraints {
   return {
     investment_horizon: pick(CONSTRAINT_VARIANTS.investment_horizon, random),
@@ -42,6 +98,13 @@ function generateConstraints(random: () => number): PersonalConstraints {
     tolerable_drawdown: pick(CONSTRAINT_VARIANTS.tolerable_drawdown, random),
     investment_objective: pick(CONSTRAINT_VARIANTS.investment_objective, random),
   };
+}
+
+function localDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function createDemoExperienceFromSeed(
@@ -53,25 +116,19 @@ export function createDemoExperienceFromSeed(
   const random = mulberry32(normalizedSeed);
   const seedLabel = `demo-experience-${normalizedSeed.toString(16).padStart(8, "0")}`;
   const createdAt = now();
-  const [line] = createRandomExampleLines({
-    createLineId: () => `line-${seedLabel}`,
-    excludedSymbols,
-    now: createdAt,
+  const holdings: DemoExperienceHolding[] = generatePortfolio(
     random,
-  });
-  if (!line) {
-    throw new Error("demo_experience_has_no_random_holding_candidate");
-  }
-  const holding: DemoExperienceHolding = {
-    line_id: line.line_id,
-    asset_class: line.asset_class,
-    name: line.name,
-    symbol: String(line.symbol),
-    ...(line.market ? { market: String(line.market) } : {}),
-    size_basis: String(line.size_basis),
-    observation_date: String(line.observation_date),
+    excludedSymbols ?? new Set(),
+  ).map(({ instrument, sizeBasis }, index) => ({
+    line_id: `line-${seedLabel}-${index + 1}`,
+    asset_class: instrument.asset_class,
+    name: instrument.name,
+    symbol: instrument.symbol,
+    ...(instrument.market ? { market: instrument.market } : {}),
+    size_basis: sizeBasis,
+    observation_date: localDate(createdAt),
     source_name: DEMO_EXPERIENCE_SOURCE_LABEL,
-  };
+  }));
   return {
     identity_id: `identity-${seedLabel}`,
     seed: seedLabel,
@@ -81,7 +138,7 @@ export function createDemoExperienceFromSeed(
     is_example: true,
     source_kind: "generated",
     source_label: DEMO_EXPERIENCE_SOURCE_LABEL,
-    holdings: [holding],
+    holdings,
     constraints: generateConstraints(random),
   };
 }

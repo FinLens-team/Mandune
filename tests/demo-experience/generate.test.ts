@@ -19,22 +19,36 @@ describe("random demo experience", () => {
     expect(first.source_kind).toBe("generated");
   });
 
-  it("uses the same real instrument pool and directional fields as data management", () => {
-    const identity = createDemoExperienceFromSeed(3, FIXED_NOW);
+  it("builds a diversified human-like portfolio from the real instrument pool", () => {
+    const identities = Array.from({ length: 32 }, (_, seed) =>
+      createDemoExperienceFromSeed(seed, FIXED_NOW),
+    );
 
-    expect(identity.holdings).toHaveLength(1);
-    for (const holding of identity.holdings) {
-      const instrument = INSTRUMENT_DICTIONARY.find(
-        (candidate) => candidate.symbol === holding.symbol,
+    for (const identity of identities) {
+      expect(identity.holdings.length).toBeGreaterThanOrEqual(4);
+      expect(identity.holdings.length).toBeLessThanOrEqual(6);
+      expect(new Set(identity.holdings.map((holding) => holding.symbol)).size).toBe(
+        identity.holdings.length,
       );
-      expect(instrument).toMatchObject({
-        asset_class: holding.asset_class,
-        name: holding.name,
-        market: holding.market,
-      });
-      expect(holding.size_basis).toMatch(/仓位/);
-      expect(holding.observation_date).toMatch(/^2026-\d{2}-\d{2}$/);
-      expect(holding.source_name).toBe("内置标的随机生成");
+      expect(identity.holdings.filter((holding) => holding.asset_class === "a_share").length).toBeGreaterThanOrEqual(2);
+      expect(identity.holdings.some((holding) => holding.asset_class === "etf")).toBe(true);
+      expect(identity.holdings.some((holding) => holding.asset_class === "fund")).toBe(true);
+      expect(identity.holdings.filter((holding) => holding.size_basis.startsWith("核心仓位"))).toHaveLength(1);
+      expect(identity.holdings.filter((holding) => holding.size_basis.startsWith("中等仓位"))).toHaveLength(2);
+
+      for (const holding of identity.holdings) {
+        const instrument = INSTRUMENT_DICTIONARY.find(
+          (candidate) => candidate.symbol === holding.symbol,
+        );
+        expect(instrument).toMatchObject({
+          asset_class: holding.asset_class,
+          name: holding.name,
+          ...(holding.market ? { market: holding.market } : {}),
+        });
+        expect(holding.size_basis).toMatch(/仓位/);
+        expect(holding.observation_date).toBe("2026-07-25");
+        expect(holding.source_name).toBe("内置标的随机生成");
+      }
     }
   });
 
