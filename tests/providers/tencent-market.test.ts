@@ -6,16 +6,18 @@ function klines(rows: string[][]): object {
 }
 
 describe("Tencent public market evidence", () => {
-  it("returns the latest three valid trading days and excludes rows after the cutoff", async () => {
-    const source = new TencentMarketEvidenceSource(
-      async () => Response.json(klines([
+  it("returns up to 260 valid trading days, keeps only the latest available and excludes rows after the cutoff", async () => {
+    let requestedUrl = "";
+    const source = new TencentMarketEvidenceSource(async (input) => {
+      requestedUrl = String(input);
+      return Response.json(klines([
         ["2026-07-22", "10", "10.1"],
         ["2026-07-23", "10.1", "10.2"],
         ["2026-07-24", "10.2", "10.4"],
         ["2026-07-25", "10.4", "10.3"],
         ["2026-07-26", "10.3", "99"],
-      ])),
-    );
+      ]));
+    });
     const evidence = await source.collectMarketEvidence({
       lineId: "line-1",
       assetClass: "a_share",
@@ -25,8 +27,10 @@ describe("Tencent public market evidence", () => {
       signal: new AbortController().signal,
     });
 
-    expect(evidence).toHaveLength(3);
+    expect(requestedUrl).toContain("260%2Cqfq");
+    expect(evidence).toHaveLength(4);
     expect(evidence.map((item) => [item.observation_or_event_time, item.value, item.status])).toEqual([
+      ["2026-07-22", 10.1, "ambiguous"],
       ["2026-07-23", 10.2, "ambiguous"],
       ["2026-07-24", 10.4, "ambiguous"],
       ["2026-07-25", 10.3, "available"],

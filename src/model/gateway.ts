@@ -35,6 +35,10 @@ export interface ModelStreamRequest {
   prompt: string;
   signal: AbortSignal;
   timeoutMs: number;
+  maxOutputTokens?: number;
+  onConnected?: () => void;
+  /** Signals that private model reasoning has started; no reasoning text crosses this boundary. */
+  onReasoningStarted?: () => void;
   onText: (delta: string) => void;
 }
 

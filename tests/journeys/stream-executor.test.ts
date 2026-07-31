@@ -4,6 +4,7 @@ import type { MarketEvidenceSource } from "../../src/analysis/index.js";
 import type { EvidenceRecord, TaskEvent } from "../../src/contracts/index.js";
 import { getFixture } from "../../src/fixtures/index.js";
 import type { ModelGateway, ModelGatewayResult, ModelStreamRequest } from "../../src/model/index.js";
+import type { ThemeId } from "../../src/theme/index.js";
 
 const NOW = new Date("2026-07-25T09:00:00.000Z");
 const SAFE_RATIONAL = "#市场概览\n\n当前证据支持继续观察组合变化。\n\n##风险边界\n\n部分持仓证据仍有缺口，应等待数据确认，并保留最终判断权。";
@@ -63,7 +64,7 @@ async function execute(input: {
   marketEvidenceSource?: MarketEvidenceSource;
   hardDeadlineMs?: number;
   onText?: (text: string) => void;
-  themeId?: "eastern_observation" | "jixing_doudou" | "sunge";
+  themeId?: ThemeId;
 }) {
   const events: Array<Pick<TaskEvent, "stage" | "state"> & { message?: string }> = [];
   const executor = new StreamingAnalysisExecutor({
@@ -102,6 +103,8 @@ describe("StreamingAnalysisExecutor", () => {
     const requests: ModelStreamRequest[] = [];
     const modelGateway = gateway(async (request) => {
       requests.push(request);
+      request.onConnected?.();
+      request.onReasoningStarted?.();
       const text = modelReports(SAFE_RATIONAL, `#角色观察\n\n${SAFE_PERSONA}`);
       for (const delta of [text.slice(0, 8), text.slice(8, 64), text.slice(64)]) request.onText(delta);
       return { ok: true, text };
@@ -121,13 +124,14 @@ describe("StreamingAnalysisExecutor", () => {
       .filter((event) => event.stage === "form_conclusions_and_advice" && event.state === "running")
       .map((event) => event.message)
     ).toEqual([
-      "连通API尝试中",
-      "API连通成功",
-      "正在思考...",
+      "正在连接模型服务",
+      "模型服务已连接，正在生成复盘",
+      "模型正在推理并核对证据",
       "正在生成 市场概览",
       "正在生成 风险边界",
       "正在生成 角色观察",
     ]);
+    expect(requests[0]?.maxOutputTokens).toBe(16_384);
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "running",
@@ -221,6 +225,10 @@ describe("StreamingAnalysisExecutor", () => {
     ["eastern_observation", "奶龙", "你是**奶龙**", "我是龙"],
     ["jixing_doudou", "兜兜", "自称统一用「贫道」", "吉星高照"],
     ["sunge", "孙哥", "兄弟们", "孙哥"],
+    ["zhouli", "周礼", "大周礼时代", "周礼"],
+    ["tieba_laoge", "贴吧老哥", "攻击性、性别羞辱、脏话", "贴吧老哥"],
+    ["male_succubus", "男魅魔", "成年男性魅魔", "男魅魔"],
+    ["female_succubus", "女魅魔", "成年女性魅魔", "女魅魔"],
   ] as const)("loads the %s persona skill in the same model call", async (themeId, label, skillPhrase, themeLabel) => {
     const requests: ModelStreamRequest[] = [];
     const modelGateway = gateway(async (request) => {

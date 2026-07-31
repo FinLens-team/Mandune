@@ -1,4 +1,5 @@
 import {
+  compileModelMarketContext,
   deriveAnalysisInputs,
   RATIONAL_ANALYSIS_SCHEMA_VERSION,
   type MarketEvidenceSource,
@@ -154,18 +155,18 @@ function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRec
     `投资目标：${constraintLabel(snapshot.constraints.investment_objective)}`,
   ].join("\n");
 
-  const evidenceLines = evidence.length === 0
-    ? "（本次没有获取到可用行情证据。）"
-    : evidence
-        .map((item) => {
-          const value = item.value === null || item.value === undefined
-            ? "无可用值"
-            : `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
-          const note = item.limitations.length > 0 ? `，说明：${item.limitations.join("；")}` : "";
-          return `- ${item.scope.kind === "asset" ? item.scope.symbol ?? item.scope.line_id : "组合"} ` +
-            `${item.metric_or_event_type}：${value}（状态 ${item.status}，观察时间 ${item.observation_or_event_time}，来源 ${item.source.name}）${note}`;
-        })
-        .join("\n");
+  const marketContext = compileModelMarketContext(evidence);
+  const evidenceLimitations = evidence
+    .filter((item) => item.status !== "available" && item.status !== "ambiguous")
+    .slice(0, 12)
+    .map((item) => ({
+      asset: item.scope.kind === "asset" ? item.scope.symbol ?? item.scope.line_id : "组合",
+      metric_or_event_type: item.metric_or_event_type,
+      status: item.status,
+      observation_or_event_time: item.observation_or_event_time,
+      source: item.source.name,
+      limitations: item.limitations,
+    }));
 
   return [
     "【当前持仓】",
@@ -174,8 +175,12 @@ function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRec
     "【四项个人约束】",
     constraints,
     "",
-    "【已获取的行情证据】",
-    evidenceLines,
+    "【分层市场上下文｜服务端确定性计算】",
+    "近3个交易日保留逐日锚点；近1个月与近1年只提供关键摘要，不附全年原始日线。样本不足的窗口必须保持 insufficient。",
+    JSON.stringify(marketContext, null, 2),
+    "",
+    "【数据限制与失败项】",
+    evidenceLimitations.length > 0 ? JSON.stringify(evidenceLimitations, null, 2) : "（无额外限制。）",
     "",
     "请基于以上信息生成同一事实基础上的理性报告和当前角色报告，严格遵守系统指令中的四个边界标记与输出顺序。",
   ].join("\n");
@@ -255,19 +260,29 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       input.emit(activeStage, "succeeded", { covered_count: derivations.coverage.covered_line_ids.length });
 
       activeStage = "form_conclusions_and_advice";
-      input.emit(activeStage, "running", { message: "连通API尝试中" });
+      input.emit(activeStage, "running", { message: "正在连接模型服务" });
       const headings = createHeadingProgressReporter((message) => {
         input.emit(activeStage, "running", { message });
         input.onText?.(`# ${message.slice("正在生成 ".length)}\n`);
       }, snapshot.lines.flatMap((line) => [line.name.trim(), line.symbol.trim()]));
-      let receivedFirstDelta = false;
+      let connected = false;
+      const reportConnected = (): void => {
+        if (connected) return;
+        connected = true;
+        input.emit(activeStage, "running", { message: "模型服务已连接，正在生成复盘" });
+      };
+      let reasoningStarted = false;
+      const reportReasoningStarted = (): void => {
+        if (reasoningStarted) return;
+        reasoningStarted = true;
+        reportConnected();
+        input.emit(activeStage, "running", { message: "模型正在推理并核对证据" });
+      };
+      let receivedTextDelta = false;
       const reportModelDelta = (delta: string): void => {
         if (!delta) return;
-        if (!receivedFirstDelta) {
-          receivedFirstDelta = true;
-          input.emit(activeStage, "running", { message: "API连通成功" });
-          input.emit(activeStage, "running", { message: "正在思考..." });
-        }
+        receivedTextDelta = true;
+        reportConnected();
         headings.push(delta);
       };
       const modelText = await this.streamModelText(
@@ -275,9 +290,11 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
         evidence,
         Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
         deadlineController.signal,
+        reportConnected,
+        reportReasoningStarted,
         reportModelDelta,
       );
-      if (!receivedFirstDelta && modelText.trim()) reportModelDelta(modelText);
+      if (!receivedTextDelta && modelText.trim()) reportModelDelta(modelText);
       headings.scan(modelText);
       headings.finish();
       if (!modelText.trim()) {
@@ -382,6 +399,8 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
     evidence: readonly EvidenceRecord[],
     timeoutMs: number,
     deadlineSignal: AbortSignal,
+    onConnected: () => void,
+    onReasoningStarted: () => void,
     onDelta: (delta: string) => void,
   ): Promise<string> {
     const gateway = this.dependencies.modelGateway;
@@ -394,6 +413,9 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
         prompt: buildPrompt(snapshot, evidence),
         signal: deadlineSignal,
         timeoutMs,
+        maxOutputTokens: 16_384,
+        onConnected,
+        onReasoningStarted,
         onText: (delta) => {
           if (!deadlineSignal.aborted) onDelta(delta);
         },

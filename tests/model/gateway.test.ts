@@ -25,7 +25,100 @@ function completion(content: string): Response {
   );
 }
 
+function streamCompletion(chunks: readonly Record<string, unknown>[]): Response {
+  const body = chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n";
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
 describe("OpenAI-compatible AI SDK model gateway", () => {
+  it("enables DeepSeek thinking while keeping private reasoning out of text callbacks", async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
+      void _input;
+      void _init;
+      return streamCompletion([
+        {
+          id: "stream-1",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "deepseek-v4-flash",
+          choices: [{ index: 0, delta: { role: "assistant", reasoning_content: "private chain of thought" }, finish_reason: null }],
+        },
+        {
+          id: "stream-1",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "deepseek-v4-flash",
+          choices: [{ index: 0, delta: { content: "public answer" }, finish_reason: null }],
+        },
+        {
+          id: "stream-1",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "deepseek-v4-flash",
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 10, completion_tokens: 8, total_tokens: 18 },
+        },
+      ]);
+    });
+    const onConnected = vi.fn();
+    const onReasoningStarted = vi.fn();
+    const onText = vi.fn();
+    const gateway = createOpenAICompatibleModelGateway({
+      providerName: "DeepSeek",
+      baseURL: "https://api.deepseek.com",
+      apiKey: "fixture-key",
+      modelId: "deepseek-v4-flash",
+      supportsStructuredOutputs: false,
+      fetch,
+    });
+
+    const result = await gateway.streamGenerate!({
+      instructions: "Return a public answer.",
+      prompt: "fixture",
+      signal: new AbortController().signal,
+      timeoutMs: 1_000,
+      onConnected,
+      onReasoningStarted,
+      onText,
+    });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({ thinking: { type: "enabled" }, reasoning_effort: "high" });
+    expect(onReasoningStarted).toHaveBeenCalledTimes(1);
+    expect(onConnected).toHaveBeenCalled();
+    expect(onText).toHaveBeenCalledWith("public answer");
+    expect(result).toEqual({ ok: true, text: "public answer" });
+    expect(JSON.stringify({ result, textCalls: onText.mock.calls })).not.toContain("private chain of thought");
+  });
+
+  it("does not send DeepSeek-specific thinking fields to generic compatible providers", async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
+      void _input;
+      void _init;
+      return completion('{"schema_version":"test.v1","answer":"ok"}');
+    });
+    const gateway = createOpenAICompatibleModelGateway({
+      providerName: "fixture-provider",
+      baseURL: "https://models.example.test/v1",
+      apiKey: "fixture-key",
+      modelId: "test-model",
+      supportsStructuredOutputs: true,
+      fetch,
+    });
+    await gateway.generate({
+      operation: "test",
+      schemaVersion: "test.v1",
+      schema,
+      instructions: "Return the accepted schema.",
+      input: {},
+      signal: new AbortController().signal,
+      timeoutMs: 1_000,
+    });
+    const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("thinking");
+    expect(body).not.toHaveProperty("reasoning_effort");
+  });
+
   it("uses AI SDK v7 structured output without tools or internal retries", async () => {
     const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       void _input;

@@ -91,6 +91,31 @@ function allowedNumbers(
   });
 }
 
+function compactEvidenceForModel(
+  evidence: readonly EvidenceRecord[],
+  derived: readonly DerivedResult[],
+): EvidenceRecord[] {
+  const referenced = new Set(derived.flatMap((item) => item.evidence_refs));
+  const recentBySeries = new Map<string, EvidenceRecord[]>();
+  for (const item of evidence) {
+    if (item.scope.kind !== "asset" || (item.metric_or_event_type !== "close" && item.metric_or_event_type !== "nav") ||
+      typeof item.value !== "number") continue;
+    const key = `${item.scope.line_id}\u0000${item.metric_or_event_type}\u0000${item.source.name}`;
+    const rows = recentBySeries.get(key) ?? [];
+    rows.push(item);
+    recentBySeries.set(key, rows);
+  }
+  for (const rows of recentBySeries.values()) {
+    rows.sort((left, right) => left.observation_or_event_time.localeCompare(right.observation_or_event_time));
+    for (const item of rows.slice(-3)) referenced.add(item.id);
+  }
+  return evidence.filter((item) =>
+    referenced.has(item.id) || item.metric_or_event_type === "verified_event" ||
+    item.status === "failed" || item.status === "unsupported" || item.status === "stale" ||
+    item.status === "conflicting" || item.status === "unverified",
+  );
+}
+
 export function buildReviewPacket(input: {
   analysisId: string;
   snapshot: PortfolioSnapshot;
@@ -102,8 +127,9 @@ export function buildReviewPacket(input: {
   selectedAtlasKind: AtlasCardKind;
   existingAtlasCards: readonly AtlasCardV1[];
 }): ReviewPacketV2 {
-  const evidence = structuredClone([...input.evidence].sort((left, right) => left.id.localeCompare(right.id)));
   const derived = structuredClone([...input.derivations.derived].sort((left, right) => left.id.localeCompare(right.id)));
+  const evidence = structuredClone(compactEvidenceForModel(input.evidence, derived)
+    .sort((left, right) => left.id.localeCompare(right.id)));
   const factIds = [
     ...input.snapshot.lines.map((line) => line.line_id),
     ...Object.keys(input.snapshot.constraints).map((key) => `constraint:${key}`),

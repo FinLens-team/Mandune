@@ -4,6 +4,12 @@ export {
   type DerivationInput,
 } from "./derivations.js";
 export {
+  compileModelMarketContext,
+  type AssetMarketContext,
+  type MarketWindowSummary,
+  type ModelMarketContext,
+} from "./market-context.js";
+export {
   ANALYSIS_STAGES,
   createAnalysisOrchestrator,
   type AnalysisOrchestratorDependencies,

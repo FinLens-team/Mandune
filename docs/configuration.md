@@ -54,6 +54,14 @@ MANDONG_ANALYSIS_MODE=stream
 | `v2` | `MODEL_*`, PandaAI runtime, Bocha credential | Strict evidence cache, deterministic ReviewPacket, structured generation |
 | fixture | no `MODEL_*` outside production | Deterministic local/test result; production rejects missing model config |
 
+Market evidence uses AKShare first for A-share and ETF daily closes, then the
+public Tencent adapter as a fallback. Install AKShare in an isolated Python
+environment and configure its interpreter with:
+
+```dotenv
+AKSHARE_PYTHON_EXECUTABLE=/absolute/path/to/venv/bin/python
+```
+
 Strict V2 variables:
 
 ```dotenv

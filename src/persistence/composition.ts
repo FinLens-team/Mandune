@@ -15,7 +15,9 @@ import {
   BochaEvidenceCollector,
   BochaWebSearchClient,
   CachedPandaEvidenceCollector,
+  AkshareMarketEvidenceSource,
   PandaBatchClient,
+  FallbackMarketEvidenceSource,
   SupplementedMarketEvidenceCollector,
   TencentMarketEvidenceSource,
 } from "../providers/index.js";
@@ -88,7 +90,10 @@ export function createDurableServices(config: ServerConfig) {
                 new PandaBatchClient({ pythonExecutable: config.pandaPythonExecutable }),
                 evidenceCache,
               ),
-              new TencentMarketEvidenceSource(),
+              new FallbackMarketEvidenceSource(
+                new AkshareMarketEvidenceSource({ pythonExecutable: config.aksharePythonExecutable }),
+                new TencentMarketEvidenceSource(),
+              ),
             ),
             eventEvidenceCollector: new BochaEvidenceCollector(
               new BochaWebSearchClient(config.bochaApiKey ?? ""),
@@ -101,7 +106,10 @@ export function createDurableServices(config: ServerConfig) {
         )
       : new StreamingAnalysisExecutor({
           modelGateway,
-          marketEvidenceSource: new TencentMarketEvidenceSource(),
+          marketEvidenceSource: new FallbackMarketEvidenceSource(
+            new AkshareMarketEvidenceSource({ pythonExecutable: config.aksharePythonExecutable }),
+            new TencentMarketEvidenceSource(),
+          ),
         }, { hardDeadlineMs: config.analysisDeadlineMs })
     : undefined;
   const journey = executor

@@ -38,6 +38,29 @@ function usableLineIds(evidence: readonly EvidenceRecord[]): Set<string> {
  * close/nav 证据的持仓再用免鉴权公开行情源逐项补齐。补到可用证据的持仓
  * 从失败清单移除，让 Demo 主路径尽可能带真实数据进入模型生成。
  */
+export class FallbackMarketEvidenceSource implements MarketEvidenceSource {
+  constructor(
+    private readonly primary: MarketEvidenceSource,
+    private readonly fallback: MarketEvidenceSource,
+  ) {}
+
+  async collectMarketEvidence(input: Parameters<MarketEvidenceSource["collectMarketEvidence"]>[0]): Promise<EvidenceRecord[]> {
+    const primary = await this.primary.collectMarketEvidence(input);
+    const usable = primary.filter((item) =>
+      (item.status === "available" || (item.status === "ambiguous" &&
+        item.normalization_note === "unitless_return_eligible:same_provider_method")) &&
+      (item.metric_or_event_type === "close" || item.metric_or_event_type === "nav"));
+    if (new Set(usable.map((item) => item.observation_or_event_time.slice(0, 10))).size >= 3) {
+      return primary;
+    }
+    return [...primary, ...await this.fallback.collectMarketEvidence(input)];
+  }
+}
+
+/**
+ * Combine the protected collector with a source-level fallback while preserving
+ * the collector contract used by the strict V2 executor.
+ */
 export class SupplementedMarketEvidenceCollector implements MarketEvidenceCollector {
   constructor(
     private readonly primary: MarketEvidenceCollector,
