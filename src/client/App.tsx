@@ -18,6 +18,7 @@ import { AnalysisProgress } from "../features/analysis-progress/index.js";
 import { HistoryView } from "../features/history-view/index.js";
 import { AtlasReveal, AtlasView } from "../features/atlas/index.js";
 import { LongCard } from "../features/long-card/LongCard.js";
+import { ScoreShareCard } from "../features/score-share-card/ScoreShareCard.js";
 import { OnboardingFlow } from "../features/onboarding/index.js";
 import { ThemeSwitcher } from "../features/theme-switcher/index.js";
 import { WorkspaceNav, WorkspaceShell } from "../features/workspace-shell/index.js";
@@ -285,6 +286,7 @@ export function App(props: AppProps = {}) {
       <div className="journey-result-page" data-reduced-motion={state.reducedMotion || undefined}>
         <BrandBanner />
         <main className="journey-result" id="main">
+          <ScoreShareCard input={state.displayedResult} />
           <LongCard input={state.displayedResult} reducedMotion={state.reducedMotion} />
           {atlasGateway ? (
             <AtlasReveal
