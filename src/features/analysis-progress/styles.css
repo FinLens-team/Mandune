@@ -254,6 +254,149 @@ opacity (an animation fill would pin them back to full strength). */
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
+.analysis-progress__daily-message {
+  width: 100%;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--theme-border);
+  display: grid;
+  gap: var(--space-5);
+}
+
+.analysis-progress__daily-message header,
+.analysis-progress__daily-message footer,
+.analysis-progress__daily-message section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.analysis-progress__daily-message p,
+.analysis-progress__daily-message h2,
+.analysis-progress__daily-message h3,
+.analysis-progress__daily-message h4,
+.analysis-progress__daily-message dl,
+.analysis-progress__daily-message dd,
+.analysis-progress__daily-message ol {
+  margin: 0;
+}
+
+.analysis-progress__daily-market h3,
+.analysis-progress__daily-news h3 {
+  font-size: var(--font-size-sm);
+}
+
+.analysis-progress__daily-market dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-border);
+}
+
+.analysis-progress__daily-market dl > div {
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--theme-surface);
+}
+
+.analysis-progress__daily-market dt {
+  color: var(--theme-ink-soft);
+  font-size: var(--font-size-xs);
+}
+
+.analysis-progress__daily-market dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.analysis-progress__daily-market dd strong {
+  font-size: var(--font-size-md);
+}
+
+.analysis-progress__daily-market dd span {
+  color: var(--theme-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.analysis-progress__daily-news ol {
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.analysis-progress__daily-news li {
+  padding-left: var(--space-1);
+}
+
+.analysis-progress__daily-news h4 {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.analysis-progress__daily-news p {
+  color: var(--theme-ink-soft);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+}
+
+.analysis-progress__daily-news small {
+  color: var(--theme-ink-soft);
+  font-size: var(--font-size-xs);
+}
+
+.analysis-progress__daily-news a {
+  color: var(--theme-accent);
+  text-underline-offset: 0.2em;
+}
+
+.analysis-progress__daily-label {
+  color: var(--theme-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.analysis-progress__daily-message h2 {
+  font-size: var(--font-size-lg);
+  line-height: 1.35;
+}
+
+.analysis-progress__daily-dek {
+  color: var(--theme-ink-soft);
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+}
+
+.analysis-progress__daily-sections {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.analysis-progress__daily-sections h3 {
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.analysis-progress__daily-sections p,
+.analysis-progress__daily-message footer p {
+  color: var(--theme-ink-soft);
+  font-size: var(--font-size-sm);
+  line-height: 1.75;
+}
+
+.analysis-progress__daily-message footer {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--theme-border);
+}
+
+.analysis-progress__daily-message footer span {
+  color: var(--theme-accent);
+  font-size: var(--font-size-xs);
+}
+
 .analysis-progress__connection {
   margin: 0;
   padding: var(--space-1) var(--space-3);

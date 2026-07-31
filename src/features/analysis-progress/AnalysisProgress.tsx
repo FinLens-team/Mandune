@@ -5,6 +5,7 @@ import { AnalysisStatus, BrandBanner, Button } from "../../client/ui/index.js";
 import { playWaitingMascotMusic } from "../../client/audio/waiting-mascot-music.js";
 import { themeForId, type ThemeId } from "../../theme/index.js";
 import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
+import { FALLBACK_DAILY_BRIEFING, loadDailyBriefing } from "./daily-briefing.js";
 import {
   projectAnalysisProgress,
   streamHeadingMessages,
@@ -86,6 +87,12 @@ export function AnalysisProgress({
   const [showPop, setShowPop] = useState(false);
   const theme = themeForId(themeId);
   const assets = themeClientAssets(themeId);
+  const [dailyBriefing, setDailyBriefing] = useState({ ...FALLBACK_DAILY_BRIEFING, theme_id: themeId });
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadDailyBriefing(themeId, controller.signal).then(setDailyBriefing);
+    return () => controller.abort();
+  }, [themeId]);
   // Terminal state at mount time only: a result arriving mid-playback
   // must not re-run the effect and cut the animation short.
   const terminalAtMountRef = useRef(model.isTerminal);
@@ -292,6 +299,65 @@ export function AnalysisProgress({
               ))
             )}
           </ol>
+
+          {!model.isTerminal ? (
+            <article aria-labelledby="analysis-daily-briefing-title" className="analysis-progress__daily-message">
+              <header>
+                <p className="analysis-progress__daily-label">满懂日报 · {dailyBriefing.date || "今日"}</p>
+                <h2 id="analysis-daily-briefing-title">{dailyBriefing.title}</h2>
+                <p className="analysis-progress__daily-dek">{dailyBriefing.dek}</p>
+              </header>
+              {dailyBriefing.market.length > 0 ? (
+                <section className="analysis-progress__daily-market" aria-labelledby="analysis-daily-market-title">
+                  <h3 id="analysis-daily-market-title">今日市场</h3>
+                  <dl>
+                    {dailyBriefing.market.map((item) => (
+                      <div key={`${item.label}:${item.observed_at}`}>
+                        <dt>{item.label}</dt>
+                        <dd>
+                          <strong>{item.value}</strong>
+                          {item.change ? <span>{item.change}</span> : null}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+              ) : null}
+              {dailyBriefing.news.length > 0 ? (
+                <section className="analysis-progress__daily-news" aria-labelledby="analysis-daily-news-title">
+                  <h3 id="analysis-daily-news-title">值得关注</h3>
+                  <ol>
+                    {dailyBriefing.news.map((item) => {
+                      const source = dailyBriefing.sources.find((entry) => entry.id === item.source_id);
+                      return (
+                        <li key={`${item.title}:${item.published_at}`}>
+                          <h4>{item.title}</h4>
+                          <p>{item.summary}</p>
+                          <small>
+                            {item.published_at} · {source ? (
+                              <a href={source.url} rel="noreferrer" target="_blank">{source.name}</a>
+                            ) : item.source_id}
+                          </small>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </section>
+              ) : null}
+              <div className="analysis-progress__daily-sections">
+                {dailyBriefing.sections.map((section) => (
+                  <section key={section.heading}>
+                    <h3>{section.heading}</h3>
+                    <p>{section.body}</p>
+                  </section>
+                ))}
+              </div>
+              <footer>
+                <span>行情截止：{dailyBriefing.market_data_cutoff}</span>
+                <p>{dailyBriefing.notice}</p>
+              </footer>
+            </article>
+          ) : null}
 
           {connection === "disconnected" || connection === "reconnecting" ? (
             <p className="analysis-progress__connection" role="status">

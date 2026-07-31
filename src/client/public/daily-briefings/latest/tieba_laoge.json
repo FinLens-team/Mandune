@@ -1,0 +1,78 @@
+{
+  "schema_version": "daily-briefing.v2",
+  "fact_sheet_id": "cn-market-2026-08-01-r1",
+  "date": "2026-08-01",
+  "generated_at": "2026-08-01T08:00:00+08:00",
+  "market_data_cutoff": "2026-07-31 15:00（最近完整交易日）",
+  "market": [
+    {
+      "label": "深证成指",
+      "value": "13578.93",
+      "change": "+2.21%",
+      "observed_at": "2026-07-31 15:00",
+      "source_id": "szse-market"
+    },
+    {
+      "label": "深市股票成交额",
+      "value": "13554.50 亿元",
+      "observed_at": "2026-07-31",
+      "source_id": "szse-market"
+    }
+  ],
+  "news": [
+    {
+      "title": "中国证监会同意焦炭期权注册",
+      "summary": "证监会于 7 月 31 日发布注册消息。该事项直接关联商品期货与风险管理工具，具体上市安排仍以交易所后续公告为准。",
+      "published_at": "2026-07-31",
+      "source_id": "csrc-coke-option",
+      "importance": "high",
+      "related_assets": [
+        "商品期货",
+        "焦炭产业链"
+      ]
+    },
+    {
+      "title": "四部门发布关于健全金融机构治理的实施意见",
+      "summary": "金融监管总局、中国人民银行、中国证监会、财政部于 7 月 31 日联合发布相关实施意见。日报只记录发布事实，不据此推断单日指数涨跌原因。",
+      "published_at": "2026-07-31",
+      "source_id": "csrc-governance",
+      "importance": "high",
+      "related_assets": [
+        "银行",
+        "非银金融",
+        "资本市场"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "szse-market",
+      "name": "深圳证券交易所市场数据",
+      "url": "https://www.sse.org.cn/www/market/"
+    },
+    {
+      "id": "csrc-coke-option",
+      "name": "中国证监会",
+      "url": "https://www.csrc.gov.cn/csrc/c100028/c7649078/content.shtml"
+    },
+    {
+      "id": "csrc-governance",
+      "name": "中国证监会",
+      "url": "https://www.csrc.gov.cn/csrc/c100028/c7649076/content.shtml"
+    }
+  ],
+  "notice": "日报基于公开市场信息预先生成，不使用你的持仓数据，不构成个性化投资建议。",
+  "theme_id": "tieba_laoge",
+  "title": "周末复盘：数字归数字，消息归消息",
+  "dek": "别用一个标题解释整张盘，也别把周五收盘当周末实时行情。",
+  "sections": [
+    {
+      "heading": "盘面有啥",
+      "body": "深证成指周五涨 2.21%，深市股票成交额 13554.50 亿元。能确认的是这两个数字，不能确认的是所有上涨都由同一条新闻推动。"
+    },
+    {
+      "heading": "消息有啥",
+      "body": "证监会同意焦炭期权注册，四部门发布金融机构治理意见。看后续安排和执行，标题党式因果先放一边。"
+    }
+  ]
+}
