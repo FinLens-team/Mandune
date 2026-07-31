@@ -49,6 +49,11 @@ describe("S8 analysis progress view (simple version)", () => {
     );
 
     expect(markup).toContain("nailong-rest.webp");
+    expect(markup).toContain("满懂日报");
+    expect(markup).toContain("今日市场日报正在更新");
+    expect(markup).toContain("行情截止：暂未取得可核验行情");
+    expect(markup).toContain("行情和新闻只有经过来源核验后才会显示");
+    expect(markup).toContain("analysis-progress__daily-message");
     expect(markup).toContain('class="analysis-progress__mascot"');
     expect(markup).toContain('aria-label="点击奶龙播放音乐"');
     expect(markup).toContain('<button');
@@ -133,6 +138,7 @@ describe("S8 analysis progress view (simple version)", () => {
     expect(markup).not.toContain("暂时离开");
     expect(markup).not.toContain("返回主页");
     expect(markup).toContain('class="analysis-progress__actions"');
+    expect(markup).not.toContain("analysis-progress__daily-message");
     expect(markup).toContain('class="analysis-status ui-analysis-status ui-analysis-status--limited analysis-progress__outcome"');
   });
 

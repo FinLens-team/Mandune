@@ -21,6 +21,7 @@
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json && node scripts/copy-runtime-assets.mjs",
     "build": "vite build && tsc -p tsconfig.server.json && node scripts/copy-runtime-assets.mjs",
+    "daily-briefings:publish": "node scripts/publish-daily-briefings.mjs",
     "start": "node dist/server/index.js",
     "maintenance:purge": "node --preserve-symlinks-main dist/persistence/maintenance.js purge-expired"
   },
