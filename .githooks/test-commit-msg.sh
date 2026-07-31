@@ -60,6 +60,12 @@ docs(architecture): 允许自由格式正文
 这里直接说明修改原因和结果，不使用背景、变更、验证标题，也不使用列表。English terms are allowed.
 EOF
 
+cat > "$fixture_dir/common-cjk.txt" <<'EOF'
+feat(demo): 完善随机体验组合
+
+修复中文排序规则造成的常用汉字误判。
+EOF
+
 cat > "$fixture_dir/non-chinese-subject.txt" <<'EOF'
 docs(architecture): document runtime decisions
 
@@ -104,6 +110,7 @@ printf '%s' 'docs(architecture): 提交信息缺少末尾换行
 
 expect_pass "完整中文提交信息" "$fixture_dir/valid.txt"
 expect_pass "自由格式中英混合正文" "$fixture_dir/freeform-body.txt"
+expect_pass "常用汉字不受排序规则影响" "$fixture_dir/common-cjk.txt"
 expect_fail "字面量 \\n" "$fixture_dir/literal-newline.txt"
 expect_fail "主题不含中文" "$fixture_dir/non-chinese-subject.txt"
 expect_fail "正文不含中文" "$fixture_dir/english-only-body.txt"
