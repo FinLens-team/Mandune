@@ -10,6 +10,11 @@ fail() {
   exit 1
 }
 
+contains_chinese() {
+  # Use PCRE Unicode code points so locale collation cannot exclude common CJK characters.
+  LC_ALL=C grep -qP '(*UTF)[\x{4E00}-\x{9FFF}]'
+}
+
 if [ -z "$message_file" ] || [ ! -f "$message_file" ]; then
   fail "未找到 Git 提交信息文件。"
 fi
@@ -36,7 +41,7 @@ if ! printf '%s\n' "$subject" | grep -Eq '^(feat|fix|docs|style|refactor|perf|te
   fail "首行必须使用 Conventional Commit：<type>(<scope>): <中文主题>。"
 fi
 
-if ! printf '%s\n' "$subject" | grep -q '[一-龥]'; then
+if ! printf '%s\n' "$subject" | contains_chinese; then
   fail "首行主题必须包含中文。"
 fi
 
@@ -44,7 +49,7 @@ if [ -n "$second_line" ]; then
   fail "首行主题后必须有一个真实空行。"
 fi
 
-if ! tail -n +3 "$cleaned_message" | grep -q '[一-龥]'; then
+if ! tail -n +3 "$cleaned_message" | contains_chinese; then
   fail "正文必须包含中文，但可以混用英文术语；正文格式和长度不作限制。"
 fi
 
