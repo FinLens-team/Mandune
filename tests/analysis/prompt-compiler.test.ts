@@ -17,6 +17,10 @@ const EXPECTED_HASHES = {
   "奶龙转述-skill.md": "6f24172abb08bb5aa1fa04e76a403db2406b69017fd82421cf32dc61ada3bf2d",
   "孙哥转述-skill.md": "a6aa654bb8ffe45c72c11ea572e055ed6e175ee88f01e0ca4849ef269ce8eb68",
   "兜兜转述-玄学版-skill.md": "af14f077d03719e4d9158b3ebc7113bed36e926f3fad9e74a5b9b7f6838012b5",
+  "周礼转述-skill.md": "2fd2c299d02ca70f3afa9c337eb0c14c427b1018ca5c666757ceffdfa8934b84",
+  "贴吧老哥转述-skill.md": "8937df1f9e850f658b499ddc48bed66da6ebf93c601520ec16868318c7f6a114",
+  "男魅魔转述-skill.md": "75eace3952fb5d270fd2c1a7820ba8453f390d8cdb059037288f1fd3731e3f4c",
+  "女魅魔转述-skill.md": "954ed5b20ebe61f3450c76f152cfb501ed54c3716a8ff77807f799781e744702",
 } as const;
 
 describe("daily review prompt compiler", () => {
@@ -26,6 +30,10 @@ describe("daily review prompt compiler", () => {
     expect(personaForTheme("sun_ge")).toBe("sunge");
     expect(personaForTheme("jixing_doudou")).toBe("doudou");
     expect(personaForTheme("sunge")).toBe("sunge");
+    expect(personaForTheme("zhouli")).toBe("zhouli");
+    expect(personaForTheme("tieba_laoge")).toBe("tieba_laoge");
+    expect(personaForTheme("male_succubus")).toBe("male_succubus");
+    expect(personaForTheme("female_succubus")).toBe("female_succubus");
   });
 
   it("keeps every FINAL skill byte-identical to the reviewed intake", () => {
@@ -81,5 +89,32 @@ describe("daily review prompt compiler", () => {
     expect(compiled.persona_instructions).toContain("[FINAL — DO NOT MODIFY]");
     expect(compiled.rational_instructions).toContain("报告正文都不得包含“每日扫盲”");
     expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
+  });
+
+  it("keeps application boundaries ahead of the stronger succubus persona", () => {
+    const fixture = structuredClone(getFixture("supported_full"));
+    fixture.snapshot.theme_id = "female_succubus";
+    const derivations = deriveAnalysisInputs({
+      snapshot: fixture.snapshot,
+      evidence: fixture.analysis.evidence,
+      latestCompleteTradingDay: fixture.analysis.latest_complete_trading_day,
+    });
+    const packet = buildReviewPacket({
+      analysisId: fixture.analysis.analysis_id,
+      snapshot: fixture.snapshot,
+      latestCompleteTradingDay: fixture.analysis.latest_complete_trading_day,
+      evidenceCutoffAt: fixture.analysis.evidence_cutoff_at,
+      personaId: "female_succubus",
+      evidence: fixture.analysis.evidence,
+      derivations,
+      selectedAtlasKind: selectAtlasKind(fixture.analysis.analysis_id),
+      existingAtlasCards: [],
+    });
+
+    const compiled = compileDailyReviewPrompt(packet, "female_succubus");
+    expect(compiled.persona_instructions.indexOf("只给可追溯的方向性观察"))
+      .toBeLessThan(compiled.persona_instructions.indexOf("成年女性魅魔"));
+    expect(compiled.persona_instructions).toContain("收益保证");
+    expect(compiled.persona_instructions).toContain("数据缺失必须先准确说明");
   });
 });
