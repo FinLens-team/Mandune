@@ -98,6 +98,32 @@ body,
   margin: 0;
 }
 
+.app-render-error {
+  width: min(100% - 2rem, 32rem);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: grid;
+  place-content: center;
+  gap: var(--space-4);
+}
+
+.app-render-error h1,
+.app-render-error p {
+  margin: 0;
+}
+
+.app-render-error button {
+  min-height: var(--control-height);
+  padding: 0 var(--space-6);
+  border: 1px solid var(--color-observed);
+  border-radius: var(--radius-md);
+  background: var(--color-observed);
+  color: var(--color-bg-surface);
+  font: inherit;
+  cursor: pointer;
+}
+
 body {
   min-width: 320px;
   background: var(--color-bg-base);
