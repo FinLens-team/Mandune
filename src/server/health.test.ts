@@ -63,6 +63,18 @@ describe("GET /health", () => {
     );
   });
 
+  it("serves source public daily briefings in development", async () => {
+    const baseUrl = await listen();
+    const response = await fetch(`${baseUrl}/daily-briefings/latest/female_succubus.json`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/application\/json/);
+    await expect(response.json()).resolves.toMatchObject({
+      schema_version: "daily-briefing.v2",
+      theme_id: "female_succubus",
+    });
+  });
+
   it("does not echo model environment values", async () => {
     const previousApiKey = process.env.MODEL_API_KEY;
     const previousBaseUrl = process.env.MODEL_BASE_URL;
