@@ -9,7 +9,14 @@ import type { ReviewPacketV2 } from "./review-packet.js";
 export const DAILY_REVIEW_PROMPT_VERSION = "daily-review-prompt.v3" as const;
 export const DAILY_REVIEW_MODEL_ID = "step-explore" as const;
 
-export type DailyReviewPersonaId = "doudou" | "nailong" | "sunge";
+export type DailyReviewPersonaId =
+  | "doudou"
+  | "nailong"
+  | "sunge"
+  | "zhouli"
+  | "tieba_laoge"
+  | "male_succubus"
+  | "female_succubus";
 
 interface SkillAsset {
   fileName: string;
@@ -34,6 +41,22 @@ const PERSONA_SKILLS: Record<DailyReviewPersonaId, SkillAsset> = {
     fileName: "孙哥转述-skill.md",
     sha256: "a6aa654bb8ffe45c72c11ea572e055ed6e175ee88f01e0ca4849ef269ce8eb68",
   },
+  zhouli: {
+    fileName: "周礼转述-skill.md",
+    sha256: "2fd2c299d02ca70f3afa9c337eb0c14c427b1018ca5c666757ceffdfa8934b84",
+  },
+  tieba_laoge: {
+    fileName: "贴吧老哥转述-skill.md",
+    sha256: "8937df1f9e850f658b499ddc48bed66da6ebf93c601520ec16868318c7f6a114",
+  },
+  male_succubus: {
+    fileName: "男魅魔转述-skill.md",
+    sha256: "75eace3952fb5d270fd2c1a7820ba8453f390d8cdb059037288f1fd3731e3f4c",
+  },
+  female_succubus: {
+    fileName: "女魅魔转述-skill.md",
+    sha256: "954ed5b20ebe61f3450c76f152cfb501ed54c3716a8ff77807f799781e744702",
+  },
 };
 
 export const DAILY_REVIEW_SKILL_VERSIONS = {
@@ -42,6 +65,10 @@ export const DAILY_REVIEW_SKILL_VERSIONS = {
     doudou: `sha256:${PERSONA_SKILLS.doudou.sha256}`,
     nailong: `sha256:${PERSONA_SKILLS.nailong.sha256}`,
     sunge: `sha256:${PERSONA_SKILLS.sunge.sha256}`,
+    zhouli: `sha256:${PERSONA_SKILLS.zhouli.sha256}`,
+    tieba_laoge: `sha256:${PERSONA_SKILLS.tieba_laoge.sha256}`,
+    male_succubus: `sha256:${PERSONA_SKILLS.male_succubus.sha256}`,
+    female_succubus: `sha256:${PERSONA_SKILLS.female_succubus.sha256}`,
   },
 } as const;
 
