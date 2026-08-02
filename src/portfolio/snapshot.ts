@@ -43,6 +43,10 @@ export function draftLineToConfirmed(
     observation_date: line.observation_date,
     entry_method: line.entry_method,
     confirmed_at: confirmedAt,
+    ...(line.current_market_value_cny !== undefined
+      ? { current_market_value_cny: line.current_market_value_cny }
+      : {}),
+    ...(line.cost_basis_cny !== undefined ? { cost_basis_cny: line.cost_basis_cny } : {}),
   };
 }
 
@@ -96,6 +100,7 @@ export function createSnapshotFromDraft(
     created_at: confirmedAt,
     contracts_version: CONTRACTS_VERSION,
     theme_id: input.theme_id ?? "eastern_observation",
+    ...(draft.cash_balance_cny !== undefined ? { cash_balance_cny: draft.cash_balance_cny } : {}),
     lines: confirmed,
     constraints: draft.constraints,
   };

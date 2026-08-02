@@ -40,6 +40,8 @@ export function createManualLine(input: {
   market?: string | UnknownFieldState;
   size_basis: string | UnknownFieldState;
   observation_date: string | UnknownFieldState;
+  current_market_value_cny?: number;
+  cost_basis_cny?: number;
 }): DraftLine {
   return withUsability({
     line_id: createId("line"),
@@ -49,6 +51,10 @@ export function createManualLine(input: {
     market: input.market === undefined ? undefined : normalizeOptional(input.market),
     size_basis: normalizeOptional(input.size_basis),
     observation_date: normalizeOptional(input.observation_date),
+    ...(input.current_market_value_cny !== undefined
+      ? { current_market_value_cny: input.current_market_value_cny }
+      : {}),
+    ...(input.cost_basis_cny !== undefined ? { cost_basis_cny: input.cost_basis_cny } : {}),
     entry_method: "manual",
   });
 }
@@ -108,6 +114,19 @@ export function updateConstraints(
     updated_at: nowIso(),
     constraints,
   };
+}
+
+export function updateCashBalance(
+  draft: PortfolioDraft,
+  cashBalanceCny: number | undefined,
+): PortfolioDraft {
+  const next: PortfolioDraft = { ...draft, updated_at: nowIso() };
+  if (cashBalanceCny === undefined) {
+    delete next.cash_balance_cny;
+  } else {
+    next.cash_balance_cny = cashBalanceCny;
+  }
+  return next;
 }
 
 export function listUsableLines(draft: PortfolioDraft): DraftLine[] {

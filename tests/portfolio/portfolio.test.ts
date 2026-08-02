@@ -91,4 +91,36 @@ describe("portfolio draft and snapshot", () => {
     expect(result.snapshot.lines).toHaveLength(1);
     expect(result.snapshot.lines[0]?.line_id).toBe(usable.line_id);
   });
+
+  it("maps optional valuation inputs into snapshots while legacy drafts remain valid", () => {
+    const legacyDraft = createExampleDraft();
+    const result = createSnapshotFromDraft({
+      ...legacyDraft,
+      cash_balance_cny: 1250.5,
+      lines: legacyDraft.lines.map((line, index) =>
+        index === 0
+          ? {
+              ...line,
+              current_market_value_cny: 12_345.67,
+              cost_basis_cny: 10_000,
+            }
+          : line,
+      ),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.cash_balance_cny).toBe(1250.5);
+    expect(result.snapshot.lines[0]).toMatchObject({
+      current_market_value_cny: 12_345.67,
+      cost_basis_cny: 10_000,
+    });
+
+    const legacyResult = createSnapshotFromDraft(legacyDraft);
+    expect(legacyResult.ok).toBe(true);
+    if (legacyResult.ok) {
+      expect(legacyResult.snapshot.cash_balance_cny).toBeUndefined();
+      expect(legacyResult.snapshot.lines[0]?.current_market_value_cny).toBeUndefined();
+    }
+  });
 });

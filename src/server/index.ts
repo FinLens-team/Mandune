@@ -31,6 +31,7 @@ export function startServer(
     atlas: services.atlas,
     history: services.history,
     journey: services.journey,
+    randomExamples: services.randomExamples,
     ...(services.a2a ? { a2a: services.a2a } : {}),
   });
 

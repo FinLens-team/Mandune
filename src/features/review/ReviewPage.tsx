@@ -7,6 +7,7 @@ import type {
   PortfolioSnapshot,
   UnknownFieldState,
 } from "../../contracts/index.js";
+import type { RandomExampleHolding } from "../../app/client/index.js";
 import { createExampleDraft, listUnresolvedLines, listUsableLines } from "../../portfolio/index.js";
 import { Button, IconButton } from "../../client/ui/index.js";
 import { ConstraintsForm } from "../constraints/ConstraintsForm.js";
@@ -14,9 +15,12 @@ import { InstrumentField } from "./InstrumentField.js";
 import {
   appendHolding,
   appendRandomHoldings,
+  appendServerRandomHolding,
   deleteHolding,
+  editCashBalance,
   editConstraints,
   editHolding,
+  normalizeOptionalCnyAmount,
   snapshotCurrentDraft,
 } from "./model.js";
 import "./styles.css";
@@ -29,6 +33,7 @@ export interface PortfolioEditorProps {
   onSave?: (snapshot: PortfolioSnapshot) => void;
   onCancel?: () => void;
   onConfirmDraft?: (draft: PortfolioDraft) => void;
+  onRequestRandomHolding?: () => Promise<RandomExampleHolding>;
 }
 
 const EMPTY_HOLDING = {
@@ -38,6 +43,8 @@ const EMPTY_HOLDING = {
   market: "",
   size_basis: "",
   observation_date: "",
+  current_market_value_cny: "",
+  cost_basis_cny: "",
 };
 
 /** Contract field names are internal; the page speaks the form's language. */
@@ -60,7 +67,18 @@ function unknownToBlank(value: string | UnknownFieldState): string {
 interface HoldingLineFieldsProps {
   line: DraftLine;
   onPatch: (
-    patch: Partial<Pick<DraftLine, "asset_class" | "name" | "symbol" | "size_basis" | "observation_date">>,
+    patch: Partial<
+      Pick<
+        DraftLine,
+        | "asset_class"
+        | "name"
+        | "symbol"
+        | "size_basis"
+        | "observation_date"
+        | "current_market_value_cny"
+        | "cost_basis_cny"
+      >
+    >,
   ) => void;
 }
 
@@ -74,15 +92,39 @@ function HoldingLineFields({ line, onPatch }: HoldingLineFieldsProps) {
     symbol: unknownToBlank(String(line.symbol)),
     size_basis: unknownToBlank(String(line.size_basis)),
     observation_date: unknownToBlank(String(line.observation_date)),
+    current_market_value_cny: line.current_market_value_cny?.toString() ?? "",
+    cost_basis_cny: line.cost_basis_cny?.toString() ?? "",
   }));
 
-  function edit(field: "name" | "symbol" | "size_basis" | "observation_date", value: string) {
+  function edit(
+    field:
+      | "name"
+      | "symbol"
+      | "size_basis"
+      | "observation_date"
+      | "current_market_value_cny"
+      | "cost_basis_cny",
+    value: string,
+  ) {
     setFields((current) => ({ ...current, [field]: value }));
-    onPatch({ [field]: value });
+    if (field === "current_market_value_cny") {
+      onPatch({ current_market_value_cny: normalizeOptionalCnyAmount(value) });
+      return;
+    }
+    if (field === "cost_basis_cny") {
+      onPatch({ cost_basis_cny: normalizeOptionalCnyAmount(value) });
+      return;
+    }
+    if (field === "name") onPatch({ name: value });
+    if (field === "symbol") onPatch({ symbol: value });
+    if (field === "size_basis") onPatch({ size_basis: value });
+    if (field === "observation_date") onPatch({ observation_date: value });
   }
 
   const dateText = fields.observation_date.trim();
   const dateIncomplete = dateText.length > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(dateText);
+  const invalidValuation = (value: string) =>
+    value.trim().length > 0 && normalizeOptionalCnyAmount(value) === undefined;
 
   return (
     <div className="portfolio-line__fields">
@@ -121,6 +163,36 @@ function HoldingLineFields({ line, onPatch }: HoldingLineFieldsProps) {
         />
       </label>
       <label className="field">
+        <span className="field-label">当前市值（元）</span>
+        <input
+          inputMode="decimal"
+          min="0"
+          placeholder="可留空"
+          step="0.01"
+          type="number"
+          value={fields.current_market_value_cny}
+          onChange={(event) => edit("current_market_value_cny", event.target.value)}
+        />
+        {invalidValuation(fields.current_market_value_cny) ? (
+          <span className="field-hint">请输入非负金额；留空表示未提供。</span>
+        ) : null}
+      </label>
+      <label className="field">
+        <span className="field-label">持仓成本（元）</span>
+        <input
+          inputMode="decimal"
+          min="0"
+          placeholder="可留空"
+          step="0.01"
+          type="number"
+          value={fields.cost_basis_cny}
+          onChange={(event) => edit("cost_basis_cny", event.target.value)}
+        />
+        {invalidValuation(fields.cost_basis_cny) ? (
+          <span className="field-hint">请输入非负金额；留空表示未提供。</span>
+        ) : null}
+      </label>
+      <label className="field">
         <span className="field-label">观察日期</span>
         <input
           inputMode="numeric"
@@ -136,12 +208,23 @@ function HoldingLineFields({ line, onPatch }: HoldingLineFieldsProps) {
   );
 }
 
-export function PortfolioEditor({ draft, onCancel, onChange, onConfirmDraft, onSave }: PortfolioEditorProps) {
+export function PortfolioEditor({
+  draft,
+  onCancel,
+  onChange,
+  onConfirmDraft,
+  onRequestRandomHolding,
+  onSave,
+}: PortfolioEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
   const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
+  const [cashBalance, setCashBalance] = useState(() => draft.cash_balance_cny?.toString() ?? "");
   const [message, setMessage] = useState<string | null>(null);
+  const [addingRandom, setAddingRandom] = useState(false);
   const usable = useMemo(() => listUsableLines(draft), [draft]);
   const unresolved = useMemo(() => listUnresolvedLines(draft), [draft]);
+  const cashBalanceInvalid =
+    cashBalance.trim().length > 0 && normalizeOptionalCnyAmount(cashBalance) === undefined;
 
   function save() {
     const result = snapshotCurrentDraft(draft);
@@ -155,7 +238,32 @@ export function PortfolioEditor({ draft, onCancel, onChange, onConfirmDraft, onS
     onConfirmDraft?.(draft);
   }
 
-  function addRandomHoldings() {
+  async function addRandomHoldings() {
+    if (onRequestRandomHolding) {
+      setAddingRandom(true);
+      try {
+        const example = await onRequestRandomHolding();
+        const next = appendServerRandomHolding(
+          draft,
+          example.line,
+          example.valuation.cash_balance_cny,
+        );
+        const added = next.lines.length - draft.lines.length;
+        onChange(next);
+        setMessage(
+          added === 1
+            ? example.valuation.source.kind === "public_delayed"
+              ? "已新增 1 条随机持仓数据；估值来自公开延迟日线（非实时），确认保存后才会进入快照。"
+              : "已新增 1 条随机持仓数据；公开行情不可用，已使用明确标识的本地演示估值（非实时）。"
+            : "随机候选已在当前草稿中，未重复添加。",
+        );
+      } catch {
+        setMessage("随机示例服务暂不可用；没有新增或伪造行情数据，请稍后重试。");
+      } finally {
+        setAddingRandom(false);
+      }
+      return;
+    }
     const next = appendRandomHoldings(draft);
     const added = next.lines.length - draft.lines.length;
     onChange(next);
@@ -217,10 +325,33 @@ export function PortfolioEditor({ draft, onCancel, onChange, onConfirmDraft, onS
               <h2>持仓数据</h2>
               <p>可用 {usable.length} 条，未决 {unresolved.length} 条。未决行不会进入快照。</p>
             </div>
-            <Button onClick={addRandomHoldings} variant="secondary">
+            <Button disabled={addingRandom} onClick={() => void addRandomHoldings()} variant="secondary">
               <Dices aria-hidden="true" size={20} />
-              新增随机数据
+              {addingRandom ? "正在获取随机示例…" : "新增随机数据"}
             </Button>
+          </div>
+
+          <div className="portfolio-cash-balance">
+            <label className="field">
+              <span className="field-label">组合现金余额（元）</span>
+              <input
+                inputMode="decimal"
+                min="0"
+                placeholder="可留空"
+                step="0.01"
+                type="number"
+                value={cashBalance}
+                onChange={(event) => {
+                  const nextCashBalance = event.target.value;
+                  setCashBalance(nextCashBalance);
+                  onChange(editCashBalance(draft, nextCashBalance));
+                }}
+              />
+              {cashBalanceInvalid ? (
+                <span className="field-hint">请输入非负金额；留空表示未提供。</span>
+              ) : null}
+            </label>
+            <p>以下金额均为可选录入项；未填写不会影响已有复盘或历史快照。</p>
           </div>
 
           <div className="portfolio-lines" role="list">

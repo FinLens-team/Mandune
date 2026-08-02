@@ -156,6 +156,43 @@ describe("journey HTTP gateway privacy and isolation", () => {
     expect(requestBody).toEqual({ experience_source: "edited" });
   });
 
+  it("uses the same-origin endpoint and rejects a random example without explicit provenance", async () => {
+    const line = createExampleDraft().lines[0]!;
+    const fetcher: JourneyFetch = vi.fn(async () => json({ example: {
+      line: { ...line, current_market_value_cny: 1_200, cost_basis_cny: 1_000 },
+      valuation: {
+        current_market_value_cny: 1_200,
+        cost_basis_cny: 1_000,
+        cash_balance_cny: 300,
+        position_units: 100,
+        source: {
+          kind: "local_fallback",
+          is_live: false,
+          name: "本地演示估值（非实时行情）",
+          locator: "local:test",
+          observation_date: "2026-07-25",
+          historical_observation_date: "2026-07-01",
+          current_price_cny: 12,
+          historical_price_cny: 10,
+          limitations: ["测试 fallback。"],
+        },
+      },
+    } }));
+    const gateway = new FetchJourneyGateway(fetcher);
+
+    await expect(gateway.getRandomExampleHolding()).resolves.toMatchObject({
+      line: { current_market_value_cny: 1_200, cost_basis_cny: 1_000 },
+      valuation: { source: { kind: "local_fallback", is_live: false } },
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/random-examples/holding",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
+
+    const malformed = new FetchJourneyGateway(async () => json({ example: { line } }));
+    await expect(malformed.getRandomExampleHolding()).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
   it("preserves an unsupported history version instead of replaying it", async () => {
     const fetcher: JourneyFetch = async (url) => {
       if (url.endsWith("/replay")) {

@@ -11,6 +11,7 @@ export type {
   AtlasGateway,
   JourneyFetch,
   JourneyGateway,
+  RandomExampleHolding,
 } from "./gateway.js";
 export {
   identityToPortfolioDraft,

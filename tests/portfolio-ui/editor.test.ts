@@ -5,6 +5,7 @@ import type { PortfolioDraft } from "../../src/contracts/index.js";
 import { createExampleDraft } from "../../src/portfolio/index.js";
 import {
   appendHolding,
+  appendServerRandomHolding,
   deleteHolding,
   editConstraints,
   editHolding,
@@ -74,6 +75,28 @@ describe("S6 portfolio editor", () => {
 
     const removed = deleteHolding(added, lineId);
     expect(removed.lines.some((line) => line.line_id === lineId)).toBe(false);
+  });
+
+  it("keeps server-generated market value, cost basis, and cash together in the editable draft", () => {
+    const original = createExampleDraft();
+    const sourceLine = original.lines[0]!;
+    const serverLine = {
+      ...sourceLine,
+      line_id: "line-server-valuation",
+      symbol: "510301.SH",
+      current_market_value_cny: 1_200,
+      cost_basis_cny: 1_000,
+    };
+
+    const next = appendServerRandomHolding(original, serverLine, 300);
+
+    expect(next.cash_balance_cny).toBe(300);
+    expect(next.lines.at(-1)).toMatchObject({
+      line_id: "line-server-valuation",
+      current_market_value_cny: 1_200,
+      cost_basis_cny: 1_000,
+    });
+    expect(original.cash_balance_cny).toBeUndefined();
   });
 
   it("renders an assistive fuzzy-search combobox that never blocks free text", async () => {

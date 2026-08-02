@@ -10,6 +10,7 @@ import {
   type AnalysisExecutor,
   type StoredAnalysisRun,
 } from "../../src/app/server/index.js";
+import { RandomExampleValuationService } from "../../src/app/server/random-example-valuation.js";
 import {
   CONTRACTS_VERSION,
   validateTaskEvent,
@@ -98,7 +99,13 @@ function composition(database = open(), executor?: AnalysisExecutor) {
   const history = new HistoryService(new SqliteHistoryStore(database));
   const store = new SqliteJourneyStore(database);
   const journey = new JourneyAnalysisService(store, history, executor);
-  const app = createApp({ version: "journey-test" }, workspaces, { history, journey });
+  const randomExamples = new RandomExampleValuationService({
+    marketEvidenceSource: { collectMarketEvidence: async () => [] },
+    now: () => new Date("2026-07-25T03:00:00.000Z"),
+    random: () => 0.2,
+    createLineId: () => "line-server-random",
+  });
+  const app = createApp({ version: "journey-test" }, workspaces, { history, journey, randomExamples });
   return { app, workspaces, history, store, journey, database };
 }
 
@@ -124,6 +131,31 @@ async function request(
 }
 
 describe("#34 backend journey transport", () => {
+  it("generates an authenticated server-side random holding with explicit fallback provenance", async () => {
+    const { app } = composition();
+    const cookie = await createCookie(app);
+
+    const response = await request(app, cookie, "/api/random-examples/holding", { method: "POST" });
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      example: {
+        line: { line_id: string; current_market_value_cny: number; cost_basis_cny: number };
+        valuation: { cash_balance_cny: number; source: { kind: string; is_live: boolean } };
+      };
+    };
+    expect(body.example.line).toMatchObject({
+      line_id: "line-server-random",
+      current_market_value_cny: expect.any(Number),
+      cost_basis_cny: expect.any(Number),
+    });
+    expect(body.example.valuation).toMatchObject({
+      cash_balance_cny: expect.any(Number),
+      source: { kind: "local_fallback", is_live: false },
+    });
+    expect((await request(app, "", "/api/random-examples/holding", { method: "POST" })).status).toBe(401);
+  });
+
   it("authorizes durable current drafts by cookie and isolates two workspaces", async () => {
     const { app } = composition();
     const cookieA = await createCookie(app);

@@ -396,6 +396,9 @@ export function App(props: AppProps = {}) {
           onNavigateAtlas={atlasGateway ? () => controller.navigate("atlas") : undefined}
           onReducedMotionChange={(enabled) => controller.setReducedMotion(enabled)}
           onReviewCoachmarkDismiss={() => controller.dismissReviewCoachmark()}
+          onRequestRandomHolding={gateway.getRandomExampleHolding
+            ? () => gateway.getRandomExampleHolding!()
+            : undefined}
           onResumeAnalysis={(analysisId) => void controller.resumeAnalysis(analysisId)}
           onStartAnalysis={() =>
             void controller.startAnalysis(state.draft!, state.experienceSource)}
