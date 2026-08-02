@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    allowedHosts: ["dev.wuxie233.com"],
+    allowedHosts: ["dev.wuxie233.com", "hermes-webui.tail4a277c.ts.net"],
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8788",
