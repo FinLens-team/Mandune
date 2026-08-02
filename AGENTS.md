@@ -34,7 +34,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - `src/server/`：Hono HTTP 边界，静态资源与 SPA fallback。
 - `src/contracts/`：框架中立的版本化契约与纯校验器，不得导入 React、Hono 或供应商 SDK。
 - `src/analysis/`：确定性派生、ReviewPacket、Prompt 编译、结果校验与单 agent 编排。
-- `src/scoring/`：基于已确认持仓、个人约束和证据覆盖的确定性十分制评分；主题与 persona 只改变展示角色，不参与分数计算。
+- `src/scoring/`：基于持仓短期表现、中期趋势、长期回撤和持仓结构的确定性十分制评分；资料完整度、个人约束、证据覆盖、主题与 persona 不参与分数计算，关键行情周期不足时不定级。
 - 默认 `stream` 分析只调用一次模型；同一次输出包含有边界的理性背面与人物正面，人物正文按快照主题加载定稿 persona skill。Markdown 标题实时投影为等待页进度，两个分区完整校验后才进入结果与历史。Atlas 后置候选任务复用主报告的 `modelGateway` 及 fallback 顺序，生产已验证可返回 `generation_mode=model` 卡片。
 - A2A 采用 HTTP+JSON 绑定与 ProtoJSON 对象形状；协议 `1.0.x` 对外协商值固定为 `1.0`，请求必须携带 `A2A-Version: 1.0`（缺失按 `0.3` 处理并拒绝）。
 - A2A 结构化行情复用隔离的 PandaAI Python worker 与 SQLite 证据缓存；生产凭据只使用 `PANDA_DATA_USERNAME` / `PANDA_DATA_PASSWORD` 服务端环境变量，worker 子进程内再映射为 SDK 变量。
