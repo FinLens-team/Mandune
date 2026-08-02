@@ -8,7 +8,7 @@ function runtimeFixture(id: keyof typeof FIXTURES) {
 }
 
 describe("portfolio score", () => {
-  it("returns a stable one-decimal score and the highest tier for complete diversified input", () => {
+  it("scores only market performance, drawdown and portfolio structure", () => {
     const input = runtimeFixture("supported_full");
     input.snapshot.lines.push({
       ...input.snapshot.lines[0]!,
@@ -21,14 +21,20 @@ describe("portfolio score", () => {
     input.analysis.coverage.covered_line_ids.push("line-extra");
 
     const result = scorePortfolio(input);
-    expect(result.score).toBeGreaterThanOrEqual(8.5);
     expect(result.score.toFixed(1)).toMatch(/^\d+\.\d$/u);
-    expect(result.tier).toBe("夯");
     expect(result.dimensions).toHaveLength(4);
+    expect(result.dimensions.map((item) => item.id)).toEqual([
+      "short_term",
+      "mid_term",
+      "risk",
+      "diversification",
+    ]);
+    expect(result.dimensions.reduce((sum, item) => sum + item.maxScore, 0)).toBe(10);
   });
 
-  it("scores evidence gaps and unknown constraints without inventing missing facts", () => {
+  it("does not change the score when only personal constraints change", () => {
     const input = runtimeFixture("limited_partial");
+    const baseline = scorePortfolio(input);
     input.snapshot.constraints = {
       investment_horizon: "unknown",
       near_term_liquidity: "not_decided",
@@ -37,11 +43,7 @@ describe("portfolio score", () => {
     };
     input.analysis.constraints = structuredClone(input.snapshot.constraints);
 
-    const result = scorePortfolio(input);
-    expect(result.score).toBeLessThan(6);
-    expect(["NPC", "拉完了"]).toContain(result.tier);
-    expect(result.dimensions.find((item) => item.id === "information")?.summary).toContain("待确认");
-    expect(result.dimensions.find((item) => item.id === "fit")?.summary).toContain("未补齐");
+    expect(scorePortfolio(input)).toEqual(baseline);
   });
 
   it.each([
