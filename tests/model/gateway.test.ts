@@ -31,7 +31,7 @@ function streamCompletion(chunks: readonly Record<string, unknown>[]): Response 
 }
 
 describe("OpenAI-compatible AI SDK model gateway", () => {
-  it("enables DeepSeek thinking while keeping private reasoning out of text callbacks", async () => {
+  it("disables DeepSeek thinking while keeping private reasoning out of text callbacks", async () => {
     const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       void _input;
       void _init;
@@ -83,8 +83,9 @@ describe("OpenAI-compatible AI SDK model gateway", () => {
     });
 
     const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
-    expect(body).toMatchObject({ thinking: { type: "enabled" }, reasoning_effort: "high" });
-    expect(onReasoningStarted).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({ thinking: { type: "disabled" } });
+    expect(body).not.toHaveProperty("reasoning_effort");
+    expect(onReasoningStarted).not.toHaveBeenCalled();
     expect(onConnected).toHaveBeenCalled();
     expect(onText).toHaveBeenCalledWith("public answer");
     expect(result).toEqual({ ok: true, text: "public answer" });

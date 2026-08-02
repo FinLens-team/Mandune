@@ -42,6 +42,72 @@ function failureFrom(error: unknown, signal: AbortSignal, timedOut: boolean): Mo
   return { ok: false, code: "provider_failure", retryable: true };
 }
 
+/**
+ * The official DeepSeek stream contains `reasoning_content` chunks before
+ * regular `content`. Current ai-sdk OpenAI-compatible parsing can discard the
+ * entire response for this dialect. Consume its public SSE dialect directly,
+ * forwarding only final answer content across the privacy boundary.
+ */
+async function streamOfficialDeepSeek(
+  config: OpenAICompatibleModelGatewayConfig,
+  request: ModelStreamRequest,
+  signal: AbortSignal,
+): Promise<ModelStreamResult> {
+  const endpoint = new URL("chat/completions", `${config.baseURL.replace(/\/$/, "")}/`);
+  const response = await (config.fetch ?? fetch)(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.modelId,
+      messages: [
+        { role: "system", content: request.instructions },
+        { role: "user", content: request.prompt },
+      ],
+      stream: true,
+      temperature: 0.4,
+      max_tokens: request.maxOutputTokens ?? 8_192,
+      // The report consumes final prose only. Disabling hidden thinking prevents
+      // DeepSeek from exhausting the output budget before it emits any content.
+      thinking: { type: "disabled" },
+    }),
+    signal,
+  });
+  if (!response.ok || !response.body) return { ok: false, code: "provider_failure", retryable: true };
+  request.onConnected?.();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let text = "";
+  const consume = (line: string): void => {
+    if (!line.startsWith("data: ")) return;
+    const payload = line.slice(6).trim();
+    if (!payload || payload === "[DONE]") return;
+    try {
+      const parsed = JSON.parse(payload) as { choices?: Array<{ delta?: { content?: unknown } }> };
+      const delta = parsed.choices?.[0]?.delta?.content;
+      if (typeof delta === "string" && delta) {
+        text += delta;
+        request.onText(delta);
+      }
+    } catch { /* ignore a malformed individual SSE chunk; EOF decides success */ }
+  };
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+    for (const line of lines) consume(line);
+    if (done) break;
+  }
+  if (buffer) consume(buffer);
+  return text.trim()
+    ? { ok: true, text }
+    : { ok: false, code: "malformed_output", retryable: true };
+}
+
 export function createOpenAICompatibleModelGateway(
   config: OpenAICompatibleModelGatewayConfig,
 ): ModelGateway {
@@ -140,6 +206,16 @@ export function createOpenAICompatibleModelGateway(
       }
       if (!request.prompt.trim() || request.timeoutMs <= 0) {
         return { ok: false, code: "configuration_unavailable", retryable: false };
+      }
+      if (deepSeekOfficial) {
+        try {
+          return await streamOfficialDeepSeek(config, request, request.signal);
+        } catch (error) {
+          const failure = failureFrom(error, request.signal, false);
+          return failure.ok
+            ? { ok: false, code: "provider_failure", retryable: true }
+            : { ok: false, code: failure.code, retryable: failure.retryable };
+        }
       }
 
       const timeoutController = new AbortController();
