@@ -24,9 +24,13 @@ export interface JourneyLongCardRuntimeInput {
 
 export function journeyLongCardIsDisplayable(input: JourneyLongCardRuntimeInput): boolean {
   const { analysis, narrative, aiText, snapshot } = input;
+  const deferredSnapshot = snapshot.lines.length === 0 &&
+    Number.isSafeInteger((snapshot as PortfolioSnapshot & { lines_total?: unknown }).lines_total);
+  const deferredEvidence = analysis.evidence.length === 0 &&
+    Number.isSafeInteger((analysis as AnalysisResult & { evidence_total?: unknown }).evidence_total);
   if (
-    !validatePortfolioSnapshot(snapshot).ok ||
-    !validateOwnedAnalysisResult(analysis).ok ||
+    (!deferredSnapshot && !validatePortfolioSnapshot(snapshot).ok) ||
+    (!deferredEvidence && !validateOwnedAnalysisResult(analysis).ok) ||
     analysis.status === "unavailable" ||
     analysis.snapshot_id !== snapshot.snapshot_id ||
     analysis.contracts_version !== snapshot.contracts_version ||

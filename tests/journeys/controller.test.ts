@@ -141,6 +141,8 @@ class FakeGateway implements JourneyGateway {
           analysis_id: analysisId,
           source: { kind: "fixture", is_live: false, label: "示例 fixture（非实时）" },
           analysis: this.record.analysis,
+          snapshot: this.record.snapshot,
+          ...(this.record.experience_source ? { experienceSource: this.record.experience_source } : {}),
           ...(this.record.narrative ? { narrative: this.record.narrative } : {}),
         };
   }

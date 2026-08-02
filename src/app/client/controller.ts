@@ -102,6 +102,22 @@ function historyInput(
   };
 }
 
+function readyResultInput(
+  result: Extract<AnalysisResultResponse, { status: "ready" }>,
+): JourneyLongCardRuntimeInput {
+  const isExample = result.snapshot.lines.some((line) => line.entry_method === "example");
+  return {
+    analysis: result.analysis,
+    ...(isExample ? { exampleLabel: result.source.label } : {}),
+    ...(result.experienceSource ? { experienceSource: result.experienceSource } : {}),
+    isExample,
+    ...(result.narrative ? { narrative: result.narrative } : {}),
+    ...(result.aiText ? { aiText: result.aiText } : {}),
+    ...(result.aiThemeText ? { aiThemeText: result.aiThemeText } : {}),
+    snapshot: result.snapshot,
+  };
+}
+
 function isSameLocalDay(iso: string, now: Date): boolean {
   const value = new Date(iso);
   return value.getFullYear() === now.getFullYear() &&
@@ -457,13 +473,15 @@ export class JourneyController {
     let result: AnalysisResultResponse;
     try {
       result = await this.options.gateway.getAnalysisResult(analysisId);
-    } catch {
+    } catch (error) {
       this.options.dispatch({
         type: "ANALYSIS_TERMINAL",
         analysisId,
         terminal: terminalUnavailable(
           analysisId,
-          "终态结果未通过校验，未展示任何部分复盘报告。",
+          error instanceof JourneyGatewayError && error.code === "invalid_response"
+            ? "终态结果的数据格式与当前页面不一致，未展示任何部分复盘报告。"
+            : "终态结果暂时无法读取，未展示任何部分复盘报告。",
           "persistence_failure",
         ),
       });
@@ -492,34 +510,10 @@ export class JourneyController {
       return;
     }
 
-    const replay = await this.options.gateway.replayHistory(analysisId);
-    if (
-      replay.status !== "replayed" ||
-      replay.record.analysis.analysis_id !== result.analysis.analysis_id ||
-      JSON.stringify(replay.record.analysis) !== JSON.stringify(result.analysis)
-    ) {
-      this.options.dispatch({
-        type: "ANALYSIS_TERMINAL",
-        analysisId,
-        terminal: terminalUnavailable(
-          analysisId,
-          "不可变快照或历史结果尚不可核对，未展示复盘报告。",
-          "persistence_failure",
-        ),
-      });
-      return;
-    }
-    const input = historyInput(
-      replay.record,
-      result.source.label,
-      this.historyRecordExperienceSource(replay.record),
-    );
-    // Relaxed Demo mode: either a matching free-text narrative or a matching
-    // theme narrative makes the card displayable over the same analysis shell.
-    const narrativeMatch = Boolean(result.narrative) &&
-      JSON.stringify(replay.record.narrative) === JSON.stringify(result.narrative);
-    const aiTextMatch = Boolean(result.aiText) && replay.record.ai_text === result.aiText;
-    const displayable = (narrativeMatch || aiTextMatch) &&
+    const input = readyResultInput(result);
+    // The terminal result route is served only after immutable history persistence.
+    // Do not fetch the full history record here: evidence is deliberately paged.
+    const displayable = Boolean(result.narrative || result.aiText) &&
       journeyLongCardIsDisplayable(input);
     const terminal: AnalysisProgressTerminal = {
       analysis_id: analysisId,

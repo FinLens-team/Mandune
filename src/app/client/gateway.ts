@@ -111,6 +111,8 @@ export type AnalysisResultResponse =
       analysis_id: string;
       source: AnalysisSourceResponse;
       analysis: AnalysisResult;
+      snapshot: import("../../contracts/index.js").PortfolioSnapshot;
+      experienceSource?: HistoryExperienceSource;
       narrative?: ThemeModelOutput;
       aiText?: string;
       aiThemeText?: string;
@@ -121,6 +123,8 @@ export interface JourneyGateway {
   deleteWorkspace(): Promise<void>;
   ensureWorkspace(): Promise<WorkspacePublicStatus>;
   getAnalysisEvents(analysisId: string): Promise<TaskEvent[]>;
+  getAnalysisHoldingsPage?(analysisId: string, options?: { cursor?: string; limit?: number }): Promise<AnalysisHoldingPage>;
+  getAnalysisEvidencePage?(analysisId: string, options?: { cursor?: string; limit?: number }): Promise<AnalysisEvidencePage>;
   getAnalysisResult(analysisId: string): Promise<AnalysisResultResponse>;
   getAnalysisStatus(analysisId: string): Promise<AnalysisStatusResponse>;
   getCurrentDraft(): Promise<PortfolioDraft | null>;
@@ -250,17 +254,28 @@ function checkedHistoryRead(value: unknown): HistoryReadResult {
   }
   if (value.status === "found" && object(value.record)) {
     const record = value.record;
+    if (!object(record.snapshot) || !object(record.analysis)) {
+      return { status: "unavailable", code: "storage_failure" };
+    }
+    const summarySnapshot = record.snapshot;
+    const deferredSnapshot = Array.isArray(summarySnapshot.lines) === false &&
+      Number.isSafeInteger(summarySnapshot.lines_total) && Number(summarySnapshot.lines_total) >= 0;
+    const snapshot = deferredSnapshot ? { ...summarySnapshot, lines: [] } : summarySnapshot;
+    const summaryAnalysis = record.analysis;
+    const deferredEvidence = Array.isArray(summaryAnalysis.evidence) === false &&
+      Number.isSafeInteger(summaryAnalysis.evidence_total) && Number(summaryAnalysis.evidence_total) >= 0;
+    const analysis = deferredEvidence
+      ? { ...summaryAnalysis, evidence: [] }
+      : summaryAnalysis;
     if (
-      object(record.snapshot) &&
-      object(record.analysis) &&
-      validatePortfolioSnapshot(record.snapshot).ok &&
-      validateOwnedAnalysisResult(record.analysis as unknown as AnalysisResult).ok &&
-      record.analysis.snapshot_id === record.snapshot.snapshot_id &&
+      (deferredSnapshot || validatePortfolioSnapshot(snapshot).ok) &&
+      (deferredEvidence || validateOwnedAnalysisResult(analysis as unknown as AnalysisResult).ok) &&
+      analysis.snapshot_id === snapshot.snapshot_id &&
       (record.experience_source === undefined ||
         record.experience_source === "random" ||
         record.experience_source === "edited")
     ) {
-      return value as unknown as HistoryReadResult;
+      return { ...value, record: { ...record, analysis, snapshot } } as unknown as HistoryReadResult;
     }
     return { status: "unavailable", code: "storage_failure" };
   }
@@ -428,6 +443,46 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
     });
   }
 
+  async getAnalysisHoldingsPage(
+    analysisId: string,
+    options: { cursor?: string; limit?: number } = {},
+  ): Promise<AnalysisHoldingPage> {
+    const query = new URLSearchParams({ limit: String(options.limit ?? 20) });
+    if (options.cursor) query.set("cursor", options.cursor);
+    const response = await this.response(`/api/analyses/${encodeURIComponent(analysisId)}/holdings?${query}`);
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    if (
+      !object(body) || body.analysis_id !== analysisId || !Array.isArray(body.holdings) ||
+      !body.holdings.every((line) => object(line) && identifier(line.line_id)) ||
+      (body.next_cursor !== null && !identifier(String(body.next_cursor))) ||
+      !Number.isSafeInteger(body.total) || Number(body.total) < body.holdings.length
+    ) throw new JourneyGatewayError("invalid_response", response.status);
+    return body as unknown as AnalysisHoldingPage;
+  }
+
+  async getAnalysisEvidencePage(
+    analysisId: string,
+    options: { cursor?: string; limit?: number } = {},
+  ): Promise<AnalysisEvidencePage> {
+    const query = new URLSearchParams({ limit: String(options.limit ?? 20) });
+    if (options.cursor) query.set("cursor", options.cursor);
+    const response = await this.response(`/api/analyses/${encodeURIComponent(analysisId)}/evidence?${query}`);
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    if (
+      !object(body) ||
+      body.analysis_id !== analysisId ||
+      !Array.isArray(body.evidence) ||
+      !body.evidence.every((item) => object(item) && identifier(item.id)) ||
+      (body.next_cursor !== null && !identifier(String(body.next_cursor))) ||
+      !Number.isSafeInteger(body.total) || Number(body.total) < body.evidence.length
+    ) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
+    return body as unknown as AnalysisEvidencePage;
+  }
+
   async getAnalysisResult(analysisId: string): Promise<AnalysisResultResponse> {
     const response = await this.response(`/api/analyses/${encodeURIComponent(analysisId)}/result`);
     if (!(response.ok || response.status === 202)) this.failure(response);
@@ -451,10 +506,21 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
     if (body.status !== "ready" || !object(body.analysis) || !object(body.source)) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }
-    const analysis = body.analysis as unknown as AnalysisResult;
-    if (analysis.analysis_id !== analysisId || !validateOwnedAnalysisResult(analysis).ok) {
+    const summary = body.analysis;
+    if (
+      summary.analysis_id !== analysisId ||
+      "evidence" in summary ||
+      !Number.isSafeInteger(summary.evidence_total) ||
+      Number(summary.evidence_total) < 0 ||
+      !object(body.snapshot) ||
+      "lines" in body.snapshot ||
+      !Number.isSafeInteger(body.snapshot.lines_total) || Number(body.snapshot.lines_total) < 0
+    ) {
       throw new JourneyGatewayError("invalid_response", response.status);
     }
+    // Evidence records deliberately travel only through getAnalysisEvidencePage().
+    // The existing report core still receives an empty typed array for backwards-compatible rendering.
+    const analysis = { ...summary, evidence: [] } as unknown as AnalysisResult;
     const source = body.source;
     if (
       (source.kind !== "fixture" && source.kind !== "live" && source.kind !== "unavailable") ||
@@ -472,6 +538,10 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
       analysis_id: analysisId,
       source: source as unknown as AnalysisSourceResponse,
       analysis,
+      snapshot: { ...body.snapshot, lines: [] } as unknown as import("../../contracts/index.js").PortfolioSnapshot,
+      ...(body.experience_source === "random" || body.experience_source === "edited"
+        ? { experienceSource: body.experience_source }
+        : {}),
       ...(narrative ? { narrative } : {}),
       ...(aiText ? { aiText } : {}),
       ...(aiThemeText ? { aiThemeText } : {}),

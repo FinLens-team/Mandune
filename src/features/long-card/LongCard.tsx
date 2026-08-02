@@ -1,15 +1,16 @@
 import {
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
-  type PointerEvent,
 } from "react";
 import {
+  ArrowLeft,
   BookOpenCheck,
-  Rotate3D,
+  ListChecks,
 } from "lucide-react";
 import {
   validatePortfolioSnapshot,
@@ -28,17 +29,13 @@ import {
 } from "../../analysis/index.js";
 import {
   AnalysisStatus,
+  Button,
   GeneratedMarkdown,
 } from "../../client/ui/index.js";
 import { themeForId } from "../../theme/index.js";
 import { themeClientAssets, themeCssVariables } from "../../theme/client.js";
 import "./LongCard.css";
 
-const FLIP_THRESHOLD_PX = 64;
-const INTENT_THRESHOLD_PX = 10;
-const HORIZONTAL_INTENT_RATIO = 1.2;
-const MAX_DRAG_OFFSET_PX = 52;
-const DRAG_DAMPING_PX = 72;
 
 export type LongCardFace = "narrative" | "evidence";
 
@@ -52,8 +49,22 @@ export interface LongCardRuntimeInput {
   snapshot: PortfolioSnapshot;
 }
 
+export interface EvidencePageReader {
+  getAnalysisHoldingsPage(analysisId: string, options?: { cursor?: string; limit?: number }): Promise<{
+    holdings: PortfolioSnapshot["lines"];
+    next_cursor: string | null;
+    total: number;
+  }>;
+  getAnalysisEvidencePage(analysisId: string, options?: { cursor?: string; limit?: number }): Promise<{
+    evidence: EvidenceRecord[];
+    next_cursor: string | null;
+    total: number;
+  }>;
+}
+
 export interface LongCardProps {
   input: LongCardRuntimeInput;
+  evidenceReader?: EvidencePageReader;
   reducedMotion?: boolean;
 }
 
@@ -62,18 +73,12 @@ export interface FaceScrollOffsets {
   narrative: number | null;
 }
 
-interface PointerStart {
-  id?: number;
-  x: number;
-  y: number;
-}
 
 interface PendingScrollRestore {
   face: LongCardFace;
   offset: number;
 }
 
-type GestureIntent = "horizontal" | "vertical" | null;
 
 export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRuntimeInput {
   const { analysis } = fixture;
@@ -102,9 +107,13 @@ export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRu
 
 export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boolean {
   const { analysis, narrative, aiText, snapshot } = input;
+  const deferredSnapshot = snapshot.lines.length === 0 &&
+    Number.isSafeInteger((snapshot as PortfolioSnapshot & { lines_total?: unknown }).lines_total);
+  const deferredEvidence = analysis.evidence.length === 0 &&
+    Number.isSafeInteger((analysis as AnalysisResult & { evidence_total?: unknown }).evidence_total);
   if (
-    !validatePortfolioSnapshot(snapshot).ok ||
-    !validateOwnedAnalysisResult(analysis).ok ||
+    (!deferredSnapshot && !validatePortfolioSnapshot(snapshot).ok) ||
+    (!deferredEvidence && !validateOwnedAnalysisResult(analysis).ok) ||
     analysis.status === "unavailable" ||
     analysis.snapshot_id !== snapshot.snapshot_id ||
     analysis.contracts_version !== snapshot.contracts_version ||
@@ -127,27 +136,6 @@ export function longCardRuntimeIsDisplayable(input: LongCardRuntimeInput): boole
     narrative.guidance_summary === analysis.advice.map((item) => item.statement).join("；");
 }
 
-/** Returns the target face only for an unambiguously horizontal swipe. */
-export function longCardFlipTarget(start: PointerStart, end: PointerStart): boolean | null {
-  const deltaX = end.x - start.x;
-  const deltaY = end.y - start.y;
-
-  if (Math.abs(deltaX) < FLIP_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
-    return null;
-  }
-
-  return deltaX < 0;
-}
-
-export function longCardGestureIntent(
-  start: PointerStart,
-  end: PointerStart,
-): GestureIntent {
-  const deltaX = Math.abs(end.x - start.x);
-  const deltaY = Math.abs(end.y - start.y);
-  if (Math.max(deltaX, deltaY) < INTENT_THRESHOLD_PX) return null;
-  return deltaX > deltaY * HORIZONTAL_INTENT_RATIO ? "horizontal" : "vertical";
-}
 
 export function preserveFaceScrollOffsets(
   offsets: FaceScrollOffsets,
@@ -215,11 +203,12 @@ function ThemeMascot({ themeId }: { themeId: string }) {
 function CoverageSummary({ input }: { input: LongCardRuntimeInput }) {
   const { coverage } = input.analysis;
   const pending = coverage.uncovered_line_ids.length + coverage.unsupported_line_ids.length;
+  const holdingsTotal = (input.snapshot as PortfolioSnapshot & { lines_total?: number }).lines_total ?? input.snapshot.lines.length;
   return (
     <dl className="mandong-long-card__coverage" aria-label="本次分析覆盖">
       <div>
         <dt>确认持仓</dt>
-        <dd>{input.snapshot.lines.length} 项</dd>
+        <dd>{holdingsTotal} 项</dd>
       </div>
       <div>
         <dt>已覆盖</dt>
@@ -239,6 +228,7 @@ interface FaceProps {
   headingId: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   input: LongCardRuntimeInput;
+  evidenceReader?: EvidencePageReader;
 }
 
 interface NarrativeFaceProps extends FaceProps {
@@ -268,20 +258,15 @@ export function NarrativeFront({
       inert={!active}
     >
       <header className="mandong-long-card__intro">
-        <div className="mandong-long-card__date-row">
-          <p>
-            复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
-          </p>
-        </div>
-        <div className="mandong-long-card__masthead">
+        <div className="mandong-long-card__masthead mandong-long-card__masthead--narrative">
           <div>
             <p className="mandong-long-card__theme">{theme.label}</p>
             <h2 id={headingId} ref={headingRef} tabIndex={-1}>{narrative.headline}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
-        </div>
-        <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
-          <ThemeMascot themeId={analysis.theme_id} />
+          <div className="mandong-long-card__guide" data-mascot-mood={narrative.mascot_mood}>
+            <ThemeMascot themeId={analysis.theme_id} />
+          </div>
         </div>
       </header>
 
@@ -356,20 +341,15 @@ export function AiNarrativeFront({
       inert={!active}
     >
       <header className="mandong-long-card__intro">
-        <div className="mandong-long-card__date-row">
-          <p>
-            复盘完成 <time dateTime={analysis.analysis_completed_at}>{analysis.analysis_completed_at}</time>
-          </p>
-        </div>
-        <div className="mandong-long-card__masthead">
+        <div className="mandong-long-card__masthead mandong-long-card__masthead--narrative">
           <div>
             <p className="mandong-long-card__theme">{theme.label}</p>
             <h2 id={headingId} ref={headingRef} tabIndex={-1}>{theme.copy.resultTitle}</h2>
             <p>最新完整交易日 <time dateTime={analysis.latest_complete_trading_day}>{analysis.latest_complete_trading_day}</time></p>
           </div>
-        </div>
-        <div className="mandong-long-card__guide" data-mascot-mood="calm">
-          <ThemeMascot themeId={analysis.theme_id} />
+          <div className="mandong-long-card__guide" data-mascot-mood="calm">
+            <ThemeMascot themeId={analysis.theme_id} />
+          </div>
         </div>
       </header>
 
@@ -400,23 +380,119 @@ function ReferenceList({ refs }: { refs: MaterialReference[] }) {
   );
 }
 
-function Constraints({ constraints }: { constraints: PersonalConstraints }) {
+export function Constraints({ constraints }: { constraints: PersonalConstraints }) {
+  const rows = [
+    ["投资期限", constraints.investment_horizon],
+    ["近期流动性需求", constraints.near_term_liquidity],
+    ["可承受回撤", constraints.tolerable_drawdown],
+    ["投资目标", constraints.investment_objective],
+  ] as const;
   return (
     <dl className="mandong-long-card__constraints">
-      <div><dt>投资期限</dt><dd>{formatConstraint(constraints.investment_horizon)}</dd></div>
-      <div><dt>近期流动性需求</dt><dd>{formatConstraint(constraints.near_term_liquidity)}</dd></div>
-      <div><dt>可承受回撤</dt><dd>{formatConstraint(constraints.tolerable_drawdown)}</dd></div>
-      <div><dt>投资目标</dt><dd>{formatConstraint(constraints.investment_objective)}</dd></div>
+      {rows.map(([label, value]) => (
+        <div key={label}><dt>{label}</dt><dd>{formatConstraint(value)}</dd></div>
+      ))}
     </dl>
   );
 }
 
-export function RationalEvidenceBack({ active, faceId, headingId, headingRef, input }: FaceProps) {
+function EvidencePageList({ analysisId, fallbackEvidence, reader }: {
+  analysisId: string;
+  fallbackEvidence: readonly EvidenceRecord[];
+  reader?: EvidencePageReader;
+}) {
+  const [cursor, setCursor] = useState<string | undefined>();
+  const [previousCursors, setPreviousCursors] = useState<string[]>([]);
+  const [page, setPage] = useState<{ evidence: EvidenceRecord[]; next_cursor: string | null; total: number } | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFailed(false);
+    if (!reader) {
+      setPage({ evidence: [...fallbackEvidence], next_cursor: null, total: fallbackEvidence.length });
+      return () => { cancelled = true; };
+    }
+    void reader.getAnalysisEvidencePage(analysisId, { ...(cursor ? { cursor } : {}), limit: 20 })
+      .then((next) => { if (!cancelled) setPage(next); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [analysisId, cursor, fallbackEvidence, reader]);
+
+  if (failed) return <p>行情证据暂时无法读取，请稍后重试。</p>;
+  if (!page) return <p>正在读取行情证据…</p>;
+  return (
+    <>
+      <div className="mandong-long-card__materials-list">
+        {page.evidence.map((evidence) => (
+          <article className="mandong-long-card__evidence-list mandong-long-card__material-evidence" key={evidence.id}>
+            <div><strong>{evidence.metric_or_event_type}</strong><span>{provenanceLabel(evidence.provenance)} · {evidenceStatusLabel(evidence.status)}</span></div>
+            <dl>
+              <div><dt>证据 ID</dt><dd>{evidence.id}</dd></div>
+              <div><dt>来源</dt><dd>{evidence.source.name}</dd></div>
+              <div><dt>定位</dt><dd>{evidence.source.locator}</dd></div>
+              <div><dt>观察／发布时间</dt><dd>{evidence.observation_or_event_time}</dd></div>
+              <div><dt>获取时间</dt><dd>{evidence.fetched_at}</dd></div>
+            </dl>
+            {evidence.limitations.length > 0 ? <ul className="mandong-long-card__plain-list">{evidence.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul> : null}
+          </article>
+        ))}
+      </div>
+      {reader && (previousCursors.length > 0 || page.next_cursor) ? (
+        <nav aria-label="行情证据分页" className="mandong-long-card__pagination">
+          <Button disabled={previousCursors.length === 0} onClick={() => {
+            const previous = previousCursors.at(-1);
+            setPreviousCursors((items) => items.slice(0, -1));
+            setCursor(previous);
+          }} variant="secondary">上一页</Button>
+          <span>{page.total} 条证据</span>
+          <Button disabled={!page.next_cursor} onClick={() => {
+            if (!page.next_cursor) return;
+            setPreviousCursors((items) => [...items, cursor ?? ""]);
+            setCursor(page.next_cursor);
+          }} variant="secondary">下一页</Button>
+        </nav>
+      ) : null}
+    </>
+  );
+}
+
+function HoldingPageList({ analysis, reader }: { analysis: AnalysisResult; reader?: EvidencePageReader }) {
+  const [cursor, setCursor] = useState<string | undefined>();
+  const [previous, setPrevious] = useState<string[]>([]);
+  const [page, setPage] = useState<{ holdings: PortfolioSnapshot["lines"]; next_cursor: string | null; total: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!reader) { setPage(null); return () => { cancelled = true; }; }
+    void reader.getAnalysisHoldingsPage(analysis.analysis_id, { ...(cursor ? { cursor } : {}), limit: 20 })
+      .then((next) => { if (!cancelled) setPage(next); });
+    return () => { cancelled = true; };
+  }, [analysis.analysis_id, cursor, reader]);
+  if (!page) return <p>正在读取本次分析用到的持仓…</p>;
+  return <>
+    <div className="mandong-long-card__materials-list">{page.holdings.map((line) => {
+      const covered = analysis.coverage.covered_line_ids.includes(line.line_id);
+      const unsupported = analysis.coverage.unsupported_line_ids.includes(line.line_id);
+      return <article className="mandong-long-card__evidence-list mandong-long-card__material-holding" key={line.line_id}>
+        <div><strong>{line.name}</strong><span>{line.asset_class.toUpperCase()} · {line.symbol}</span></div>
+        <dl><div><dt>规模依据</dt><dd>{line.size_basis}</dd></div><div><dt>持仓确认日</dt><dd>{line.observation_date}</dd></div><div><dt>覆盖</dt><dd>{covered ? "已覆盖" : unsupported ? "不支持" : "未覆盖"}</dd></div></dl>
+      </article>;
+    })}</div>
+    {(previous.length > 0 || page.next_cursor) ? <nav aria-label="持仓分页" className="mandong-long-card__pagination">
+      <Button disabled={previous.length === 0} onClick={() => { const value = previous.at(-1); setPrevious((items) => items.slice(0, -1)); setCursor(value); }} variant="secondary">上一页</Button>
+      <span>{page.total} 项持仓</span>
+      <Button disabled={!page.next_cursor} onClick={() => { if (!page.next_cursor) return; setPrevious((items) => [...items, cursor ?? ""]); setCursor(page.next_cursor); }} variant="secondary">下一页</Button>
+    </nav> : null}
+  </>;
+}
+
+export function RationalEvidenceBack({ active, faceId, headingId, headingRef, input, evidenceReader }: FaceProps) {
   const { analysis, snapshot } = input;
   // Relaxed Demo mode: the back face is the formal rational analysis report
   // (the model's report text plus the inputs it was given). The placeholder
   // conclusion/advice shells and derivation bookkeeping stay hidden.
   const relaxed = Boolean(input.aiText && !input.narrative);
+  const [showAnalysisMaterials, setShowAnalysisMaterials] = useState(false);
   return (
     <article
       aria-hidden={!active}
@@ -454,31 +530,30 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
         </section>
       ) : null}
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-inputs`}>
-        <h3 id={`${headingId}-inputs`}>{relaxed ? "本次分析用到的持仓" : "确认输入与覆盖"}</h3>
-        <CoverageSummary input={input} />
-        <ul className="mandong-long-card__evidence-list">
-          {snapshot.lines.map((line) => {
-            const covered = analysis.coverage.covered_line_ids.includes(line.line_id);
-            const unsupported = analysis.coverage.unsupported_line_ids.includes(line.line_id);
-            return (
-              <li key={line.line_id}>
-                <div><strong>{line.name}</strong><span>{line.asset_class.toUpperCase()} · {line.symbol}</span></div>
-                <dl>
-                  <div><dt>规模依据</dt><dd>{line.size_basis}</dd></div>
-                  <div><dt>观察日期</dt><dd>{line.observation_date}</dd></div>
-                  <div><dt>覆盖</dt><dd>{covered ? "已覆盖" : unsupported ? "不支持" : "未覆盖"}</dd></div>
-                </dl>
-              </li>
-            );
-          })}
-        </ul>
+      <section className="mandong-long-card__materials-toggle" aria-label="本次分析依据">
+        <Button
+          aria-expanded={showAnalysisMaterials}
+          onClick={() => setShowAnalysisMaterials((visible) => !visible)}
+          variant="secondary"
+        >
+          {showAnalysisMaterials ? "收起本次分析依据" : "查看本次分析依据"}
+        </Button>
       </section>
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-constraints`}>
-        <h3 id={`${headingId}-constraints`}>四项个人约束</h3>
-        <Constraints constraints={analysis.constraints} />
-      </section>
+      {showAnalysisMaterials ? (
+        <div className="mandong-long-card__materials-content">
+          <section className="mandong-long-card__section" aria-labelledby={`${headingId}-inputs`}>
+            <h3 id={`${headingId}-inputs`}>{relaxed ? "本次分析用到的持仓" : "确认输入与覆盖"}</h3>
+            <CoverageSummary input={input} />
+            <HoldingPageList analysis={analysis} reader={evidenceReader} />
+          </section>
+
+          <section className="mandong-long-card__section" aria-labelledby={`${headingId}-constraints`}>
+            <h3 id={`${headingId}-constraints`}>四项个人约束</h3>
+            <Constraints constraints={analysis.constraints} />
+          </section>
+        </div>
+      ) : null}
 
       {!relaxed ? (
         <section className="mandong-long-card__section" aria-labelledby={`${headingId}-conclusions`}>
@@ -511,31 +586,16 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
       </section>
       ) : null}
 
-      <section className="mandong-long-card__section" aria-labelledby={`${headingId}-evidence`}>
-        <h3 id={`${headingId}-evidence`}>{relaxed ? "本次分析用到的行情证据" : "观察证据与核验状态"}</h3>
-        <ul className="mandong-long-card__evidence-list">
-          {analysis.evidence.map((evidence) => (
-            <li key={evidence.id}>
-              <div>
-                <strong>{evidence.metric_or_event_type}</strong>
-                <span>{provenanceLabel(evidence.provenance)} · {evidenceStatusLabel(evidence.status)}</span>
-              </div>
-              <dl>
-                <div><dt>证据 ID</dt><dd>{evidence.id}</dd></div>
-                <div><dt>来源</dt><dd>{evidence.source.name}</dd></div>
-                <div><dt>定位</dt><dd>{evidence.source.locator}</dd></div>
-                <div><dt>观察／发布时间</dt><dd>{evidence.observation_or_event_time}</dd></div>
-                <div><dt>获取时间</dt><dd>{evidence.fetched_at}</dd></div>
-              </dl>
-              {evidence.limitations.length > 0 ? (
-                <ul className="mandong-long-card__plain-list">
-                  {evidence.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {showAnalysisMaterials ? (
+        <section className="mandong-long-card__section" aria-labelledby={`${headingId}-evidence`}>
+          <h3 id={`${headingId}-evidence`}>{relaxed ? "本次分析用到的行情证据" : "观察证据与核验状态"}</h3>
+          <EvidencePageList
+            analysisId={analysis.analysis_id}
+            fallbackEvidence={analysis.evidence}
+            reader={evidenceReader}
+          />
+        </section>
+      ) : null}
 
       {!relaxed ? (
         <section className="mandong-long-card__section" aria-labelledby={`${headingId}-derived`}>
@@ -608,11 +668,8 @@ function IncompleteLongCard() {
   );
 }
 
-export function LongCard({ input, reducedMotion = false }: LongCardProps) {
+export function LongCard({ input, evidenceReader, reducedMotion = false }: LongCardProps) {
   const [face, setFace] = useState<LongCardFace>("narrative");
-  const [pointerStart, setPointerStart] = useState<PointerStart | null>(null);
-  const [gestureIntent, setGestureIntent] = useState<GestureIntent>(null);
-  const [dragOffset, setDragOffset] = useState(0);
   const [transitionDirection, setTransitionDirection] = useState<"forward" | "backward" | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const narrativeHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -625,7 +682,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const evidenceHeadingId = `${id}-evidence-heading`;
   const narrativeFaceId = `${id}-narrative-face`;
   const evidenceFaceId = `${id}-evidence-face`;
-  const gestureHintId = `${id}-gesture-hint`;
+
   const longContent = Math.max(aiText?.length ?? 0, aiThemeText?.length ?? 0) > 4_000;
 
   useLayoutEffect(() => {
@@ -663,47 +720,6 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
     setFace(targetFace);
   }
 
-  function handlePointerDown(event: PointerEvent<HTMLElement>) {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    setPointerStart({ id: event.pointerId, x: event.clientX, y: event.clientY });
-    setGestureIntent(null);
-    setDragOffset(0);
-  }
-
-  function handlePointerMove(event: PointerEvent<HTMLElement>) {
-    if (pointerStart === null || pointerStart.id !== event.pointerId) return;
-    const nextIntent = gestureIntent ?? longCardGestureIntent(pointerStart, { x: event.clientX, y: event.clientY });
-    if (nextIntent !== gestureIntent) setGestureIntent(nextIntent);
-    if (nextIntent !== "horizontal") return;
-    event.preventDefault();
-    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-    const delta = event.clientX - pointerStart.x;
-    const damped = Math.sign(delta) * MAX_DRAG_OFFSET_PX *
-      (1 - Math.exp(-Math.abs(delta) / DRAG_DAMPING_PX));
-    setDragOffset(damped);
-  }
-
-  function handlePointerUp(event: PointerEvent<HTMLElement>) {
-    if (pointerStart === null) return;
-    const target = longCardFlipTarget(pointerStart, { x: event.clientX, y: event.clientY });
-    setPointerStart(null);
-    setGestureIntent(null);
-    setDragOffset(0);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (target !== null) {
-      switchFace(target ? "evidence" : "narrative");
-    }
-  }
-
-  function cancelPointer() {
-    setPointerStart(null);
-    setGestureIntent(null);
-    setDragOffset(0);
-  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "ArrowRight") {
@@ -722,10 +738,7 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
   const relaxedMode = Boolean(aiText && !narrative);
   const theme = themeForId(analysis.theme_id);
   const faceLabel = showEvidence ? (relaxedMode ? "理性分析" : "理性证据") : theme.label;
-  const stageStyle = {
-    "--long-card-drag-rotation": `${dragOffset * -0.42}deg`,
-    "--long-card-drag-x": `${dragOffset}px`,
-  } as CSSProperties;
+  const stageStyle = {} as CSSProperties;
   return (
     <section
       className={`mandong-long-card mandong-long-card--${analysis.status}`}
@@ -735,16 +748,17 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
       aria-label="每日复盘报告"
       style={themeCssVariables(theme.id)}
     >
+      <div className="mandong-long-card__toolbar">
+        <span className="mandong-long-card__face-state">{showEvidence ? "分析详情" : "报告摘要"}</span>
+        <Button onClick={() => switchFace(showEvidence ? "narrative" : "evidence")} variant="secondary">
+          {showEvidence ? <ArrowLeft aria-hidden="true" size={18} /> : <ListChecks aria-hidden="true" size={18} />}
+          {showEvidence ? "返回报告" : "查看分析详情"}
+        </Button>
+      </div>
       <div
-        aria-describedby={gestureHintId}
-        aria-label="每日复盘报告内容，按左右方向键切换正面与理性证据。"
+        aria-label="每日复盘报告内容，按左右方向键切换报告与分析详情。"
         className="mandong-long-card__stage"
-        data-dragging={gestureIntent === "horizontal" || undefined}
         onKeyDown={handleKeyDown}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={cancelPointer}
         ref={stageRef}
         style={stageStyle}
         tabIndex={0}
@@ -765,11 +779,11 @@ export function LongCard({ input, reducedMotion = false }: LongCardProps) {
           ) : (
             <AiNarrativeFront active={!showEvidence} faceId={narrativeFaceId} headingId={narrativeHeadingId} headingRef={narrativeHeadingRef} input={input} aiText={aiThemeText ?? aiText ?? ""} />
           )}
-          <RationalEvidenceBack active={showEvidence} faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} />
+          {showEvidence ? <RationalEvidenceBack active evidenceReader={evidenceReader} faceId={evidenceFaceId} headingId={evidenceHeadingId} headingRef={evidenceHeadingRef} input={input} /> : null}
         </div>
       </div>
       <span aria-live="polite" className="mandong-long-card__keyboard-status">当前：{faceLabel}</span>
-      <p className="mandong-long-card__gesture-hint" id={gestureHintId}><Rotate3D aria-hidden="true" size={16} />横向拖动也可翻面，纵向滚动始终用于阅读。</p>
+
     </section>
   );
 }

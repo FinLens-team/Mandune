@@ -4,33 +4,29 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "../../fixtures/index.js";
 import {
+  Constraints,
   LongCard,
   RationalEvidenceBack,
   longCardRuntimeFromFixture,
   longCardRuntimeIsDisplayable,
-  longCardFlipTarget,
-  longCardGestureIntent,
   preserveFaceScrollOffsets,
 } from "./LongCard.js";
 
 describe("long-card rendering and interaction boundaries", () => {
-  it("renders a gesture and keyboard-accessible front face without report source or state badges", () => {
+  it("renders a keyboard-accessible summary and defers the analysis details", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.limited_partial);
     const markup = renderToStaticMarkup(createElement(LongCard, { input }));
-    expect(markup).toContain('aria-label="每日复盘报告内容，按左右方向键切换正面与理性证据。"');
+    expect(markup).toContain('aria-label="每日复盘报告内容，按左右方向键切换报告与分析详情。"');
     expect(markup).toContain('tabindex="0"');
-    expect(markup).toContain("横向拖动也可翻面，纵向滚动始终用于阅读。");
+    expect(markup).toContain("查看分析详情");
     expect(markup).not.toContain("随机体验身份 · 示例数据");
     expect(markup).not.toContain("有限分析");
     expect(markup).not.toContain("部分证据缺口限制了结论范围");
-    expect(markup).not.toContain("查看证据");
-    expect(markup).not.toContain("查看理性分析");
+    expect(markup).not.toContain("本次分析用到的行情证据");
     expect(markup).toContain("AI 分析仅供信息整理与理解参考，不对投资决策或结果负责；请自行判断与操作。");
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
     expect(markup).toContain("mandong-long-card__front");
-    expect(markup).toContain("mandong-long-card__back");
     expect(markup).toContain('data-face="narrative"');
-    expect(markup).toContain('aria-hidden="true"');
   });
 
   it("accepts provenance fields from existing callers without rendering source badges", () => {
@@ -53,15 +49,6 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("可以怎样恢复");
   });
 
-  it("flips only for a horizontal swipe and leaves vertical reading gestures alone", () => {
-    expect(longCardFlipTarget({ x: 160, y: 20 }, { x: 80, y: 28 })).toBe(true);
-    expect(longCardFlipTarget({ x: 80, y: 20 }, { x: 160, y: 28 })).toBe(false);
-    expect(longCardFlipTarget({ x: 100, y: 20 }, { x: 112, y: 140 })).toBeNull();
-    expect(longCardFlipTarget({ x: 160, y: 20 }, { x: 80, y: 140 })).toBeNull();
-    expect(longCardGestureIntent({ x: 120, y: 20 }, { x: 112, y: 160 })).toBe("vertical");
-    expect(longCardGestureIntent({ x: 160, y: 20 }, { x: 80, y: 28 })).toBe("horizontal");
-  });
-
   it("keeps separate reading offsets for each face", () => {
     const firstSwitch = preserveFaceScrollOffsets(
       { narrative: null, evidence: null },
@@ -76,7 +63,7 @@ describe("long-card rendering and interaction boundaries", () => {
     });
   });
 
-  it("renders the rational back with the exact analysis identifiers and all references", () => {
+  it("keeps detailed holdings, constraints, and evidence behind one collapsed control", () => {
     const fixture = FIXTURES.limited_partial;
     const input = longCardRuntimeFromFixture(fixture);
     const markup = renderToStaticMarkup(
@@ -88,26 +75,28 @@ describe("long-card rendering and interaction boundaries", () => {
         headingRef: { current: null },
       }),
     );
-    expect(markup).toContain(fixture.snapshot.snapshot_id);
-    expect(markup).toContain(fixture.analysis.analysis_id);
-    expect(markup).toContain(fixture.analysis.evidence_cutoff_at);
-    expect(markup).not.toContain("与正面同一版本");
-    for (const conclusion of fixture.analysis.conclusions) {
-      expect(markup).toContain(conclusion.statement);
-      for (const ref of conclusion.refs) expect(markup).toContain(ref.ref_id);
-    }
-    for (const advice of fixture.analysis.advice) {
-      expect(markup).toContain(advice.statement);
-      for (const ref of advice.trigger_refs) expect(markup).toContain(ref.ref_id);
-    }
-    for (const evidence of fixture.analysis.evidence) {
-      expect(markup).toContain(evidence.source.name);
-      expect(markup).toContain(evidence.observation_or_event_time);
-      expect(markup).toContain(evidence.fetched_at);
-    }
+    expect(markup).toContain("查看本次分析依据");
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).not.toContain("确认输入与覆盖");
+    expect(markup).not.toContain("四项个人约束");
+    expect(markup).not.toContain("观察证据与核验状态");
+    expect(markup).not.toContain(fixture.analysis.evidence[0]!.source.locator);
   });
 
-  it("renders unknown and not_decided constraints as equally valid unknown values", () => {
+  it("shows all four personal constraints as simple rows without front-end pagination", () => {
+    const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const markup = renderToStaticMarkup(createElement(Constraints, { constraints: input.analysis.constraints }));
+
+    expect(markup).toContain("投资期限");
+    expect(markup).toContain("近期流动性需求");
+    expect(markup).toContain("可承受回撤");
+    expect(markup).toContain("投资目标");
+    expect(markup).not.toContain("上一页");
+    expect(markup).not.toContain("下一页");
+    expect(markup).not.toContain("个人约束分页");
+  });
+
+  it("does not expose raw unknown constraint values while analysis materials are collapsed", () => {
     const input = longCardRuntimeFromFixture(FIXTURES.supported_full);
     const constraints = {
       ...input.analysis.constraints,
@@ -127,7 +116,7 @@ describe("long-card rendering and interaction boundaries", () => {
         headingRef: { current: null },
       }),
     );
-    expect(markup.match(/未知／尚未决定/g)).toHaveLength(2);
+    expect(markup).toContain("查看本次分析依据");
     expect(markup).not.toContain(">unknown<");
     expect(markup).not.toContain(">not_decided<");
   });
@@ -207,7 +196,7 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(longCardRuntimeIsDisplayable(input)).toBe(true);
     expect(markup).toContain("<h2>核心观察</h2>");
     expect(markup).toContain("<strong>保持观察</strong>");
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
     expect(markup).toContain("mandong-long-card__front");
   });
 
@@ -232,10 +221,11 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(markup).toContain("主题正文");
     expect(evidenceMarkup).toContain("<h2>理性说明</h2>");
     expect(evidenceMarkup).toContain("理性正文");
-    expect(evidenceMarkup).toContain("本次分析用到的持仓");
-    expect(evidenceMarkup).toContain("本次分析用到的行情证据");
+    expect(evidenceMarkup).toContain("查看本次分析依据");
+    expect(evidenceMarkup).not.toContain("本次分析用到的持仓");
+    expect(evidenceMarkup).not.toContain("本次分析用到的行情证据");
     expect(markup).toContain('data-reduced-motion="true"');
-    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(2);
+    expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
   });
 
   it("keeps very long model reports in normal document flow", () => {
@@ -248,6 +238,19 @@ describe("long-card rendering and interaction boundaries", () => {
     const markup = renderToStaticMarkup(createElement(LongCard, { input }));
 
     expect(markup).toContain('data-long-content="true"');
+  });
+
+  it("uses the server evidence cursor rather than slicing a client-side evidence array", () => {
+    const component = readFileSync("src/features/long-card/LongCard.tsx", "utf8");
+    const stylesheet = readFileSync("src/features/long-card/LongCard.css", "utf8");
+
+    expect(component).toContain("reader.getAnalysisEvidencePage");
+    expect(component).toContain("reader.getAnalysisHoldingsPage");
+    expect(component).toContain("next_cursor");
+    expect(component).not.toContain("analysis.evidence.map");
+    expect(component).not.toContain("snapshot.lines.map");
+    expect(component).not.toContain("evidence.slice(");
+    expect(stylesheet).toContain("mandong-long-card__pagination");
   });
 
   it("keeps a reduced-motion fallback, 680px axis, and vertical touch panning", () => {

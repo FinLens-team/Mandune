@@ -31,6 +31,45 @@ function validIdentifier(value: string): boolean {
   return IDENTIFIER.test(value);
 }
 
+function evidencePageParameters(c: Context): { cursor: number; limit: number } | null {
+  const rawCursor = c.req.query("cursor");
+  const rawLimit = c.req.query("limit");
+  if (rawCursor !== undefined && !/^\d+$/.test(rawCursor)) return null;
+  if (rawLimit !== undefined && !/^\d+$/.test(rawLimit)) return null;
+  const cursor = rawCursor === undefined ? 0 : Number(rawCursor);
+  const limit = rawLimit === undefined ? 20 : Number(rawLimit);
+  if (!Number.isSafeInteger(cursor) || !Number.isSafeInteger(limit) || limit < 1 || limit > 50) return null;
+  return { cursor, limit };
+}
+
+function analysisSummary(analysis: { evidence: readonly unknown[] }) {
+  const { evidence, ...summary } = analysis;
+  return { ...summary, evidence_total: evidence.length };
+}
+
+function snapshotSummary(snapshot: { lines: readonly unknown[] }) {
+  const { lines, ...summary } = snapshot;
+  return { ...summary, lines_total: lines.length };
+}
+
+function historySummary<T>(value: T): T {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  let summary: Record<string, unknown> = record;
+  if (record.analysis && typeof record.analysis === "object" && !Array.isArray(record.analysis)) {
+    const analysis = record.analysis as Record<string, unknown>;
+    if (Array.isArray(analysis.evidence)) summary = { ...summary, analysis: analysisSummary(analysis as { evidence: readonly unknown[] }) };
+  }
+  if (record.snapshot && typeof record.snapshot === "object" && !Array.isArray(record.snapshot)) {
+    const snapshot = record.snapshot as Record<string, unknown>;
+    if (Array.isArray(snapshot.lines)) summary = { ...summary, snapshot: snapshotSummary(snapshot as { lines: readonly unknown[] }) };
+  }
+  if (record.record && typeof record.record === "object" && !Array.isArray(record.record)) {
+    return { ...summary, record: historySummary(record.record) } as T;
+  }
+  return summary as T;
+}
+
 export function createJourneyRoutes(input: {
   workspaces: WorkspaceService;
   journey: JourneyAnalysisService;
@@ -168,6 +207,45 @@ export function createJourneyRoutes(input: {
     return events ? c.json({ analysis_id: analysisId, events }) : c.json({ error: "not_found" }, 404);
   });
 
+  app.get("/analyses/:analysisId/holdings", async (c) => {
+    const id = await workspaceId(c, input.workspaces, cookieName);
+    if (!id) return c.json(UNAUTHORIZED, 401);
+    const analysisId = c.req.param("analysisId");
+    if (!validIdentifier(analysisId)) return c.json({ error: "not_found" }, 404);
+    const page = evidencePageParameters(c);
+    if (!page) return c.json({ error: "invalid_pagination" }, 400);
+    const run = await input.journey.getRun(id, analysisId);
+    if (!run) return c.json({ error: "not_found" }, 404);
+    const lines = run.snapshot.lines;
+    const nextOffset = page.cursor + page.limit;
+    return c.json({
+      analysis_id: analysisId,
+      holdings: lines.slice(page.cursor, nextOffset),
+      next_cursor: nextOffset < lines.length ? String(nextOffset) : null,
+      total: lines.length,
+    });
+  });
+
+  app.get("/analyses/:analysisId/evidence", async (c) => {
+    const id = await workspaceId(c, input.workspaces, cookieName);
+    if (!id) return c.json(UNAUTHORIZED, 401);
+    const analysisId = c.req.param("analysisId");
+    if (!validIdentifier(analysisId)) return c.json({ error: "not_found" }, 404);
+    const page = evidencePageParameters(c);
+    if (!page) return c.json({ error: "invalid_pagination" }, 400);
+    const run = await input.journey.getRun(id, analysisId);
+    if (!run) return c.json({ error: "not_found" }, 404);
+    if (!run.execution || run.state !== "terminal") return c.json({ error: "not_ready" }, 409);
+    const evidence = run.execution.analysis.evidence;
+    const nextOffset = page.cursor + page.limit;
+    return c.json({
+      analysis_id: analysisId,
+      evidence: evidence.slice(page.cursor, nextOffset),
+      next_cursor: nextOffset < evidence.length ? String(nextOffset) : null,
+      total: evidence.length,
+    });
+  });
+
   app.get("/analyses/:analysisId/result", async (c) => {
     const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
@@ -188,7 +266,9 @@ export function createJourneyRoutes(input: {
       status: "ready",
       analysis_id: analysisId,
       source: run.execution.source,
-      analysis: run.execution.analysis,
+      analysis: analysisSummary(run.execution.analysis),
+      snapshot: snapshotSummary(run.snapshot),
+      experience_source: run.experience_source ?? null,
       narrative: run.execution.narrative ?? null,
       ai_text: run.execution.ai_text ?? null,
       ai_theme_text: run.execution.ai_theme_text ?? null,
@@ -239,7 +319,7 @@ export function createJourneyRoutes(input: {
   app.get("/history", async (c) => {
     const id = await workspaceId(c, input.workspaces, cookieName);
     if (!id) return c.json(UNAUTHORIZED, 401);
-    return c.json({ history: await input.history.list(id) });
+    return c.json({ history: (await input.history.list(id)).map((record) => historySummary(record)) });
   });
 
   app.get("/history/:recordId", async (c) => {
@@ -250,7 +330,7 @@ export function createJourneyRoutes(input: {
     const result = await input.history.getDetail(id, recordId);
     return result.status === "not_found"
       ? c.json({ error: "not_found" }, 404)
-      : c.json({ history: result });
+      : c.json({ history: historySummary(result) });
   });
 
   app.get("/history/:recordId/replay", async (c) => {
@@ -261,7 +341,7 @@ export function createJourneyRoutes(input: {
     const result = await input.history.replay(id, recordId);
     return result.status === "not_found"
       ? c.json({ error: "not_found" }, 404)
-      : c.json({ history: result });
+      : c.json({ history: historySummary(result) });
   });
 
   return app;

@@ -30,10 +30,42 @@
   gap: var(--space-2);
 }
 
+.mandong-long-card__materials-list {
+  display: grid;
+  gap: 0;
+}
+
+.mandong-long-card__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+}
+
+.mandong-long-card__pagination span {
+  min-width: 5rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
 .mandong-long-card__face-state {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
+}
+
+.mandong-long-card__materials-toggle {
+  display: flex;
+  justify-content: flex-start;
+  padding-block: var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.mandong-long-card__materials-content {
+  display: contents;
 }
 
 .mandong-long-card__stage {
@@ -194,8 +226,17 @@
   font-weight: 700;
 }
 
-.mandong-long-card__masthead--evidence {
+.mandong-long-card__masthead--evidence,
+.mandong-long-card__masthead--narrative {
   align-items: center;
+}
+
+.mandong-long-card__masthead--narrative > :first-child {
+  min-width: 0;
+}
+
+.mandong-long-card__masthead--narrative .mandong-long-card__guide {
+  flex: 0 0 auto;
 }
 
 .mandong-long-card__masthead--evidence > svg {
@@ -276,6 +317,67 @@
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm);
   font-weight: 700;
+}
+
+/* Four fixed personal constraints are a short reading list, not a paged table. */
+.mandong-long-card__constraints {
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  border: 0;
+}
+
+.mandong-long-card__constraints > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--space-4);
+  align-items: baseline;
+  padding: 0;
+  border: 0;
+}
+
+.mandong-long-card__constraints dd {
+  margin: 0;
+}
+
+/* Material lists are continuous; each record gets one quiet boundary only. */
+.mandong-long-card__material-evidence,
+.mandong-long-card__material-holding {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.mandong-long-card__materials-list > :last-child {
+  border-bottom: 0;
+}
+
+.mandong-long-card__material-evidence > div:first-child,
+.mandong-long-card__material-holding > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.mandong-long-card__material-evidence > div:first-child span,
+.mandong-long-card__material-holding > div:first-child span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.mandong-long-card__material-evidence dl,
+.mandong-long-card__material-holding dl {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  border: 0;
+}
+
+.mandong-long-card__material-evidence dl > div,
+.mandong-long-card__material-holding dl > div {
+  padding: 0;
+  border: 0;
 }
 
 .mandong-long-card__section {
@@ -616,7 +718,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .mandong-long-card__constraints,
   .mandong-long-card__evidence-list dl {
     grid-template-columns: 1fr;
   }
@@ -625,13 +726,11 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .mandong-long-card__constraints > div,
-  .mandong-long-card__evidence-list dl > div {
+  .mandong-long-card__evidence-list:not(.mandong-long-card__material-evidence):not(.mandong-long-card__material-holding) dl > div {
     border-bottom: 1px solid var(--color-border-subtle);
   }
 
-  .mandong-long-card__constraints > div:last-child,
-  .mandong-long-card__evidence-list dl > div:last-child {
+  .mandong-long-card__evidence-list:not(.mandong-long-card__material-evidence):not(.mandong-long-card__material-holding) dl > div:last-child {
     border-bottom: 0;
   }
 
