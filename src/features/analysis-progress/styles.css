@@ -393,8 +393,13 @@ opacity (an animation fill would pin them back to full strength). */
 }
 
 .analysis-progress__daily-message footer span {
-  color: var(--theme-accent);
+  color: var(--theme-ink-soft);
   font-size: var(--font-size-xs);
+}
+
+.analysis-progress__daily-message footer p {
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
 }
 
 .analysis-progress__connection {
