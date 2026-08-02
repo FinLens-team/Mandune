@@ -3,6 +3,8 @@ import {
   validatePortfolioSnapshot,
   validateTaskEvent,
   type AnalysisResult,
+  type DraftLine,
+  type EvidenceRecord,
   type PortfolioDraft,
   type TaskEvent,
 } from "../../contracts/index.js";
@@ -61,6 +63,41 @@ export interface AnalysisSourceResponse {
   label: string;
 }
 
+export interface AnalysisHoldingPage {
+  analysis_id: string;
+  holdings: import("../../contracts/index.js").PortfolioSnapshot["lines"];
+  next_cursor: string | null;
+  total: number;
+}
+
+export interface AnalysisEvidencePage {
+  analysis_id: string;
+  evidence: EvidenceRecord[];
+  next_cursor: string | null;
+  total: number;
+}
+
+export interface RandomExampleHolding {
+  line: DraftLine;
+  valuation: {
+    current_market_value_cny: number;
+    cost_basis_cny: number;
+    cash_balance_cny: number;
+    position_units: number;
+    source: {
+      kind: "public_delayed" | "local_fallback";
+      is_live: false;
+      name: string;
+      locator: string;
+      observation_date: string;
+      historical_observation_date: string;
+      current_price_cny: number;
+      historical_price_cny: number;
+      limitations: string[];
+    };
+  };
+}
+
 export type AnalysisResultResponse =
   | { status: "pending"; analysis_id: string }
   | {
@@ -87,6 +124,7 @@ export interface JourneyGateway {
   getAnalysisResult(analysisId: string): Promise<AnalysisResultResponse>;
   getAnalysisStatus(analysisId: string): Promise<AnalysisStatusResponse>;
   getCurrentDraft(): Promise<PortfolioDraft | null>;
+  getRandomExampleHolding?(): Promise<RandomExampleHolding>;
   getDetail(workspaceId: string, recordId: string): Promise<HistoryReadResult>;
   list(workspaceId: string): Promise<HistorySummary[]>;
   replayHistory(recordId: string): Promise<HistoryReplayResult>;
@@ -129,6 +167,47 @@ function workspaceStatus(value: unknown): value is WorkspacePublicStatus {
     iso(value.last_active_at) &&
     iso(value.expires_at) &&
     value.ttl_days === 30;
+}
+
+function finiteNonNegative(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function randomExampleLine(value: unknown): value is DraftLine {
+  return validatePortfolioDraft({
+    draft_id: "draft-random-example-validation",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    constraints: {
+      investment_horizon: "unknown",
+      near_term_liquidity: "unknown",
+      tolerable_drawdown: "unknown",
+      investment_objective: "unknown",
+    },
+    lines: [value],
+  }).ok;
+}
+
+function randomExampleHolding(value: unknown): value is RandomExampleHolding {
+  if (!object(value) || !randomExampleLine(value.line) || !object(value.valuation)) return false;
+  const valuation = value.valuation;
+  if (
+    !finiteNonNegative(valuation.current_market_value_cny) ||
+    !finiteNonNegative(valuation.cost_basis_cny) ||
+    !finiteNonNegative(valuation.cash_balance_cny) ||
+    !Number.isSafeInteger(valuation.position_units) || Number(valuation.position_units) <= 0 ||
+    !object(valuation.source)
+  ) return false;
+  const source = valuation.source;
+  return (source.kind === "public_delayed" || source.kind === "local_fallback") &&
+    source.is_live === false &&
+    typeof source.name === "string" && source.name.length > 0 &&
+    typeof source.locator === "string" && source.locator.length > 0 &&
+    /^\d{4}-\d{2}-\d{2}$/.test(String(source.observation_date)) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(String(source.historical_observation_date)) &&
+    finiteNonNegative(source.current_price_cny) && source.current_price_cny > 0 &&
+    finiteNonNegative(source.historical_price_cny) && source.historical_price_cny > 0 &&
+    Array.isArray(source.limitations) && source.limitations.every((item) => typeof item === "string");
 }
 
 function historySummary(value: unknown): value is HistorySummary {
@@ -265,6 +344,16 @@ export class FetchJourneyGateway implements JourneyGateway, AtlasGateway {
     const checked = validatePortfolioDraft(body.draft);
     if (!checked.ok) throw new JourneyGatewayError("invalid_response", response.status);
     return checked.value;
+  }
+
+  async getRandomExampleHolding(): Promise<RandomExampleHolding> {
+    const response = await this.response("/api/random-examples/holding", { method: "POST" });
+    if (!response.ok) this.failure(response);
+    const body = await this.json(response);
+    if (!object(body) || !randomExampleHolding(body.example)) {
+      throw new JourneyGatewayError("invalid_response", response.status);
+    }
+    return body.example;
   }
 
   async saveCurrentDraft(draft: PortfolioDraft): Promise<PortfolioDraft> {

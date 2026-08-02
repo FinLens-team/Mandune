@@ -32,6 +32,10 @@ export interface DraftLine {
   is_usable: boolean;
   unresolved_fields: string[];
   notes?: string;
+  /** Optional user-entered holding market value in CNY; omitted when unavailable. */
+  current_market_value_cny?: number;
+  /** Optional user-entered holding cost basis in CNY; omitted when unavailable. */
+  cost_basis_cny?: number;
 }
 
 /** User-accepted line that may enter a snapshot. */
@@ -45,6 +49,10 @@ export interface ConfirmedLine {
   observation_date: IsoDateString | UnknownFieldState;
   entry_method: EntryMethod;
   confirmed_at: IsoDateTimeString;
+  /** Optional user-entered holding market value in CNY at confirmation time. */
+  current_market_value_cny?: number;
+  /** Optional user-entered holding cost basis in CNY at confirmation time. */
+  cost_basis_cny?: number;
 }
 
 /**
@@ -63,6 +71,8 @@ export interface PortfolioDraft {
   created_at: IsoDateTimeString;
   updated_at: IsoDateTimeString;
   source_label?: string;
+  /** Optional user-entered cash balance in CNY; omitted when unavailable. */
+  cash_balance_cny?: number;
   lines: DraftLine[];
   constraints: PersonalConstraints;
 }
@@ -76,6 +86,8 @@ export interface PortfolioSnapshot {
   created_at: IsoDateTimeString;
   contracts_version: string;
   theme_id: string;
+  /** Optional user-entered cash balance in CNY captured with this snapshot. */
+  cash_balance_cny?: number;
   lines: ConfirmedLine[];
   constraints: PersonalConstraints;
 }

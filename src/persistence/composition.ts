@@ -6,6 +6,7 @@ import {
 } from "../atlas/index.js";
 import { JourneyAnalysisService, StreamingAnalysisExecutor } from "../app/server/index.js";
 import { DailyReviewV2Executor } from "../app/server/daily-review-v2-executor.js";
+import { RandomExampleValuationService } from "../app/server/random-example-valuation.js";
 import {
   createAnthropicMessagesModelGateway,
   createFallbackModelGateway,
@@ -115,6 +116,11 @@ export function createDurableServices(config: ServerConfig) {
   const journey = executor
     ? new JourneyAnalysisService(journeyStore, history, executor, undefined, undefined, atlas)
     : new JourneyAnalysisService(journeyStore, history, undefined, undefined, undefined, atlas);
+  const randomExamples = new RandomExampleValuationService({
+    // Public daily bars are deliberately labeled delayed by the service; a
+    // provider failure becomes an explicit local example fallback instead.
+    marketEvidenceSource: new TencentMarketEvidenceSource(),
+  });
   const a2a = config.a2a
     ? {
         runner: new DeepSeekDeepReviewAgent({
@@ -140,6 +146,7 @@ export function createDurableServices(config: ServerConfig) {
     atlas,
     evidenceCache,
     journey,
+    randomExamples,
     journeyStore,
     ...(a2a ? { a2a } : {}),
     lifecycle: new HistoryWorkspaceLifecycle(workspaces, history),

@@ -17,6 +17,7 @@ import {
   MemoryJourneyStore,
   createJourneyRoutes,
 } from "../app/server/index.js";
+import { RandomExampleValuationService } from "../app/server/random-example-valuation.js";
 import { HistoryService } from "../history/index.js";
 import { PersistenceError } from "../persistence/errors.js";
 import {
@@ -27,6 +28,7 @@ import type { ServerConfig } from "./config.js";
 import { createA2ARoutes, type DeepReviewRunner } from "../a2a/index.js";
 import { createMetricsRoutes, MetricsService } from "../metrics/index.js";
 import { createExtractionRoutes } from "../extraction/index.js";
+import { TencentMarketEvidenceSource } from "../providers/index.js";
 
 const startedAt = Date.now();
 
@@ -43,6 +45,7 @@ export function createApp(
     journey: JourneyAnalysisService;
     atlas?: AtlasService;
     metrics?: MetricsService;
+    randomExamples?: RandomExampleValuationService;
     a2a?: {
       runner: DeepReviewRunner;
       bearerToken: string;
@@ -65,6 +68,9 @@ export function createApp(
     undefined,
     atlas,
   );
+  const randomExamples = backend?.randomExamples ?? new RandomExampleValuationService({
+    marketEvidenceSource: new TencentMarketEvidenceSource(),
+  });
 
   app.onError((error, c) => {
     if (error instanceof PersistenceError) {
@@ -101,6 +107,7 @@ export function createApp(
     workspaces: workspaceService,
     journey,
     history,
+    randomExamples,
     onReviewStarted: async () => { await metrics.increment("review_starts"); },
     ...(config.workspaceCookie ? { cookieName: config.workspaceCookie.name } : {}),
   }));

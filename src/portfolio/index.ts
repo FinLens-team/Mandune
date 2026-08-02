@@ -8,6 +8,7 @@ export {
   listUsableLines,
   removeLine,
   updateConstraints,
+  updateCashBalance,
   updateLine,
 } from "./draft.js";
 export { createSnapshotFromDraft, draftLineToConfirmed } from "./snapshot.js";

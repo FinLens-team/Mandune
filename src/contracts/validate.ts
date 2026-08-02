@@ -101,6 +101,11 @@ function isIsoDate(value: unknown): value is string {
   return isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+/** CNY valuation inputs are optional but, when supplied, must be usable amounts. */
+function isOptionalCnyAmount(value: unknown): boolean {
+  return value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= 0);
+}
+
 function isUnknownFieldState(value: unknown): value is UnknownFieldState {
   return (
     typeof value === "string" &&
@@ -230,6 +235,11 @@ function validateConfirmedLine(
   if (value.market !== undefined && !isNonEmptyString(value.market)) {
     issues.push(issue(`${path}.market`, "type", "market must be a string when set."));
   }
+  for (const key of ["current_market_value_cny", "cost_basis_cny"] as const) {
+    if (!isOptionalCnyAmount(value[key])) {
+      issues.push(issue(`${path}.${key}`, "type", `${key} must be a finite non-negative CNY amount when set.`));
+    }
+  }
   if (!isNonEmptyString(value.size_basis)) {
     issues.push(issue(`${path}.size_basis`, "required", "size_basis is required."));
   }
@@ -274,6 +284,11 @@ function validateDraftLine(
   }
   if (!(isNonEmptyString(value.symbol) || isUnknownFieldState(value.symbol))) {
     issues.push(issue(`${path}.symbol`, "type", "symbol invalid."));
+  }
+  for (const key of ["current_market_value_cny", "cost_basis_cny"] as const) {
+    if (!isOptionalCnyAmount(value[key])) {
+      issues.push(issue(`${path}.${key}`, "type", `${key} must be a finite non-negative CNY amount when set.`));
+    }
   }
   if (
     !(
@@ -331,6 +346,9 @@ export function validatePortfolioSnapshot(
   if (!isNonEmptyString(value.theme_id)) {
     issues.push(issue("theme_id", "required", "theme_id is required."));
   }
+  if (!isOptionalCnyAmount(value.cash_balance_cny)) {
+    issues.push(issue("cash_balance_cny", "type", "cash_balance_cny must be a finite non-negative CNY amount when set."));
+  }
   if (!Array.isArray(value.lines) || value.lines.length === 0) {
     issues.push(issue("lines", "required", "at least one confirmed line is required."));
   } else {
@@ -361,6 +379,9 @@ export function validatePortfolioDraft(
   }
   if (!isIsoDateTime(value.created_at) || !isIsoDateTime(value.updated_at)) {
     issues.push(issue("created_at", "type", "draft timestamps must be ISO datetime."));
+  }
+  if (!isOptionalCnyAmount(value.cash_balance_cny)) {
+    issues.push(issue("cash_balance_cny", "type", "cash_balance_cny must be a finite non-negative CNY amount when set."));
   }
   if (!Array.isArray(value.lines)) {
     issues.push(issue("lines", "type", "lines must be an array."));

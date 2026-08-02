@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Menu } from "lucide-react";
 import type { PortfolioDraft, PortfolioSnapshot } from "../../contracts/index.js";
+import type { RandomExampleHolding } from "../../app/client/index.js";
 import type { WorkspacePublicStatus } from "../../workspace/index.js";
 import { BrandBanner, IconButton } from "../../client/ui/index.js";
 import mandongLogo from "../../client/assets/mandong-logo.webp";
@@ -34,6 +35,7 @@ export interface WorkspaceShellProps {
   onReducedMotionChange?: (enabled: boolean) => void;
   onResumeAnalysis?: (analysisId: string) => void;
   onReviewCoachmarkDismiss?: () => void;
+  onRequestRandomHolding?: () => Promise<RandomExampleHolding>;
   onStartAnalysis: (snapshot: PortfolioSnapshot) => void;
   reducedMotion?: boolean;
   reviewCoachmarkVisible?: boolean;
@@ -86,6 +88,7 @@ export function WorkspaceShell({
   onNavigateTheme,
   onResumeAnalysis,
   onReviewCoachmarkDismiss,
+  onRequestRandomHolding,
   onStartAnalysis,
   reducedMotion: controlledReducedMotion,
   reviewCoachmarkVisible = false,
@@ -333,6 +336,7 @@ export function WorkspaceShell({
               <PortfolioEditor
                 draft={draft}
                 onChange={changeDraft}
+                onRequestRandomHolding={onRequestRandomHolding}
                 onSave={() => navigate("home")}
               />
             </div>

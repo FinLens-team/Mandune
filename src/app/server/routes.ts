@@ -12,6 +12,7 @@ import {
 import type { WorkspaceService } from "../../workspace/index.js";
 import { WORKSPACE_COOKIE } from "../../workspace/index.js";
 import { JourneyAnalysisService, JourneyInputError } from "./service.js";
+import type { RandomExampleValuationService } from "./random-example-valuation.js";
 import { DEFAULT_THEME_ID, isThemeId } from "../../theme/index.js";
 
 const UNAUTHORIZED = { error: "unauthorized" } as const;
@@ -34,6 +35,7 @@ export function createJourneyRoutes(input: {
   workspaces: WorkspaceService;
   journey: JourneyAnalysisService;
   history: HistoryService;
+  randomExamples?: Pick<RandomExampleValuationService, "create">;
   onReviewStarted?: () => Promise<void>;
   cookieName?: string;
 }): Hono {
@@ -86,6 +88,24 @@ export function createJourneyRoutes(input: {
       suggestions: searchInstruments(query, assetClass ? { assetClass } : {}),
       dictionary_as_of: INSTRUMENT_DICTIONARY_AS_OF,
     });
+  });
+
+  // Server-side only: this path may call a public market provider. The browser
+  // receives the provider/fallback provenance alongside the generated line.
+  app.post("/random-examples/holding", async (c) => {
+    const id = await workspaceId(c, input.workspaces, cookieName);
+    if (!id) return c.json(UNAUTHORIZED, 401);
+    if (!input.randomExamples) return c.json({ error: "random_example_unavailable" }, 503);
+    const draft = await input.journey.getDraft(id);
+    const excludedSymbols = new Set(
+      draft?.lines
+        .map((line) => line.symbol)
+        .filter((symbol): symbol is string => symbol !== "unknown" && symbol !== "not_decided") ?? [],
+    );
+    const example = await input.randomExamples.create({ excludedSymbols });
+    return example
+      ? c.json({ example })
+      : c.json({ error: "no_random_candidate" }, 409);
   });
 
   app.post("/analyses", async (c) => {
