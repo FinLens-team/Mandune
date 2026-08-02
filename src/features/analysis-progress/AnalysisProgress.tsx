@@ -368,11 +368,13 @@ export function AnalysisProgress({
 
         {model.terminal ? (
           <div className="analysis-progress__ending">
-            <AnalysisStatus
-              className="analysis-progress__outcome"
-              description={model.terminal.reason}
-              status={model.terminal.status}
-            />
+            {model.terminal.status !== "limited" ? (
+              <AnalysisStatus
+                className="analysis-progress__outcome"
+                description={model.terminal.reason}
+                status={model.terminal.status}
+              />
+            ) : null}
             <div className="analysis-progress__actions">
               {model.canOpenResult && onOpenResult ? (
                 <Button

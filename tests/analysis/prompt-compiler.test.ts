@@ -20,7 +20,7 @@ const EXPECTED_HASHES = {
   "周礼转述-skill.md": "2fd2c299d02ca70f3afa9c337eb0c14c427b1018ca5c666757ceffdfa8934b84",
   "贴吧老哥转述-skill.md": "8937df1f9e850f658b499ddc48bed66da6ebf93c601520ec16868318c7f6a114",
   "男魅魔转述-skill.md": "75eace3952fb5d270fd2c1a7820ba8453f390d8cdb059037288f1fd3731e3f4c",
-  "女魅魔转述-skill.md": "954ed5b20ebe61f3450c76f152cfb501ed54c3716a8ff77807f799781e744702",
+  "女魅魔转述-skill.md": "488ad5ff0b28de9d7e5c86b79a94d8be5be5e6867ab287b4bf1688a4c1169916",
 } as const;
 
 describe("daily review prompt compiler", () => {

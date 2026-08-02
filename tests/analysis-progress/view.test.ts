@@ -139,7 +139,8 @@ describe("S8 analysis progress view (simple version)", () => {
     expect(markup).not.toContain("返回主页");
     expect(markup).toContain('class="analysis-progress__actions"');
     expect(markup).not.toContain("analysis-progress__daily-message");
-    expect(markup).toContain('class="analysis-status ui-analysis-status ui-analysis-status--limited analysis-progress__outcome"');
+    expect(markup).not.toContain("ui-analysis-status--limited");
+    expect(markup).not.toContain("部分证据缺口限制了结论范围。");
   });
 
   it("keeps unavailable out of S9 and exposes a concrete retry path", async () => {
