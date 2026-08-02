@@ -245,7 +245,19 @@
   padding-block: var(--space-4) var(--space-12);
 }
 
-.journey-result > .mandong-long-card {
+/* Score and report share one reading column, independent of their own internals. */
+.journey-result__report {
+  width: min(100%, var(--content-reading));
+  margin-inline: auto;
+}
+
+.journey-result__report > .score-share-card,
+.journey-result__report > .mandong-long-card {
+  width: 100%;
+  margin-inline: 0;
+}
+
+.journey-result__report > .mandong-long-card {
   animation: result-card-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
 }
 
@@ -313,11 +325,11 @@
     animation: none;
   }
 
-  .journey-result > .mandong-long-card {
+  .journey-result__report > .mandong-long-card {
     animation: none;
   }
 }
 
-.journey-result-page[data-reduced-motion="true"] .journey-result > .mandong-long-card {
+.journey-result-page[data-reduced-motion="true"] .journey-result__report > .mandong-long-card {
   animation: none;
 }

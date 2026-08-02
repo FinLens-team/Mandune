@@ -216,7 +216,8 @@ describe("#34 backend journey transport", () => {
     const result = await request(app, cookie, `/api/analyses/${startBody.analysis_id}/result`);
     const resultBody = await result.json() as {
       source: { label: string; is_live: boolean };
-      analysis: { analysis_id: string; evidence_cutoff_at: string; evidence: Array<{ fetched_at: string }> };
+      analysis: { analysis_id: string; evidence_cutoff_at: string; evidence_total: number; evidence?: unknown };
+      snapshot: { lines_total: number; lines?: unknown };
     };
     expect(resultBody.source).toEqual(expect.objectContaining({
       label: FIXTURE_NON_LIVE_LABEL,
@@ -224,16 +225,52 @@ describe("#34 backend journey transport", () => {
     }));
     expect(resultBody.analysis.analysis_id).toBe(startBody.analysis_id);
     expect(resultBody.analysis.evidence_cutoff_at).toBe(getFixture("supported_full").analysis.evidence_cutoff_at);
-    expect(resultBody.analysis.evidence.map((item) => item.fetched_at)).toEqual(
-      getFixture("supported_full").analysis.evidence.map((item) => item.fetched_at),
+    expect(resultBody.analysis.evidence_total).toBe(getFixture("supported_full").analysis.evidence.length);
+    expect(resultBody.analysis.evidence).toBeUndefined();
+    expect(resultBody.snapshot.lines).toBeUndefined();
+    expect(resultBody.snapshot.lines_total).toBe(getFixture("supported_full").snapshot.lines.length);
+
+    const firstHoldingPage = await request(app, cookie, `/api/analyses/${startBody.analysis_id}/holdings?limit=1`);
+    expect(firstHoldingPage.status).toBe(200);
+    expect((await firstHoldingPage.json() as { holdings: Array<{ line_id: string }>; next_cursor: string | null }).holdings).toEqual([
+      expect.objectContaining({ line_id: getFixture("supported_full").snapshot.lines[0]?.line_id }),
+    ]);
+
+    const firstEvidencePage = await request(app, cookie, `/api/analyses/${startBody.analysis_id}/evidence?limit=1`);
+    expect(firstEvidencePage.status).toBe(200);
+    const firstEvidenceBody = await firstEvidencePage.json() as {
+      analysis_id: string;
+      evidence: Array<{ id: string; fetched_at: string }>;
+      next_cursor: string | null;
+      total: number;
+    };
+    expect(firstEvidenceBody).toMatchObject({
+      analysis_id: startBody.analysis_id,
+      total: getFixture("supported_full").analysis.evidence.length,
+    });
+    expect(firstEvidenceBody.evidence).toEqual([
+      expect.objectContaining({ id: getFixture("supported_full").analysis.evidence[0]?.id }),
+    ]);
+    expect(firstEvidenceBody.next_cursor).toBe("1");
+
+    const secondEvidencePage = await request(
+      app,
+      cookie,
+      `/api/analyses/${startBody.analysis_id}/evidence?limit=1&cursor=${firstEvidenceBody.next_cursor}`,
     );
+    expect(secondEvidencePage.status).toBe(200);
+    expect((await secondEvidencePage.json() as { evidence: Array<{ id: string }> }).evidence).toEqual([
+      expect.objectContaining({ id: getFixture("supported_full").analysis.evidence[1]?.id }),
+    ]);
+    expect((await request(app, "", `/api/analyses/${startBody.analysis_id}/evidence?limit=1`)).status).toBe(401);
 
     const history = await request(app, cookie, "/api/history");
     const historyBody = await history.json() as { history: Array<{ record_id: string }> };
     expect(historyBody.history).toHaveLength(1);
     expect(historyBody.history[0]?.record_id).toBe(startBody.analysis_id);
     const detail = await request(app, cookie, `/api/history/${startBody.analysis_id}`);
-    expect(await detail.json()).toMatchObject({
+    const detailBody = await detail.json() as { history: { record: { analysis: { evidence?: unknown; evidence_total: number } } } };
+    expect(detailBody).toMatchObject({
       history: {
         status: "found",
         record: {
@@ -242,14 +279,18 @@ describe("#34 backend journey transport", () => {
         },
       },
     });
+    expect(detailBody.history.record.analysis.evidence).toBeUndefined();
+    expect(detailBody.history.record.analysis.evidence_total).toBe(getFixture("supported_full").analysis.evidence.length);
     const replay = await request(app, cookie, `/api/history/${startBody.analysis_id}/replay`);
-    expect(await replay.json()).toMatchObject({
+    const replayBody = await replay.json() as { history: { record: { analysis: { evidence?: unknown } } } };
+    expect(replayBody).toMatchObject({
       history: {
         status: "replayed",
         source: "immutable_history",
         record: { analysis: { analysis_id: startBody.analysis_id } },
       },
     });
+    expect(replayBody.history.record.analysis.evidence).toBeUndefined();
   });
 
   it.each([
@@ -298,7 +339,7 @@ describe("#34 backend journey transport", () => {
       source: { kind: "fixture", is_live: false },
       analysis: {
         status: "observation_only",
-        evidence: expect.arrayContaining([expect.objectContaining({ status: "unverified" })]),
+        evidence_total: getFixture("observation_only_gaps").analysis.evidence.length,
         conclusions: expect.arrayContaining([expect.objectContaining({ id: "observation-only-boundary" })]),
         advice: expect.arrayContaining([expect.objectContaining({ id: "observation-only-wait-for-data" })]),
       },
