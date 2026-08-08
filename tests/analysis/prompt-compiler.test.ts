@@ -7,6 +7,7 @@ import {
   DAILY_REVIEW_MODEL_ID,
   DAILY_REVIEW_PROMPT_VERSION,
   compileDailyReviewPrompt,
+  compileStreamingReviewInstructions,
   personaForTheme,
 } from "../../src/analysis/prompt-compiler.js";
 import { buildReviewPacket } from "../../src/analysis/review-packet.js";
@@ -85,10 +86,28 @@ describe("daily review prompt compiler", () => {
     expect(personaApplication).toBeLessThan(persona);
     expect(persona).toBeLessThan(personaInput);
     expect(compiled.persona_instructions).not.toContain("【核心持仓分析 skill｜原文】");
+    const rationalApplicationText = compiled.rational_instructions.split("【核心持仓分析 skill｜原文】", 1)[0]!;
+    const personaApplicationText = compiled.persona_instructions.split("【当前人格 skill", 1)[0]!;
+    expect(rationalApplicationText).toContain("报告篇幅由模型根据事实数量");
+    expect(personaApplicationText).toContain("篇幅由模型自行决定");
+    expect(rationalApplicationText).toContain("任何总字数、段落数、要点数或重点标的数量上限均无效");
+    expect(personaApplicationText).toContain("任何总字数、段落数、要点数或重点标的数量上限均无效");
+    expect(rationalApplicationText).not.toMatch(/\d+\s*至\s*\d+\s*个汉字/u);
+    expect(personaApplicationText).not.toMatch(/\d+\s*至\s*\d+\s*个汉字/u);
     expect(compiled.rational_instructions).toContain("[FINAL — DO NOT MODIFY]");
     expect(compiled.persona_instructions).toContain("[FINAL — DO NOT MODIFY]");
     expect(compiled.rational_instructions).toContain("报告正文都不得包含“每日扫盲”");
     expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
+  });
+
+  it("lets the streaming model decide report length without numeric character caps", () => {
+    const { instructions } = compileStreamingReviewInstructions("female_succubus");
+    const applicationText = instructions.split("【核心持仓分析 skill｜原文】", 1)[0]!;
+
+    expect(applicationText).toContain("篇幅都由模型根据事实数量");
+    expect(applicationText).toContain("任何总字数、段落数、要点数或重点标的数量上限均无效");
+    expect(applicationText).not.toMatch(/\d+\s*至\s*\d+\s*个汉字/u);
+    expect(applicationText).toContain("覆盖每个持仓");
   });
 
   it("keeps application boundaries ahead of the stronger succubus persona", () => {
