@@ -358,6 +358,35 @@ describe("atlas service boundaries", () => {
     expect(JSON.stringify(request?.input)).not.toContain("why_today");
   });
 
+  it("falls back to a deterministic card when the structured model returns no candidates", async () => {
+    const gateway: ModelGateway = {
+      async generate<T>() {
+        return {
+          ok: true,
+          value: {
+            schema_version: ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION,
+            candidates: [],
+          } as T,
+        };
+      },
+    };
+    const currentAnalysis = analysis(idFor("professional_term", "fallback"));
+    const generated = await new ModelAtlasCandidateGenerator(gateway).generate({
+      analysis: currentAnalysis,
+      existing_cards: [],
+      snapshot: structuredClone(getFixture("supported_full").snapshot),
+      selected_kind: "professional_term",
+    }, new AbortController().signal);
+
+    expect(generated).toEqual([
+      expect.objectContaining({
+        kind: "professional_term",
+        canonical_name: "组合集中度",
+        generation_mode: "fixture",
+      }),
+    ]);
+  });
+
   it("skips unavailable reviews and enforces a hard timeout even when generation ignores abort", async () => {
     const store = new MemoryAtlasStore();
     const slow: AtlasCandidateGenerator = {
