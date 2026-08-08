@@ -63,6 +63,7 @@ async function execute(input: {
   modelGateway: ModelGateway;
   marketEvidenceSource?: MarketEvidenceSource;
   hardDeadlineMs?: number;
+  now?: Date;
   onText?: (text: string) => void;
   themeId?: ThemeId;
 }) {
@@ -87,7 +88,7 @@ async function execute(input: {
       state,
       ...(extra?.message !== undefined ? { message: extra.message } : {}),
     }),
-    now: () => new Date(NOW),
+    now: () => new Date(input.now ?? NOW),
     onText: input.onText,
   });
   return { result, events };
@@ -133,10 +134,11 @@ describe("StreamingAnalysisExecutor", () => {
     ]);
     expect(requests[0]?.maxOutputTokens).toBe(16_384);
     expect(requests[0]?.prompt).toContain("【时间边界】");
-    expect(requests[0]?.prompt).toContain("最近完整交易日：");
-    expect(requests[0]?.prompt).toContain("没有生成日同日涨跌是正常情况，不得当作数据缺口");
-    expect(requests[0]?.instructions).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
-    expect(requests[0]?.instructions).toContain("产品界面会统一展示一次");
+    expect(requests[0]?.prompt).toContain("报告生成日：2026-07-25（星期六）");
+    expect(requests[0]?.prompt).toContain("最近完整交易日：2026-07-24");
+    expect(requests[0]?.prompt).toContain("今天是星期六，A股市场休市，没有同日涨跌；以下使用最近完整交易日的数据");
+    expect(requests[0]?.instructions).not.toContain("不得使用“可惜”“糊弄”“别想蒙混”");
+    expect(requests[0]?.instructions).toContain("免责声明统一由产品界面展示一次");
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "running",
@@ -151,6 +153,23 @@ describe("StreamingAnalysisExecutor", () => {
       stage: "discover_and_verify_events",
       state: "failed",
     }));
+  });
+
+  it("gives the model explicit Sunday market context", async () => {
+    const requests: ModelStreamRequest[] = [];
+    await execute({
+      now: new Date("2026-07-26T09:00:00.000Z"),
+      modelGateway: gateway(async (request) => {
+        requests.push(request);
+        const text = modelReports(SAFE_RATIONAL);
+        request.onText(text);
+        return { ok: true, text };
+      }),
+    });
+
+    expect(requests[0]?.prompt).toContain("报告生成日：2026-07-26（星期日）");
+    expect(requests[0]?.prompt).toContain("最近完整交易日：2026-07-24");
+    expect(requests[0]?.prompt).toContain("今天是星期日，A股市场休市，没有同日涨跌；以下使用最近完整交易日的数据");
   });
 
   it.each([

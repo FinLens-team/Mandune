@@ -171,6 +171,15 @@ function buildPrompt(
       source: item.source.name,
       limitations: item.limitations,
     }));
+  const reportDate = timeBoundary.analysisStartedAt.slice(0, 10);
+  const weekday = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    weekday: "long",
+  }).format(new Date(timeBoundary.analysisStartedAt));
+  const weekend = weekday === "星期六" || weekday === "星期日";
+  const marketDayMessage = weekend
+    ? `今天是${weekday}，A股市场休市，没有同日涨跌；以下使用最近完整交易日的数据。`
+    : `今天是${weekday}；本报告使用最近完整交易日的数据。`;
 
   return [
     "【当前持仓】",
@@ -180,9 +189,9 @@ function buildPrompt(
     constraints,
     "",
     "【时间边界】",
-    `报告生成时间：${timeBoundary.analysisStartedAt}`,
+    `报告生成日：${reportDate}（${weekday}）`,
     `最近完整交易日：${timeBoundary.latestCompleteTradingDay}`,
-    "两者日期不同时，表示周末、节假日或其他休市边界；没有生成日同日涨跌是正常情况，不得当作数据缺口。",
+    marketDayMessage,
     "",
     "【分层市场上下文｜服务端确定性计算】",
     "近3个交易日保留逐日锚点；近1个月与近1年只提供关键摘要，不附全年原始日线。样本不足的窗口必须保持 insufficient。",

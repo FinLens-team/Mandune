@@ -98,9 +98,11 @@ describe("daily review prompt compiler", () => {
     expect(compiled.persona_instructions).toContain("[FINAL — DO NOT MODIFY]");
     expect(compiled.rational_instructions).toContain("报告正文都不得包含“每日扫盲”");
     expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
-    expect(rationalApplicationText).toContain("缺少同日涨跌属于正常情况，不是数据缺口");
-    expect(personaApplicationText).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
-    expect(personaApplicationText).toContain("产品界面会统一展示一次");
+    expect(rationalApplicationText).toContain("市场当天没有同日涨跌");
+    expect(rationalApplicationText).toContain("正文应自然采用最近完整交易日的数据");
+    expect(personaApplicationText).toContain("总市值或金额未提供时，继续利用仓位区间与行情完成分析");
+    expect(personaApplicationText).not.toContain("不得使用“可惜”“糊弄”“别想蒙混”");
+    expect(personaApplicationText).toContain("免责声明统一由产品界面展示一次");
   });
 
   it("lets the streaming model decide report length without numeric character caps", () => {
@@ -111,9 +113,11 @@ describe("daily review prompt compiler", () => {
     expect(applicationText).toContain("任何总字数、段落数、要点数或重点标的数量上限均无效");
     expect(applicationText).not.toMatch(/\d+\s*至\s*\d+\s*个汉字/u);
     expect(applicationText).toContain("覆盖每个持仓");
-    expect(applicationText).toContain("没有同日涨跌是正常情况，不是数据缺口");
-    expect(applicationText).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
-    expect(applicationText).toContain("产品界面会统一展示一次");
+    expect(applicationText).toContain("市场当天没有同日涨跌");
+    expect(applicationText).toContain("正文直接采用最近完整交易日的数据并说明当天休市");
+    expect(applicationText).toContain("若未提供总市值，正文继续使用持仓规模、比例和行情完成分析");
+    expect(applicationText).not.toContain("不得使用“可惜”“糊弄”“别想蒙混”");
+    expect(applicationText).toContain("免责声明统一由产品界面展示一次");
   });
 
   it("keeps application boundaries ahead of the stronger succubus persona", () => {

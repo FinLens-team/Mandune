@@ -110,7 +110,11 @@ function safeModelInput(input: AtlasGenerationInput): unknown {
 }
 
 export class ModelAtlasCandidateGenerator implements AtlasCandidateGenerator {
-  constructor(private readonly gateway: ModelGateway, private readonly timeoutMs = 40_000) {}
+  constructor(
+    private readonly gateway: ModelGateway,
+    private readonly timeoutMs = 40_000,
+    private readonly fallback: AtlasCandidateGenerator = new FixtureAtlasCandidateGenerator(),
+  ) {}
 
   async generate(input: AtlasGenerationInput, signal: AbortSignal): Promise<unknown | null> {
     const response = await this.gateway.generate<{
@@ -127,10 +131,12 @@ export class ModelAtlasCandidateGenerator implements AtlasCandidateGenerator {
       temperature: 0.55,
       maxOutputTokens: 1_800,
     });
-    return response.ok &&
+    const candidates = response.ok &&
       (response.finishReason === undefined || response.finishReason === "stop")
       ? response.value.candidates
       : null;
+    if (candidates && candidates.length > 0) return candidates;
+    return this.fallback.generate(input, signal);
   }
 }
 
