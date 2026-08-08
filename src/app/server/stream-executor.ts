@@ -147,10 +147,31 @@ function buildPrompt(
   const holdings = snapshot.lines
     .map((line, index) => {
       const market = line.market ? `，市场 ${line.market}` : "";
+      const currentMarketValue = line.current_market_value_cny === undefined
+        ? ""
+        : `，当前市值 ${line.current_market_value_cny} 元`;
+      const costBasis = line.cost_basis_cny === undefined
+        ? ""
+        : `，持仓成本 ${line.cost_basis_cny} 元`;
       return `${index + 1}. ${line.name}（${line.asset_class}，代码 ${line.symbol}${market}）` +
-        `：持仓规模「${line.size_basis}」，观察日期 ${line.observation_date}`;
+        `：持仓规模「${line.size_basis}」，观察日期 ${line.observation_date}${currentMarketValue}${costBasis}`;
     })
     .join("\n");
+
+  const enteredMarketValues = snapshot.lines
+    .map((line) => line.current_market_value_cny)
+    .filter((value): value is number => value !== undefined);
+  const enteredCostBases = snapshot.lines
+    .map((line) => line.cost_basis_cny)
+    .filter((value): value is number => value !== undefined);
+  const valuation = [
+    `用户填写的当前持仓总市值（不含现金）：${snapshot.total_market_value_cny ?? "未提供"}${snapshot.total_market_value_cny === undefined ? "" : " 元"}`,
+    `现金余额：${snapshot.cash_balance_cny ?? "未提供"}${snapshot.cash_balance_cny === undefined ? "" : " 元"}`,
+    `逐项当前市值覆盖：${enteredMarketValues.length}/${snapshot.lines.length}`,
+    `已填写逐项当前市值合计：${enteredMarketValues.length === 0 ? "未提供" : `${enteredMarketValues.reduce((sum, value) => sum + value, 0)} 元`}`,
+    `逐项持仓成本覆盖：${enteredCostBases.length}/${snapshot.lines.length}`,
+    `已填写逐项持仓成本合计：${enteredCostBases.length === 0 ? "未提供" : `${enteredCostBases.reduce((sum, value) => sum + value, 0)} 元`}`,
+  ].join("\n");
 
   const constraints = [
     `投资期限：${constraintLabel(snapshot.constraints.investment_horizon)}`,
@@ -184,6 +205,9 @@ function buildPrompt(
   return [
     "【当前持仓】",
     holdings || "（无持仓）",
+    "",
+    "【组合金额】",
+    valuation,
     "",
     "【四项个人约束】",
     constraints,

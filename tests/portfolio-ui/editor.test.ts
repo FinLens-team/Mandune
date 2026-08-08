@@ -1,7 +1,7 @@
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { PortfolioDraft } from "../../src/contracts/index.js";
+import { validatePortfolioDraft, type PortfolioDraft } from "../../src/contracts/index.js";
 import { createExampleDraft } from "../../src/portfolio/index.js";
 import {
   appendHolding,
@@ -9,6 +9,7 @@ import {
   deleteHolding,
   editConstraints,
   editHolding,
+  editTotalMarketValue,
   snapshotCurrentDraft,
 } from "../../src/features/review/model.js";
 
@@ -36,6 +37,11 @@ describe("S6 portfolio editor", () => {
     );
 
     expect(markup).toContain("数据管理");
+    expect(markup).toContain("当前持仓总市值（元）");
+    expect(markup).toContain("只填一个总金额也可以");
+    expect(markup).toContain("组合现金余额（元）");
+    expect(markup).toContain("当前市值（元）");
+    expect(markup).toContain("持仓成本（元）");
     expect(markup).not.toContain("随机体验身份 · 示例数据");
     // 未决字段提示使用表单语言，不暴露契约英文字段名。
     expect(markup).toContain("待补充：代码、持仓规模依据");
@@ -97,6 +103,19 @@ describe("S6 portfolio editor", () => {
       cost_basis_cny: 1_000,
     });
     expect(original.cash_balance_cny).toBeUndefined();
+  });
+
+  it("stores a single total holdings market value in the next immutable snapshot", () => {
+    const original = createExampleDraft();
+    const valued = editTotalMarketValue(original, "100000.50");
+    expect(valued.total_market_value_cny).toBe(100_000.5);
+    expect(original.total_market_value_cny).toBeUndefined();
+    expect(validatePortfolioDraft(valued).ok).toBe(true);
+
+    const result = snapshotCurrentDraft(valued);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.total_market_value_cny).toBe(100_000.5);
   });
 
   it("renders an assistive fuzzy-search combobox that never blocks free text", async () => {

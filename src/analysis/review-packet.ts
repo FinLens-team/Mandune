@@ -24,6 +24,16 @@ export interface ReviewPacketNumber {
   unit?: string;
 }
 
+export interface ReviewPacketPortfolioValuation {
+  total_market_value_cny?: number;
+  cash_balance_cny?: number;
+  entered_holding_market_value_cny?: number;
+  entered_holding_cost_basis_cny?: number;
+  holding_market_value_count: number;
+  holding_cost_basis_count: number;
+  holding_count: number;
+}
+
 export interface ReviewPacketV2 {
   schema_version: typeof REVIEW_PACKET_SCHEMA_VERSION;
   analysis_id: string;
@@ -32,6 +42,7 @@ export interface ReviewPacketV2 {
   evidence_cutoff_at: string;
   persona_id: string;
   holdings: PortfolioSnapshot["lines"];
+  portfolio_valuation: ReviewPacketPortfolioValuation;
   constraints: PersonalConstraints;
   evidence: EvidenceRecord[];
   derived: DerivedResult[];
@@ -80,15 +91,61 @@ function allowedNumbers(
     }
   }
   for (const line of snapshot.lines) {
+    if (line.current_market_value_cny !== undefined) {
+      numbers.push({ source_id: line.line_id, value: line.current_market_value_cny, unit: "CNY" });
+    }
+    if (line.cost_basis_cny !== undefined) {
+      numbers.push({ source_id: line.line_id, value: line.cost_basis_cny, unit: "CNY" });
+    }
     const percentage = /^\s*(\d+(?:\.\d+)?)\s*%\s*$/.exec(line.size_basis)?.[1];
     if (percentage !== undefined) {
       numbers.push({ source_id: line.line_id, value: Number(percentage), unit: "%" });
     }
   }
+  if (snapshot.total_market_value_cny !== undefined) {
+    numbers.push({
+      source_id: "portfolio:total_market_value",
+      value: snapshot.total_market_value_cny,
+      unit: "CNY",
+    });
+  }
+  if (snapshot.cash_balance_cny !== undefined) {
+    numbers.push({
+      source_id: "portfolio:cash_balance",
+      value: snapshot.cash_balance_cny,
+      unit: "CNY",
+    });
+  }
   return numbers.sort((left, right) => {
     const id = left.source_id.localeCompare(right.source_id);
     return id !== 0 ? id : left.value - right.value;
   });
+}
+
+function portfolioValuation(snapshot: PortfolioSnapshot): ReviewPacketPortfolioValuation {
+  const marketValues = snapshot.lines
+    .map((line) => line.current_market_value_cny)
+    .filter((value): value is number => value !== undefined);
+  const costBases = snapshot.lines
+    .map((line) => line.cost_basis_cny)
+    .filter((value): value is number => value !== undefined);
+  return {
+    ...(snapshot.total_market_value_cny !== undefined
+      ? { total_market_value_cny: snapshot.total_market_value_cny }
+      : {}),
+    ...(snapshot.cash_balance_cny !== undefined
+      ? { cash_balance_cny: snapshot.cash_balance_cny }
+      : {}),
+    ...(marketValues.length > 0
+      ? { entered_holding_market_value_cny: marketValues.reduce((sum, value) => sum + value, 0) }
+      : {}),
+    ...(costBases.length > 0
+      ? { entered_holding_cost_basis_cny: costBases.reduce((sum, value) => sum + value, 0) }
+      : {}),
+    holding_market_value_count: marketValues.length,
+    holding_cost_basis_count: costBases.length,
+    holding_count: snapshot.lines.length,
+  };
 }
 
 function compactEvidenceForModel(
@@ -132,6 +189,8 @@ export function buildReviewPacket(input: {
     .sort((left, right) => left.id.localeCompare(right.id)));
   const factIds = [
     ...input.snapshot.lines.map((line) => line.line_id),
+    ...(input.snapshot.total_market_value_cny !== undefined ? ["portfolio:total_market_value"] : []),
+    ...(input.snapshot.cash_balance_cny !== undefined ? ["portfolio:cash_balance"] : []),
     ...Object.keys(input.snapshot.constraints).map((key) => `constraint:${key}`),
     ...evidence.filter((item) => item.metric_or_event_type !== "candidate_event").map((item) => item.id),
     ...derived.map((item) => item.id),
@@ -147,6 +206,7 @@ export function buildReviewPacket(input: {
     evidence_cutoff_at: input.evidenceCutoffAt,
     persona_id: input.personaId,
     holdings: structuredClone(input.snapshot.lines),
+    portfolio_valuation: portfolioValuation(input.snapshot),
     constraints: structuredClone(input.snapshot.constraints),
     evidence,
     derived,

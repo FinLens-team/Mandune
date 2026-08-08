@@ -34,6 +34,13 @@ const card: AtlasCardV1 = {
 describe("ReviewPacket v2", () => {
   it("assembles deterministic references, allowed numbers and minimal Atlas fingerprints", () => {
     const portfolio = snapshot();
+    portfolio.total_market_value_cny = 80_000;
+    portfolio.cash_balance_cny = 5_000;
+    portfolio.lines[0] = {
+      ...portfolio.lines[0]!,
+      current_market_value_cny: 50_000,
+      cost_basis_cny: 45_000,
+    };
     const evidence = [marketEvidence("line-2"), marketEvidence("line-1")];
     const derivations = deriveAnalysisInputs({
       snapshot: portfolio,
@@ -58,17 +65,32 @@ describe("ReviewPacket v2", () => {
       schema_version: "review-packet.v2",
       analysis_id: "analysis-v2",
       persona_id: "nailong",
+      portfolio_valuation: {
+        total_market_value_cny: 80_000,
+        cash_balance_cny: 5_000,
+        entered_holding_market_value_cny: 50_000,
+        entered_holding_cost_basis_cny: 45_000,
+        holding_market_value_count: 1,
+        holding_cost_basis_count: 1,
+        holding_count: 2,
+      },
       atlas: { selected_kind: "professional_term" },
     });
     expect(first.fact_ids).toEqual([...first.fact_ids].sort());
     expect(first.fact_ids).toEqual(expect.arrayContaining([
       "line-1",
       "market-line-1",
+      "portfolio:total_market_value",
+      "portfolio:cash_balance",
       "constraint:investment_horizon",
       "concentration-top-1-share",
     ]));
     expect(first.allowed_numbers).toEqual(expect.arrayContaining([
       expect.objectContaining({ source_id: "line-1", value: 60, unit: "%" }),
+      expect.objectContaining({ source_id: "line-1", value: 50_000, unit: "CNY" }),
+      expect.objectContaining({ source_id: "line-1", value: 45_000, unit: "CNY" }),
+      expect.objectContaining({ source_id: "portfolio:total_market_value", value: 80_000, unit: "CNY" }),
+      expect.objectContaining({ source_id: "portfolio:cash_balance", value: 5_000, unit: "CNY" }),
       expect.objectContaining({ source_id: "market-line-1", value: 10.5, unit: "CNY" }),
     ]));
     expect(first.atlas.existing_cards).toEqual([{

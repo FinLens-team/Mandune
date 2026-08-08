@@ -37,6 +37,12 @@ export function freezeSnapshot(snapshot: PortfolioSnapshot): PortfolioSnapshot {
     created_at: snapshot.created_at,
     contracts_version: snapshot.contracts_version,
     theme_id: snapshot.theme_id,
+    ...(snapshot.total_market_value_cny !== undefined
+      ? { total_market_value_cny: snapshot.total_market_value_cny }
+      : {}),
+    ...(snapshot.cash_balance_cny !== undefined
+      ? { cash_balance_cny: snapshot.cash_balance_cny }
+      : {}),
     lines: snapshot.lines.map((line) => ({
       line_id: line.line_id,
       asset_class: line.asset_class,
@@ -47,6 +53,12 @@ export function freezeSnapshot(snapshot: PortfolioSnapshot): PortfolioSnapshot {
       observation_date: line.observation_date,
       entry_method: line.entry_method,
       confirmed_at: line.confirmed_at,
+      ...(line.current_market_value_cny !== undefined
+        ? { current_market_value_cny: line.current_market_value_cny }
+        : {}),
+      ...(line.cost_basis_cny !== undefined
+        ? { cost_basis_cny: line.cost_basis_cny }
+        : {}),
     })),
     constraints: { ...snapshot.constraints },
   };

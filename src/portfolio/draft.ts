@@ -129,6 +129,19 @@ export function updateCashBalance(
   return next;
 }
 
+export function updateTotalMarketValue(
+  draft: PortfolioDraft,
+  totalMarketValueCny: number | undefined,
+): PortfolioDraft {
+  const next: PortfolioDraft = { ...draft, updated_at: nowIso() };
+  if (totalMarketValueCny === undefined) {
+    delete next.total_market_value_cny;
+  } else {
+    next.total_market_value_cny = totalMarketValueCny;
+  }
+  return next;
+}
+
 export function listUsableLines(draft: PortfolioDraft): DraftLine[] {
   return draft.lines.filter((line) => line.is_usable);
 }

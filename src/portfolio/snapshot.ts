@@ -100,6 +100,9 @@ export function createSnapshotFromDraft(
     created_at: confirmedAt,
     contracts_version: CONTRACTS_VERSION,
     theme_id: input.theme_id ?? "eastern_observation",
+    ...(draft.total_market_value_cny !== undefined
+      ? { total_market_value_cny: draft.total_market_value_cny }
+      : {}),
     ...(draft.cash_balance_cny !== undefined ? { cash_balance_cny: draft.cash_balance_cny } : {}),
     lines: confirmed,
     constraints: draft.constraints,

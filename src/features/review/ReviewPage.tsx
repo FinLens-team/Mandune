@@ -20,6 +20,7 @@ import {
   editCashBalance,
   editConstraints,
   editHolding,
+  editTotalMarketValue,
   normalizeOptionalCnyAmount,
   snapshotCurrentDraft,
 } from "./model.js";
@@ -218,11 +219,23 @@ export function PortfolioEditor({
 }: PortfolioEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>("holdings");
   const [newHolding, setNewHolding] = useState(EMPTY_HOLDING);
+  const [totalMarketValue, setTotalMarketValue] = useState(
+    () => draft.total_market_value_cny?.toString() ?? "",
+  );
   const [cashBalance, setCashBalance] = useState(() => draft.cash_balance_cny?.toString() ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [addingRandom, setAddingRandom] = useState(false);
   const usable = useMemo(() => listUsableLines(draft), [draft]);
   const unresolved = useMemo(() => listUnresolvedLines(draft), [draft]);
+  const enteredValuation = useMemo(() => {
+    const valued = usable.filter((line) => line.current_market_value_cny !== undefined);
+    return {
+      count: valued.length,
+      marketValueCny: valued.reduce((sum, line) => sum + (line.current_market_value_cny ?? 0), 0),
+    };
+  }, [usable]);
+  const totalMarketValueInvalid =
+    totalMarketValue.trim().length > 0 && normalizeOptionalCnyAmount(totalMarketValue) === undefined;
   const cashBalanceInvalid =
     cashBalance.trim().length > 0 && normalizeOptionalCnyAmount(cashBalance) === undefined;
 
@@ -333,6 +346,25 @@ export function PortfolioEditor({
 
           <div className="portfolio-cash-balance">
             <label className="field">
+              <span className="field-label">当前持仓总市值（元）</span>
+              <input
+                inputMode="decimal"
+                min="0"
+                placeholder="只填一个总金额也可以"
+                step="0.01"
+                type="number"
+                value={totalMarketValue}
+                onChange={(event) => {
+                  const nextTotalMarketValue = event.target.value;
+                  setTotalMarketValue(nextTotalMarketValue);
+                  onChange(editTotalMarketValue(draft, nextTotalMarketValue));
+                }}
+              />
+              {totalMarketValueInvalid ? (
+                <span className="field-hint">请输入非负金额；留空表示未提供。</span>
+              ) : null}
+            </label>
+            <label className="field">
               <span className="field-label">组合现金余额（元）</span>
               <input
                 inputMode="decimal"
@@ -351,7 +383,12 @@ export function PortfolioEditor({
                 <span className="field-hint">请输入非负金额；留空表示未提供。</span>
               ) : null}
             </label>
-            <p>以下金额均为可选录入项；未填写不会影响已有复盘或历史快照。</p>
+            <p>
+              总市值不含现金；只填总市值可估算绝对盈亏区间，逐项填写当前市值可提高归因精度。
+              {enteredValuation.count > 0
+                ? ` 已填写 ${enteredValuation.count}/${usable.length} 项当前市值，合计 ${enteredValuation.marketValueCny.toLocaleString("zh-CN")} 元。`
+                : ""}
+            </p>
           </div>
 
           <div className="portfolio-lines" role="list">

@@ -71,6 +71,8 @@ export interface PortfolioDraft {
   created_at: IsoDateTimeString;
   updated_at: IsoDateTimeString;
   source_label?: string;
+  /** Optional user-entered total market value of all holdings in CNY, excluding cash. */
+  total_market_value_cny?: number;
   /** Optional user-entered cash balance in CNY; omitted when unavailable. */
   cash_balance_cny?: number;
   lines: DraftLine[];
@@ -86,6 +88,8 @@ export interface PortfolioSnapshot {
   created_at: IsoDateTimeString;
   contracts_version: string;
   theme_id: string;
+  /** Optional user-entered total market value of all holdings in CNY, excluding cash. */
+  total_market_value_cny?: number;
   /** Optional user-entered cash balance in CNY captured with this snapshot. */
   cash_balance_cny?: number;
   lines: ConfirmedLine[];
