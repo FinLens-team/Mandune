@@ -83,7 +83,11 @@ describe("random holdings", () => {
     expect(line.entry_method).toBe("manual");
     expect(line.name).not.toMatch(/体验|示例/);
     expect(line.notes).toBeUndefined();
-    expect(line.size_basis).toMatch(/^(小仓位，约占组合一成以内|中等仓位，约占组合一到两成|核心仓位，约占组合两成以上)$/);
+    expect(line.size_basis).toBe("核心仓位，约占当前持仓总市值 100%");
+    expect(line.current_market_value_cny).toBeGreaterThan(0);
+    expect(line.cost_basis_cny).toBeGreaterThan(0);
+    expect(next.total_market_value_cny).toBe(line.current_market_value_cny);
+    expect(next.cash_balance_cny).toBeGreaterThan(0);
     expect(line.observation_date).toMatch(/^2026-0[4-7]-\d{2}$/);
     expect(line.is_usable).toBe(true);
     expect(validatePortfolioDraft(next).ok).toBe(true);
@@ -94,6 +98,12 @@ describe("random holdings", () => {
     const next = appendRandomHoldings(first, { random: () => 0.1 });
     expect(next.lines).toHaveLength(2);
     expect(next.lines[1]!.symbol).not.toBe(next.lines[0]!.symbol);
+    expect(next.lines.reduce((sum, line) => sum + (line.current_market_value_cny ?? 0), 0))
+      .toBe(next.total_market_value_cny);
+    for (const line of next.lines) {
+      const percent = (line.current_market_value_cny ?? 0) / (next.total_market_value_cny ?? 1) * 100;
+      expect(line.size_basis).toContain(`${Number(percent.toFixed(1))}%`);
+    }
 
     // 仍需显式确认：草稿本身不是快照，确认路径与手工持仓一致。
     const result = snapshotCurrentDraft(next);

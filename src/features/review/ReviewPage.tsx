@@ -262,6 +262,8 @@ export function PortfolioEditor({
           example.valuation.cash_balance_cny,
         );
         const added = next.lines.length - draft.lines.length;
+        setTotalMarketValue(next.total_market_value_cny?.toString() ?? "");
+        setCashBalance(next.cash_balance_cny?.toString() ?? "");
         onChange(next);
         setMessage(
           added === 1
@@ -279,6 +281,8 @@ export function PortfolioEditor({
     }
     const next = appendRandomHoldings(draft);
     const added = next.lines.length - draft.lines.length;
+    setTotalMarketValue(next.total_market_value_cny?.toString() ?? "");
+    setCashBalance(next.cash_balance_cny?.toString() ?? "");
     onChange(next);
     setMessage(
       added === 1

@@ -46,33 +46,46 @@ describe("random demo experience", () => {
           ...(holding.market ? { market: holding.market } : {}),
         });
         expect(holding.size_basis).toMatch(/仓位/);
-        expect(holding.observation_date).toBe("2026-07-25");
+        expect(holding.observation_date).toMatch(/^2026-\d{2}-\d{2}$/);
+        expect(new Date(`${holding.observation_date}T00:00:00Z`).getUTCDay()).not.toBe(0);
+        expect(new Date(`${holding.observation_date}T00:00:00Z`).getUTCDay()).not.toBe(6);
+        expect(holding.current_market_value_cny).toBeGreaterThan(0);
+        expect(holding.cost_basis_cny).toBeGreaterThan(0);
+        expect(holding.size_basis).toContain("当前持仓总市值");
         expect(holding.source_name).toBe("内置标的随机生成");
       }
     }
   });
 
-  it("always emits exactly the four contract constraints and preserves unknown as valid", () => {
+  it("emits a complete internally consistent valuation and fills all four preferences", () => {
+    const identities = Array.from({ length: 64 }, (_, seed) =>
+      createDemoExperienceFromSeed(seed, FIXED_NOW),
+    );
     const keys = [
       "investment_horizon",
       "near_term_liquidity",
       "tolerable_drawdown",
       "investment_objective",
     ];
-    const identities = Array.from({ length: 64 }, (_, seed) =>
-      createDemoExperienceFromSeed(seed, FIXED_NOW),
-    );
 
     for (const identity of identities) {
       expect(Object.keys(identity.constraints).sort()).toEqual([...keys].sort());
+      expect(Object.values(identity.constraints).every((value) => value !== "unknown" && value !== "not_decided")).toBe(true);
+      expect(identity.total_market_value_cny).toBeGreaterThan(0);
+      expect(identity.cash_balance_cny).toBeGreaterThan(0);
+      expect(identity.holdings.reduce((sum, holding) => sum + holding.current_market_value_cny, 0))
+        .toBeCloseTo(identity.total_market_value_cny, 2);
+      const cashRatio = identity.cash_balance_cny /
+        (identity.cash_balance_cny + identity.total_market_value_cny);
+      expect(cashRatio).toBeGreaterThanOrEqual(0.1);
+      expect(cashRatio).toBeLessThanOrEqual(0.22);
+      for (const holding of identity.holdings) {
+        expect(holding.cost_basis_cny / holding.current_market_value_cny).toBeGreaterThanOrEqual(0.88);
+        expect(holding.cost_basis_cny / holding.current_market_value_cny).toBeLessThanOrEqual(1.12);
+        const percent = holding.current_market_value_cny / identity.total_market_value_cny * 100;
+        expect(holding.size_basis).toContain(`${Number(percent.toFixed(1))}%`);
+      }
     }
-    expect(
-      identities.some((identity) =>
-        Object.values(identity.constraints).some(
-          (value) => value === "unknown" || value === "not_decided",
-        ),
-      ),
-    ).toBe(true);
   });
 
   it("guarantees a different reproducible seed when reroll entropy repeats", () => {

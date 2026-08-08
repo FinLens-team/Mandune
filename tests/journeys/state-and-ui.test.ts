@@ -53,6 +53,8 @@ describe("journey identity and pure state", () => {
     expect(draft.source_label).toBe(`随机体验身份 · ${DEMO_EXPERIENCE_SOURCE_LABEL}`);
     expect(draft.constraints).toEqual(identity.constraints);
     expect(draft.constraints).not.toBe(identity.constraints);
+    expect(draft.total_market_value_cny).toBe(identity.total_market_value_cny);
+    expect(draft.cash_balance_cny).toBe(identity.cash_balance_cny);
     expect(draft.lines).toHaveLength(identity.holdings.length);
     for (const [index, line] of draft.lines.entries()) {
       const holding = identity.holdings[index]!;
@@ -62,6 +64,8 @@ describe("journey identity and pure state", () => {
         ...(holding.market ? { market: holding.market } : {}),
         size_basis: holding.size_basis,
         observation_date: holding.observation_date,
+        current_market_value_cny: holding.current_market_value_cny,
+        cost_basis_cny: holding.cost_basis_cny,
         entry_method: "example",
         is_usable: true,
       });

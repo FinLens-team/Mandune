@@ -99,7 +99,7 @@ function localFallbackPricing(line: DraftLine, random: () => number, now: Date):
       : pickNumber(random, 8, 80);
   const change = pickNumber(random, -0.16, 0.16);
   const historicalPrice = currentPrice / (1 + change);
-  const date = now.toISOString().slice(0, 10);
+  const date = previousTradingDay(now);
   return {
     kind: "local_fallback",
     is_live: false,
@@ -178,6 +178,7 @@ export class RandomExampleValuationService {
     return {
       line: {
         ...line,
+        observation_date: source.historical_observation_date,
         current_market_value_cny: valuation.current_market_value_cny,
         cost_basis_cny: valuation.cost_basis_cny,
       },
