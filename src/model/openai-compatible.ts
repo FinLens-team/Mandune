@@ -120,10 +120,12 @@ export function createOpenAICompatibleModelGateway(
         apiKey: config.apiKey,
         supportsStructuredOutputs: config.supportsStructuredOutputs,
         ...(deepSeekOfficial ? {
+          // Structured JSON calls need a final schema-conforming object, not a
+          // hidden reasoning trace that can consume the entire output budget.
+          // The free-text stream uses the same setting in streamOfficialDeepSeek.
           transformRequestBody: (body: Record<string, unknown>) => ({
             ...body,
-            thinking: { type: "enabled" },
-            reasoning_effort: "high",
+            thinking: { type: "disabled" },
           }),
         } : {}),
         ...(config.fetch ? { fetch: config.fetch } : {}),
@@ -153,9 +155,16 @@ export function createOpenAICompatibleModelGateway(
       }, request.timeoutMs);
       const combinedSignal = AbortSignal.any([request.signal, timeoutController.signal]);
       try {
+        const structuredInstructions = config.supportsStructuredOutputs
+          ? request.instructions
+          : [
+              request.instructions,
+              "Return json only. The response must match this JSON Schema exactly:",
+              JSON.stringify(request.schema),
+            ].join("\n\n");
         const result = await generateText({
           model: provider(config.modelId),
-          instructions: request.instructions,
+          instructions: structuredInstructions,
           prompt: JSON.stringify({
             schema_version: request.schemaVersion,
             input: request.input,

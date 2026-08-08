@@ -92,6 +92,40 @@ describe("OpenAI-compatible AI SDK model gateway", () => {
     expect(JSON.stringify({ result, textCalls: onText.mock.calls })).not.toContain("private chain of thought");
   });
 
+  it("disables DeepSeek thinking for structured JSON generation", async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
+      void _input;
+      void _init;
+      return completion('{"schema_version":"test.v1","answer":"ok"}');
+    });
+    const gateway = createOpenAICompatibleModelGateway({
+      providerName: "DeepSeek",
+      baseURL: "https://api.deepseek.com",
+      apiKey: "server-only-secret",
+      modelId: "deepseek-v4-flash",
+      supportsStructuredOutputs: false,
+      fetch,
+    });
+
+    const result = await gateway.generate<{ schema_version: string; answer: string }>({
+      operation: "test",
+      schemaVersion: "test.v1",
+      schema,
+      instructions: "Return json only.",
+      input: {},
+      signal: new AbortController().signal,
+      timeoutMs: 1_000,
+      maxOutputTokens: 777,
+    });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({ thinking: { type: "disabled" }, max_tokens: 777 });
+    expect(body).not.toHaveProperty("reasoning_effort");
+    expect(JSON.stringify(body)).toContain('\\"answer\\"');
+    expect(JSON.stringify(body)).toContain("JSON Schema");
+    expect(result).toMatchObject({ ok: true, value: { schema_version: "test.v1", answer: "ok" } });
+  });
+
   it("does not send DeepSeek-specific thinking fields to generic compatible providers", async () => {
     const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       void _input;

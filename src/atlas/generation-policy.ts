@@ -1,6 +1,8 @@
-export const ATLAS_GENERATION_POLICY_VERSION = "atlas-generation-policy.v2" as const;
+export const ATLAS_GENERATION_POLICY_VERSION = "atlas-generation-policy.v3" as const;
 
 export const ATLAS_GENERATION_POLICY = `
+Return json only. 输出必须是符合调用方 schema 的单个 JSON 对象，不要输出 Markdown、代码围栏或额外文字。
+
 你负责在已保存、已校验的每日复盘之后生成零至四张满懂图鉴候选。
 
 生成前必须先阅读 existing_cards：
