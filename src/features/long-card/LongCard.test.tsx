@@ -10,6 +10,7 @@ import {
   longCardRuntimeFromFixture,
   longCardRuntimeIsDisplayable,
   preserveFaceScrollOffsets,
+  stripGeneratedRiskNotices,
 } from "./LongCard.js";
 
 describe("long-card rendering and interaction boundaries", () => {
@@ -226,6 +227,34 @@ describe("long-card rendering and interaction boundaries", () => {
     expect(evidenceMarkup).not.toContain("本次分析用到的行情证据");
     expect(markup).toContain('data-reduced-motion="true"');
     expect(markup.match(/class="mandong-long-card__face /g)).toHaveLength(1);
+  });
+
+  it("suppresses model-added disclaimers and keeps one product-owned footer", () => {
+    const duplicateNotice = "⚠️ 免责声明：本报告仅作分析展示，不构成投资建议。";
+    expect(stripGeneratedRiskNotices(`正文保留。\n\n${duplicateNotice}`)).toBe("正文保留。");
+
+    const base = longCardRuntimeFromFixture(FIXTURES.supported_full);
+    const input = {
+      ...base,
+      aiText: `## 理性说明\n\n理性正文。\n\n${duplicateNotice}`,
+      aiThemeText: `## 角色说明\n\n角色正文。\n\n${duplicateNotice}`,
+      narrative: undefined,
+    };
+    const frontMarkup = renderToStaticMarkup(createElement(LongCard, { input }));
+    const backMarkup = renderToStaticMarkup(createElement(RationalEvidenceBack, {
+      faceId: "evidence-face",
+      active: true,
+      input,
+      headingId: "evidence-heading",
+      headingRef: { current: null },
+    }));
+
+    for (const markup of [frontMarkup, backMarkup]) {
+      expect(markup).not.toContain(duplicateNotice);
+      expect(markup.match(/AI 分析仅供信息整理与理解参考/gu)).toHaveLength(1);
+    }
+    expect(frontMarkup).toContain("角色正文");
+    expect(backMarkup).toContain("理性正文");
   });
 
   it("keeps very long model reports in normal document flow", () => {

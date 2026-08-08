@@ -98,6 +98,9 @@ describe("daily review prompt compiler", () => {
     expect(compiled.persona_instructions).toContain("[FINAL — DO NOT MODIFY]");
     expect(compiled.rational_instructions).toContain("报告正文都不得包含“每日扫盲”");
     expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
+    expect(rationalApplicationText).toContain("缺少同日涨跌属于正常情况，不是数据缺口");
+    expect(personaApplicationText).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
+    expect(personaApplicationText).toContain("产品界面会统一展示一次");
   });
 
   it("lets the streaming model decide report length without numeric character caps", () => {
@@ -108,6 +111,9 @@ describe("daily review prompt compiler", () => {
     expect(applicationText).toContain("任何总字数、段落数、要点数或重点标的数量上限均无效");
     expect(applicationText).not.toMatch(/\d+\s*至\s*\d+\s*个汉字/u);
     expect(applicationText).toContain("覆盖每个持仓");
+    expect(applicationText).toContain("没有同日涨跌是正常情况，不是数据缺口");
+    expect(applicationText).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
+    expect(applicationText).toContain("产品界面会统一展示一次");
   });
 
   it("keeps application boundaries ahead of the stronger succubus persona", () => {

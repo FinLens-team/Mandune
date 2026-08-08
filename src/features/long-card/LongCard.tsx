@@ -79,6 +79,18 @@ interface PendingScrollRestore {
   offset: number;
 }
 
+const GENERATED_RISK_NOTICE_LINE = /(?:免责声明|本报告仅作分析展示|不构成(?:任何|个性化)?投资建议|仅供投资参考)/u;
+
+/** Product-owned footer is the single risk notice; suppress model-added duplicates. */
+export function stripGeneratedRiskNotices(markdown: string): string {
+  return markdown
+    .split(/\r?\n/u)
+    .filter((line) => !GENERATED_RISK_NOTICE_LINE.test(line))
+    .join("\n")
+    .replace(/\n{3,}/gu, "\n\n")
+    .trim();
+}
+
 
 export function longCardRuntimeFromFixture(fixture: AnalysisFixture): LongCardRuntimeInput {
   const { analysis } = fixture;
@@ -332,6 +344,7 @@ export function AiNarrativeFront({
 }: AiNarrativeFaceProps) {
   const { analysis } = input;
   const theme = themeForId(analysis.theme_id);
+  const displayText = stripGeneratedRiskNotices(aiText);
   return (
     <article
       aria-hidden={!active}
@@ -355,8 +368,8 @@ export function AiNarrativeFront({
 
       <section className="mandong-long-card__section" aria-labelledby={`${headingId}-observations`}>
         <h3 id={`${headingId}-observations`}>本次复盘</h3>
-        {aiText.trim() ? (
-          <GeneratedMarkdown>{aiText}</GeneratedMarkdown>
+        {displayText ? (
+          <GeneratedMarkdown>{displayText}</GeneratedMarkdown>
         ) : <p>模型未返回可展示的复盘文本。</p>}
       </section>
 
@@ -492,6 +505,7 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
   // (the model's report text plus the inputs it was given). The placeholder
   // conclusion/advice shells and derivation bookkeeping stay hidden.
   const relaxed = Boolean(input.aiText && !input.narrative);
+  const rationalText = stripGeneratedRiskNotices(input.aiText ?? "");
   const [showAnalysisMaterials, setShowAnalysisMaterials] = useState(false);
   return (
     <article
@@ -524,8 +538,8 @@ export function RationalEvidenceBack({ active, faceId, headingId, headingRef, in
       {relaxed ? (
         <section className="mandong-long-card__section" aria-labelledby={`${headingId}-report`}>
           <h3 id={`${headingId}-report`}>报告正文</h3>
-          {input.aiText?.trim() ? (
-            <GeneratedMarkdown>{input.aiText}</GeneratedMarkdown>
+          {rationalText ? (
+            <GeneratedMarkdown>{rationalText}</GeneratedMarkdown>
           ) : <p>模型未返回可展示的分析报告。</p>}
         </section>
       ) : null}

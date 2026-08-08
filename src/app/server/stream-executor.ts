@@ -139,7 +139,11 @@ function constraintLabel(value: string): string {
   return value;
 }
 
-function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRecord[]): string {
+function buildPrompt(
+  snapshot: PortfolioSnapshot,
+  evidence: readonly EvidenceRecord[],
+  timeBoundary: { analysisStartedAt: string; latestCompleteTradingDay: string },
+): string {
   const holdings = snapshot.lines
     .map((line, index) => {
       const market = line.market ? `，市场 ${line.market}` : "";
@@ -174,6 +178,11 @@ function buildPrompt(snapshot: PortfolioSnapshot, evidence: readonly EvidenceRec
     "",
     "【四项个人约束】",
     constraints,
+    "",
+    "【时间边界】",
+    `报告生成时间：${timeBoundary.analysisStartedAt}`,
+    `最近完整交易日：${timeBoundary.latestCompleteTradingDay}`,
+    "两者日期不同时，表示周末、节假日或其他休市边界；没有生成日同日涨跌是正常情况，不得当作数据缺口。",
     "",
     "【分层市场上下文｜服务端确定性计算】",
     "近3个交易日保留逐日锚点；近1个月与近1年只提供关键摘要，不附全年原始日线。样本不足的窗口必须保持 insufficient。",
@@ -288,6 +297,7 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       const modelText = await this.streamModelText(
         snapshot,
         evidence,
+        { analysisStartedAt: startedAtIso, latestCompleteTradingDay: tradingDay },
         Math.min(modelTimeoutMs, this.remainingMs(deadlineAt)),
         deadlineController.signal,
         reportConnected,
@@ -397,6 +407,7 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
   private async streamModelText(
     snapshot: PortfolioSnapshot,
     evidence: readonly EvidenceRecord[],
+    timeBoundary: { analysisStartedAt: string; latestCompleteTradingDay: string },
     timeoutMs: number,
     deadlineSignal: AbortSignal,
     onConnected: () => void,
@@ -410,7 +421,7 @@ export class StreamingAnalysisExecutor implements AnalysisExecutor {
       const compiled = compileStreamingReviewInstructions(snapshot.theme_id);
       const result = await waitForAbort(gateway.streamGenerate({
         instructions: compiled.instructions,
-        prompt: buildPrompt(snapshot, evidence),
+        prompt: buildPrompt(snapshot, evidence, timeBoundary),
         signal: deadlineSignal,
         timeoutMs,
         maxOutputTokens: 16_384,
