@@ -10,6 +10,8 @@ export function identityToPortfolioDraft(identity: DemoExperienceIdentity): Port
     created_at: identity.created_at,
     updated_at: identity.created_at,
     source_label: sourceLabel,
+    total_market_value_cny: identity.total_market_value_cny,
+    cash_balance_cny: identity.cash_balance_cny,
     constraints: structuredClone(identity.constraints),
     lines: identity.holdings.map((holding) => ({
       line_id: holding.line_id,
@@ -19,6 +21,8 @@ export function identityToPortfolioDraft(identity: DemoExperienceIdentity): Port
       ...(holding.market ? { market: holding.market } : {}),
       size_basis: holding.size_basis,
       observation_date: holding.observation_date,
+      current_market_value_cny: holding.current_market_value_cny,
+      cost_basis_cny: holding.cost_basis_cny,
       entry_method: "example",
       is_usable: true,
       unresolved_fields: [],

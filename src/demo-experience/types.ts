@@ -13,6 +13,8 @@ export interface DemoExperienceHolding {
   market?: string;
   size_basis: string;
   observation_date: string;
+  current_market_value_cny: number;
+  cost_basis_cny: number;
   source_name: string;
 }
 
@@ -25,6 +27,8 @@ export interface DemoExperienceIdentity {
   is_example: true;
   source_kind: "generated";
   source_label: typeof DEMO_EXPERIENCE_SOURCE_LABEL;
+  total_market_value_cny: number;
+  cash_balance_cny: number;
   holdings: DemoExperienceHolding[];
   constraints: PersonalConstraints;
 }

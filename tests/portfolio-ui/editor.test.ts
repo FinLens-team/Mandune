@@ -2,7 +2,7 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { validatePortfolioDraft, type PortfolioDraft } from "../../src/contracts/index.js";
-import { createExampleDraft } from "../../src/portfolio/index.js";
+import { createEmptyDraft, createExampleDraft } from "../../src/portfolio/index.js";
 import {
   appendHolding,
   appendServerRandomHolding,
@@ -103,6 +103,42 @@ describe("S6 portfolio editor", () => {
       cost_basis_cny: 1_000,
     });
     expect(original.cash_balance_cny).toBeUndefined();
+  });
+
+  it("derives total market value and stable cash from a complete random-only draft", () => {
+    const original = createEmptyDraft();
+    const first = appendServerRandomHolding(original, {
+      ...createExampleDraft().lines[0]!,
+      line_id: "line-random-1",
+      asset_class: "etf",
+      name: "随机 ETF",
+      symbol: "510300.SH",
+      size_basis: "随机",
+      observation_date: "2026-07-01",
+      entry_method: "example",
+      current_market_value_cny: 1_200,
+      cost_basis_cny: 1_000,
+    }, 300);
+
+    expect(first.total_market_value_cny).toBe(1_200);
+    expect(first.cash_balance_cny).toBe(300);
+    expect(first.lines[0]?.size_basis).toContain("100%");
+
+    const second = appendServerRandomHolding(first, {
+      ...first.lines[0]!,
+      line_id: "line-random-2",
+      name: "随机债基",
+      symbol: "000001.OF",
+      current_market_value_cny: 1_800,
+      cost_basis_cny: 1_700,
+    }, 999);
+    expect(second.total_market_value_cny).toBe(3_000);
+    expect(second.cash_balance_cny).toBe(300);
+    expect(second.lines.reduce((sum, line) => sum + (line.current_market_value_cny ?? 0), 0)).toBe(3_000);
+    expect(second.lines.map((line) => line.size_basis)).toEqual([
+      "核心仓位，约占当前持仓总市值 40%",
+      "核心仓位，约占当前持仓总市值 60%",
+    ]);
   });
 
   it("stores a single total holdings market value in the next immutable snapshot", () => {

@@ -125,14 +125,43 @@ export function appendRandomHoldings(
   return appendRandomExampleLines(draft, input);
 }
 
-/** Add a server-generated example and its explicitly generated cash balance. */
+function formatPercent(value: number): string {
+  return Number(value.toFixed(1)).toString();
+}
+
+function randomWeightLabel(value: number, total: number): string {
+  const percent = value / total * 100;
+  const descriptor = percent >= 25 ? "核心仓位" : percent >= 15 ? "中等仓位" : "小仓位";
+  return `${descriptor}，约占当前持仓总市值 ${formatPercent(percent)}%`;
+}
+
+/** Append a server-valued example and keep portfolio-level amounts coherent. */
 export function appendServerRandomHolding(
   draft: PortfolioDraft,
   line: DraftLine,
   cashBalanceCny: number,
 ): PortfolioDraft {
   if (draft.lines.some((existing) => existing.symbol === line.symbol)) return draft;
-  return updateCashBalance(addLine(draft, line), cashBalanceCny);
+  let next = addLine(draft, line);
+  const valuedLines = next.lines.filter(
+    (item) => typeof item.current_market_value_cny === "number" && Number.isFinite(item.current_market_value_cny),
+  );
+  const total = draft.total_market_value_cny !== undefined
+    ? draft.total_market_value_cny + (line.current_market_value_cny ?? 0)
+    : valuedLines.length === next.lines.length
+      ? valuedLines.reduce((sum, item) => sum + (item.current_market_value_cny ?? 0), 0)
+      : undefined;
+  if (total !== undefined && total > 0) {
+    next = updateTotalMarketValue(next, total);
+    for (const item of next.lines) {
+      if (item.current_market_value_cny !== undefined) {
+        next = updateLine(next, item.line_id, {
+          size_basis: randomWeightLabel(item.current_market_value_cny, total),
+        });
+      }
+    }
+  }
+  return updateCashBalance(next, draft.cash_balance_cny ?? cashBalanceCny);
 }
 
 export function deleteHolding(draft: PortfolioDraft, lineId: string): PortfolioDraft {

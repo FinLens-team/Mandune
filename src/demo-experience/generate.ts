@@ -9,15 +9,6 @@ import {
   type DemoExperienceIdentity,
 } from "./types.js";
 
-const CONSTRAINT_VARIANTS: Readonly<
-  Record<keyof PersonalConstraints, readonly string[]>
-> = {
-  investment_horizon: ["1-3年", "3-5年", "unknown"],
-  near_term_liquidity: ["近期可能需要", "暂无明确近期需求", "not_decided"],
-  tolerable_drawdown: ["较低", "中等", "unknown"],
-  investment_objective: ["稳健增长", "长期增长", "not_decided"],
-};
-
 function mulberry32(seed: number): () => number {
   let value = seed >>> 0;
   return () => {
@@ -47,10 +38,27 @@ function takeRandom<T>(items: T[], random: () => number): T {
   return value;
 }
 
+function money(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function weekdayDate(date: Date): string {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  while (result.getDay() === 0 || result.getDay() === 6) result.setDate(result.getDate() - 1);
+  return localDate(result);
+}
+
+function historicalDate(random: () => number, createdAt: Date): string {
+  const result = new Date(createdAt);
+  result.setDate(result.getDate() - (10 + Math.floor(random() * 80)));
+  return weekdayDate(result);
+}
+
 function generatePortfolio(
   random: () => number,
   excludedSymbols: ReadonlySet<string>,
-): Array<{ instrument: InstrumentEntry; sizeBasis: string }> {
+): Array<{ instrument: InstrumentEntry; weightPercent: number }> {
   const available = INSTRUMENT_DICTIONARY.filter(
     (instrument) => !excludedSymbols.has(instrument.symbol),
   );
@@ -81,22 +89,28 @@ function generatePortfolio(
     [selected[index], selected[swapIndex]] = [selected[swapIndex]!, selected[index]!];
   }
 
+  const weightsByCount: Record<number, readonly number[]> = {
+    4: [30, 26, 24, 20],
+    5: [28, 22, 19, 16, 15],
+    6: [25, 20, 17, 15, 13, 10],
+  };
+  const weights = weightsByCount[selected.length] ?? weightsByCount[4]!;
   return selected.map((instrument, index) => ({
     instrument,
-    sizeBasis: index === 0
-      ? "核心仓位，约占组合两成以上"
-      : index <= 2
-        ? "中等仓位，约占组合一到两成"
-        : "小仓位，约占组合一成以内",
+    weightPercent: weights[index] ?? 0,
   }));
 }
 
-function generateConstraints(random: () => number): PersonalConstraints {
+function generateConstraints(
+  random: () => number,
+  equityWeightPercent: number,
+  cashRatio: number,
+): PersonalConstraints {
   return {
-    investment_horizon: pick(CONSTRAINT_VARIANTS.investment_horizon, random),
-    near_term_liquidity: pick(CONSTRAINT_VARIANTS.near_term_liquidity, random),
-    tolerable_drawdown: pick(CONSTRAINT_VARIANTS.tolerable_drawdown, random),
-    investment_objective: pick(CONSTRAINT_VARIANTS.investment_objective, random),
+    investment_horizon: equityWeightPercent >= 60 ? pick(["3-5年", "5年以上"], random) : "3-5年",
+    near_term_liquidity: cashRatio >= 0.18 ? pick(["一般", "较高"], random) : "很低",
+    tolerable_drawdown: equityWeightPercent >= 70 ? "较高" : equityWeightPercent >= 45 ? "中等" : "较低",
+    investment_objective: equityWeightPercent >= 60 ? "长期增长" : "稳健增长",
   };
 }
 
@@ -116,19 +130,37 @@ export function createDemoExperienceFromSeed(
   const random = mulberry32(normalizedSeed);
   const seedLabel = `demo-experience-${normalizedSeed.toString(16).padStart(8, "0")}`;
   const createdAt = now();
-  const holdings: DemoExperienceHolding[] = generatePortfolio(
+  const generatedPortfolio = generatePortfolio(
     random,
     excludedSymbols ?? new Set(),
-  ).map(({ instrument, sizeBasis }, index) => ({
-    line_id: `line-${seedLabel}-${index + 1}`,
-    asset_class: instrument.asset_class,
-    name: instrument.name,
-    symbol: instrument.symbol,
-    ...(instrument.market ? { market: instrument.market } : {}),
-    size_basis: sizeBasis,
-    observation_date: localDate(createdAt),
-    source_name: DEMO_EXPERIENCE_SOURCE_LABEL,
-  }));
+  );
+  const totalMarketValue = Math.round((50_000 + random() * 180_000) / 100) * 100;
+  const cashRatio = 0.1 + random() * 0.12;
+  const cashBalance = money(totalMarketValue * cashRatio / (1 - cashRatio));
+  const equityWeightPercent = generatedPortfolio
+    .filter(({ instrument }) => instrument.asset_class === "a_share" || instrument.asset_class === "etf")
+    .reduce((sum, { weightPercent }) => sum + weightPercent, 0);
+  let allocated = 0;
+  const holdings: DemoExperienceHolding[] = generatedPortfolio.map(({ instrument, weightPercent }, index) => {
+    const currentValue = index === generatedPortfolio.length - 1
+      ? money(totalMarketValue - allocated)
+      : money(totalMarketValue * weightPercent / 100);
+    allocated += currentValue;
+    const costMultiplier = 0.88 + random() * 0.24;
+    const descriptor = index === 0 ? "核心仓位" : index <= 2 ? "中等仓位" : "小仓位";
+    return {
+      line_id: `line-${seedLabel}-${index + 1}`,
+      asset_class: instrument.asset_class,
+      name: instrument.name,
+      symbol: instrument.symbol,
+      ...(instrument.market ? { market: instrument.market } : {}),
+      size_basis: `${descriptor}，约占当前持仓总市值 ${weightPercent}%`,
+      observation_date: historicalDate(random, createdAt),
+      current_market_value_cny: currentValue,
+      cost_basis_cny: money(currentValue * costMultiplier),
+      source_name: DEMO_EXPERIENCE_SOURCE_LABEL,
+    };
+  });
   return {
     identity_id: `identity-${seedLabel}`,
     seed: seedLabel,
@@ -138,8 +170,10 @@ export function createDemoExperienceFromSeed(
     is_example: true,
     source_kind: "generated",
     source_label: DEMO_EXPERIENCE_SOURCE_LABEL,
+    total_market_value_cny: totalMarketValue,
+    cash_balance_cny: cashBalance,
     holdings,
-    constraints: generateConstraints(random),
+    constraints: generateConstraints(random, equityWeightPercent, cashRatio),
   };
 }
 
