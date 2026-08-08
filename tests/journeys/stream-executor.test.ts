@@ -132,6 +132,11 @@ describe("StreamingAnalysisExecutor", () => {
       "正在生成 角色观察",
     ]);
     expect(requests[0]?.maxOutputTokens).toBe(16_384);
+    expect(requests[0]?.prompt).toContain("【时间边界】");
+    expect(requests[0]?.prompt).toContain("最近完整交易日：");
+    expect(requests[0]?.prompt).toContain("没有生成日同日涨跌是正常情况，不得当作数据缺口");
+    expect(requests[0]?.instructions).toContain("不得使用“可惜”“糊弄”“别想蒙混”等责怪或挖苦表达");
+    expect(requests[0]?.instructions).toContain("产品界面会统一展示一次");
     expect(events).toContainEqual(expect.objectContaining({
       stage: "form_conclusions_and_advice",
       state: "running",
