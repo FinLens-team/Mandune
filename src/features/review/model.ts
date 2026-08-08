@@ -13,6 +13,7 @@ import {
   removeLine,
   updateConstraints,
   updateCashBalance,
+  updateTotalMarketValue,
   updateLine,
 } from "../../portfolio/index.js";
 import type { ThemeId } from "../../theme/index.js";
@@ -147,6 +148,10 @@ export function editConstraints(
 
 export function editCashBalance(draft: PortfolioDraft, rawValue: string): PortfolioDraft {
   return updateCashBalance(draft, normalizeOptionalCnyAmount(rawValue));
+}
+
+export function editTotalMarketValue(draft: PortfolioDraft, rawValue: string): PortfolioDraft {
+  return updateTotalMarketValue(draft, normalizeOptionalCnyAmount(rawValue));
 }
 
 export function snapshotCurrentDraft(draft: PortfolioDraft, themeId?: ThemeId):

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StreamingAnalysisExecutor } from "../../src/app/server/index.js";
 import type { MarketEvidenceSource } from "../../src/analysis/index.js";
-import type { EvidenceRecord, TaskEvent } from "../../src/contracts/index.js";
+import type { EvidenceRecord, PortfolioSnapshot, TaskEvent } from "../../src/contracts/index.js";
 import { getFixture } from "../../src/fixtures/index.js";
 import type { ModelGateway, ModelGatewayResult, ModelStreamRequest } from "../../src/model/index.js";
 import type { ThemeId } from "../../src/theme/index.js";
@@ -65,6 +65,7 @@ async function execute(input: {
   hardDeadlineMs?: number;
   now?: Date;
   onText?: (text: string) => void;
+  snapshot?: PortfolioSnapshot;
   themeId?: ThemeId;
 }) {
   const events: Array<Pick<TaskEvent, "stage" | "state"> & { message?: string }> = [];
@@ -80,7 +81,7 @@ async function execute(input: {
     workspaceId: "workspace-stream-safety",
     analysisId: "analysis-stream-safety",
     snapshot: {
-      ...structuredClone(getFixture("supported_full").snapshot),
+      ...structuredClone(input.snapshot ?? getFixture("supported_full").snapshot),
       ...(input.themeId ? { theme_id: input.themeId } : {}),
     },
     emit: (stage, state, extra) => events.push({
@@ -153,6 +154,35 @@ describe("StreamingAnalysisExecutor", () => {
       stage: "discover_and_verify_events",
       state: "failed",
     }));
+  });
+
+  it("passes portfolio totals and per-holding valuation facts into the model prompt", async () => {
+    const requests: ModelStreamRequest[] = [];
+    const valuationSnapshot = structuredClone(getFixture("supported_full").snapshot);
+    valuationSnapshot.total_market_value_cny = 100_000;
+    valuationSnapshot.cash_balance_cny = 5_000;
+    valuationSnapshot.lines[0] = {
+      ...valuationSnapshot.lines[0]!,
+      current_market_value_cny: 25_000,
+      cost_basis_cny: 22_000,
+    };
+
+    await execute({
+      snapshot: valuationSnapshot,
+      modelGateway: gateway(async (request) => {
+        requests.push(request);
+        const text = modelReports(SAFE_RATIONAL);
+        request.onText(text);
+        return { ok: true, text };
+      }),
+    });
+
+    expect(requests[0]?.prompt).toContain("【组合金额】");
+    expect(requests[0]?.prompt).toContain("当前持仓总市值（不含现金）：100000 元");
+    expect(requests[0]?.prompt).toContain("现金余额：5000 元");
+    expect(requests[0]?.prompt).toContain("当前市值 25000 元，持仓成本 22000 元");
+    expect(requests[0]?.prompt).toContain("逐项当前市值覆盖：1/2");
+    expect(requests[0]?.instructions).toContain("只有当前持仓总市值与仓位区间时，按估算范围表达金额影响");
   });
 
   it("gives the model explicit Sunday market context", async () => {

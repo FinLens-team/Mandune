@@ -19,7 +19,7 @@ const EXPECTED_HASHES = {
   "孙哥转述-skill.md": "a6aa654bb8ffe45c72c11ea572e055ed6e175ee88f01e0ca4849ef269ce8eb68",
   "兜兜转述-玄学版-skill.md": "af14f077d03719e4d9158b3ebc7113bed36e926f3fad9e74a5b9b7f6838012b5",
   "周礼转述-skill.md": "2fd2c299d02ca70f3afa9c337eb0c14c427b1018ca5c666757ceffdfa8934b84",
-  "贴吧老哥转述-skill.md": "8937df1f9e850f658b499ddc48bed66da6ebf93c601520ec16868318c7f6a114",
+  "贴吧老哥转述-skill.md": "22d33a454642e69234415191a833ad50ec74bffdf244c97826a934c778ce0a82",
   "男魅魔转述-skill.md": "75eace3952fb5d270fd2c1a7820ba8453f390d8cdb059037288f1fd3731e3f4c",
   "女魅魔转述-skill.md": "488ad5ff0b28de9d7e5c86b79a94d8be5be5e6867ab287b4bf1688a4c1169916",
 } as const;
@@ -100,7 +100,13 @@ describe("daily review prompt compiler", () => {
     expect(compiled.persona_instructions).toContain("独立 Atlas 调用生成");
     expect(rationalApplicationText).toContain("市场当天没有同日涨跌");
     expect(rationalApplicationText).toContain("正文应自然采用最近完整交易日的数据");
-    expect(personaApplicationText).toContain("总市值或金额未提供时，继续利用仓位区间与行情完成分析");
+    expect(personaApplicationText).toContain("只有当前持仓总市值与仓位区间时，以估算区间表达");
+    expect(personaApplicationText).toContain("金额都未提供时，继续利用仓位区间与行情完成分析");
+    expect(personaApplicationText).toContain("人格的语言强度、节奏、梗、粗俗度、攻击性、魅惑感或玄学叙事");
+    const tiebaPacket = { ...packet, persona_id: "tieba_laoge" as const };
+    const tiebaCompiled = compileDailyReviewPrompt(tiebaPacket, "tieba_laoge");
+    expect(tiebaCompiled.persona_instructions).toContain("攻击性是这个角色的核心卖点");
+    expect(tiebaCompiled.persona_instructions).toContain("没图没数据说个鸡毛");
     expect(personaApplicationText).not.toContain("不得使用“可惜”“糊弄”“别想蒙混”");
     expect(personaApplicationText).toContain("免责声明统一由产品界面展示一次");
   });
@@ -115,7 +121,13 @@ describe("daily review prompt compiler", () => {
     expect(applicationText).toContain("覆盖每个持仓");
     expect(applicationText).toContain("市场当天没有同日涨跌");
     expect(applicationText).toContain("正文直接采用最近完整交易日的数据并说明当天休市");
-    expect(applicationText).toContain("若未提供总市值，正文继续使用持仓规模、比例和行情完成分析");
+    expect(applicationText).toContain("逐项当前市值时，可结合可用行情说明对应的绝对金额影响");
+    expect(applicationText).toContain("只有当前持仓总市值与仓位区间时，按估算范围表达金额影响");
+    expect(applicationText).toContain("金额都未提供时继续使用持仓规模、比例和行情完成分析");
+    expect(applicationText).toContain("人格的语言强度、节奏、梗、粗俗度、攻击性、魅惑感或玄学叙事");
+    const tiebaStreaming = compileStreamingReviewInstructions("tieba_laoge").instructions;
+    expect(tiebaStreaming).toContain("攻击性是这个角色的核心卖点");
+    expect(tiebaStreaming).toContain("没图没数据说个鸡毛");
     expect(applicationText).not.toContain("不得使用“可惜”“糊弄”“别想蒙混”");
     expect(applicationText).toContain("免责声明统一由产品界面展示一次");
   });

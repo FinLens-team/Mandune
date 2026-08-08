@@ -17,6 +17,7 @@
 
 - Controlled props are read directly on every render and are never copied into local state. Local state changes only in uncontrolled mode; change callbacks fire in both modes.
 - `PortfolioEditor` marks the source as `edited` on the first holdings or constraints mutation while retaining the example-data meaning.
+- Valuation entry has two levels: one optional current total holdings market value (cash excluded) for coarse absolute-impact ranges, plus optional per-line current market value/cost for precise attribution. Cash stays separate. All valuation fields must survive draft persistence, immutable snapshot freezing and model prompt construction; missing amounts never block directional analysis.
 
 ## Commands
 

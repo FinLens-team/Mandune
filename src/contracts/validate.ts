@@ -346,6 +346,9 @@ export function validatePortfolioSnapshot(
   if (!isNonEmptyString(value.theme_id)) {
     issues.push(issue("theme_id", "required", "theme_id is required."));
   }
+  if (!isOptionalCnyAmount(value.total_market_value_cny)) {
+    issues.push(issue("total_market_value_cny", "type", "total_market_value_cny must be a finite non-negative CNY amount when set."));
+  }
   if (!isOptionalCnyAmount(value.cash_balance_cny)) {
     issues.push(issue("cash_balance_cny", "type", "cash_balance_cny must be a finite non-negative CNY amount when set."));
   }
@@ -379,6 +382,9 @@ export function validatePortfolioDraft(
   }
   if (!isIsoDateTime(value.created_at) || !isIsoDateTime(value.updated_at)) {
     issues.push(issue("created_at", "type", "draft timestamps must be ISO datetime."));
+  }
+  if (!isOptionalCnyAmount(value.total_market_value_cny)) {
+    issues.push(issue("total_market_value_cny", "type", "total_market_value_cny must be a finite non-negative CNY amount when set."));
   }
   if (!isOptionalCnyAmount(value.cash_balance_cny)) {
     issues.push(issue("cash_balance_cny", "type", "cash_balance_cny must be a finite non-negative CNY amount when set."));

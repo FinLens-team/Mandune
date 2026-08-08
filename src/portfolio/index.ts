@@ -9,6 +9,7 @@ export {
   removeLine,
   updateConstraints,
   updateCashBalance,
+  updateTotalMarketValue,
   updateLine,
 } from "./draft.js";
 export { createSnapshotFromDraft, draftLineToConfirmed } from "./snapshot.js";

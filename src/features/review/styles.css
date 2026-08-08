@@ -128,6 +128,24 @@
   font-size: var(--font-size-lg);
 }
 
+.portfolio-cash-balance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.portfolio-cash-balance > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .portfolio-lines {
   margin-top: var(--space-4);
   display: grid;
@@ -380,7 +398,8 @@
     justify-content: flex-start;
   }
 
-  .portfolio-line__fields {
+  .portfolio-line__fields,
+  .portfolio-cash-balance {
     grid-template-columns: 1fr;
   }
 
