@@ -340,6 +340,7 @@ describe("atlas service boundaries", () => {
     }, new AbortController().signal);
 
     expect(request?.instructions).toContain(ATLAS_GENERATION_POLICY_VERSION);
+    expect(request?.instructions).toMatch(/json/i);
     expect(request?.instructions).toContain("existing_cards");
     expect(request?.schemaVersion).toBe(ATLAS_CANDIDATE_BATCH_SCHEMA_VERSION);
     expect(request?.schema).toMatchObject({

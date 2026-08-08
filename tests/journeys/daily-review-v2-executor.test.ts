@@ -11,6 +11,7 @@ import {
 } from "../../src/app/server/index.js";
 import {
   ATLAS_CANDIDATE_SCHEMA_VERSION,
+  ATLAS_GENERATION_POLICY_VERSION,
   ModelAtlasCandidateGenerator,
   selectAtlasKind,
   type AtlasCardKind,
@@ -286,7 +287,7 @@ describe("DailyReviewV2Executor", () => {
         generated_review: { schema_version: GENERATED_DAILY_REVIEW_SCHEMA_VERSION },
         model_id: "step-explore",
         prompt_version: "daily-review-prompt.v3",
-        atlas_policy_version: "atlas-generation-policy.v2",
+        atlas_policy_version: ATLAS_GENERATION_POLICY_VERSION,
       },
     });
   });
