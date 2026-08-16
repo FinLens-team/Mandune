@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Share2 } from "lucide-react";
+import { ChevronDown, Share2 } from "lucide-react";
 import { longCardRuntimeIsDisplayable, type LongCardRuntimeInput } from "../long-card/LongCard.js";
 import { portfolioScoreIsAvailable, scorePortfolio, type PortfolioScore } from "../../scoring/index.js";
 import { themeCssVariables } from "../../theme/client.js";
@@ -97,14 +97,14 @@ export async function createScoreCardBlob(
   context.fillText(score.score.toFixed(1), 936, 294);
   context.fillStyle = theme.tokens.inkSoft;
   context.font = '700 27px "Noto Sans SC", "Microsoft YaHei", sans-serif';
-  context.fillText("综合分 · /10.0", 936, 344);
+  context.fillText("综合分（满分 10.0）", 936, 344);
   context.textAlign = "left";
 
   context.fillStyle = theme.tokens.surface;
   roundedRect(context, 88, 492, 904, 124, 20);
   context.fillStyle = theme.tokens.inkSoft;
   context.font = '700 24px "Noto Sans SC", "Microsoft YaHei", sans-serif';
-  context.fillText("本局角色", 124, 541);
+  context.fillText("角色", 124, 541);
   context.fillStyle = theme.tokens.ink;
   context.font = '800 38px "Noto Sans SC", "Microsoft YaHei", sans-serif';
   context.fillText(role, 124, 589);
@@ -146,6 +146,7 @@ export interface ScoreShareCardProps {
 
 export function ScoreShareCard({ input }: ScoreShareCardProps) {
   const [status, setStatus] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const score = useMemo(() => scorePortfolio(input), [input]);
   const theme = themeForId(input.snapshot.theme_id);
   if (!longCardRuntimeIsDisplayable(input) || !portfolioScoreIsAvailable(input)) return null;
@@ -180,23 +181,31 @@ export function ScoreShareCard({ input }: ScoreShareCardProps) {
     <section
       aria-labelledby="portfolio-score-heading"
       className="score-share-card"
+      data-expanded={expanded || undefined}
       data-tier={score.tier}
       data-theme={theme.id}
       style={themeCssVariables(theme.id)}
     >
-      <header className="score-share-card__hero">
+      <button
+        aria-controls="score-share-card-body"
+        aria-expanded={expanded}
+        className="score-share-card__hero"
+        onClick={() => setExpanded((value) => !value)}
+        type="button"
+      >
         <div className="score-share-card__tier">
           <p className="score-share-card__eyebrow">今日持仓段位</p>
           <h2 id="portfolio-score-heading">{score.tier}</h2>
         </div>
         <p className="score-share-card__score" aria-label={`评分 ${score.score.toFixed(1)} 分，满分 10 分`}>
-          <strong>{score.score.toFixed(1)}</strong>
-          <span>综合分 · /10.0</span>
+          <strong>{score.score.toFixed(1)}<small> / 10.0</small></strong>
+          <span>综合分</span>
         </p>
-      </header>
-      <div className="score-share-card__body">
+        <ChevronDown aria-hidden="true" size={28} />
+      </button>
+      <div className="score-share-card__body" hidden={!expanded} id="score-share-card-body">
         <div className="score-share-card__verdict">
-          <p><span>本局角色</span><strong>{theme.mascot.name}</strong></p>
+          <p><span>角色</span><strong>{theme.mascot.name}</strong></p>
           <blockquote>{score.roast}</blockquote>
         </div>
         <dl className="score-share-card__dimensions">

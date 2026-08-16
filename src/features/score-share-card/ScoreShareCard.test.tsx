@@ -19,13 +19,19 @@ function scoreableInput() {
 }
 
 describe("score share card", () => {
-  it("leads with tier and renders score, role, roast and market dimensions", () => {
+  it("renders tier and score as a collapsed hero, expands on click to show full details", () => {
     const markup = renderToStaticMarkup(createElement(ScoreShareCard, { input: scoreableInput() }));
 
     expect(markup).toContain("今日持仓段位");
     expect(markup).toMatch(/data-tier="(夯|顶级|人上人|NPC|拉完了)"/u);
-    expect(markup).toMatch(/<strong>\d+\.\d<\/strong><span>综合分 · \/10\.0<\/span>/u);
-    expect(markup).toContain("本局角色");
+    expect(markup).toMatch(/<strong>\d+\.\d<small> \/ 10\.0<\/small><\/strong><span>综合分<\/span>/u);
+    expect(markup).not.toContain("综合分 · /10.0");
+    expect(markup).toContain(">角色<");
+    expect(markup).not.toContain("本局角色");
+    // collapsed by default — full details remain accessible in the DOM but take no layout space
+    expect(markup).not.toMatch(/data-expanded="true"/u);
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain('class="score-share-card__body" hidden=""');
     expect(markup).toContain("短期表现");
     expect(markup).toContain("中期趋势");
     expect(markup).toContain("回撤控制");
@@ -54,8 +60,16 @@ describe("score share card", () => {
     expect(renderToStaticMarkup(createElement(ScoreShareCard, { input }))).toBe("");
   });
 
+  it("removes the full body from layout while collapsed", () => {
+    const stylesheet = readFileSync("src/features/score-share-card/ScoreShareCard.css", "utf8");
+    expect(stylesheet).toMatch(/\.score-share-card__body\[hidden\]\s*\{[^}]*display:\s*none/su);
+    expect(stylesheet).toContain("font-size: clamp(2rem, 5vw, 2.75rem)");
+    expect(stylesheet).toContain("padding: 0.85rem var(--space-4)");
+  });
+
   it("keeps the mobile layout single-column with a full-width share action", () => {
     const stylesheet = readFileSync("src/features/score-share-card/ScoreShareCard.css", "utf8");
+    expect(stylesheet).toContain("width: min(100%, 40rem)");
     expect(stylesheet).toContain("@media (max-width: 620px)");
     expect(stylesheet).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(stylesheet).toMatch(/\.score-share-card__share\s*\{[^}]*width:\s*100%/su);
