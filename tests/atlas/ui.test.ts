@@ -96,6 +96,8 @@ describe("atlas accessible card UI", () => {
     expect(source).toContain("再次遇见");
     expect(source).toContain("CLOSE_SWIPE_PX");
     expect(source).toContain("atlas-reveal-dialog__lead");
+    expect(source).not.toContain("常见误解");
+    expect(source).not.toContain("理解边界");
   });
 
   it("marks meme cards as generated entertainment rather than financial knowledge", async () => {
@@ -114,6 +116,8 @@ describe("atlas accessible card UI", () => {
     expect(css).toContain(".atlas-card__disclaimer");
     expect(css).toContain("font-size: var(--font-size-xs)");
     expect(css).toContain("max-height: min(78dvh, 44rem)");
+    expect(css).toMatch(/\.atlas-reveal-dialog__content h3\s*\{[^}]*font-size:\s*var\(--font-size-sm\)/su);
+    expect(css).toMatch(/\.atlas-reveal-dialog__content p\s*\{[^}]*font-size:\s*var\(--font-size-sm\)/su);
     expect(css).not.toContain(".atlas-page {\n  width: min(100%, 74rem);\n  min-height: 100dvh");
   });
 
@@ -123,5 +127,6 @@ describe("atlas accessible card UI", () => {
     expect(source).not.toContain("查看本次历史");
     expect(source).not.toContain("返回历史记录");
     expect(source).toContain('workspaceNav("result")');
+    expect(source.indexOf("<AtlasReveal")).toBeGreaterThan(source.indexOf("<LongCard"));
   });
 });

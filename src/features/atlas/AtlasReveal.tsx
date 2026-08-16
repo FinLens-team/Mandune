@@ -98,8 +98,6 @@ function AtlasRevealDetail({
             <section className="atlas-reveal-dialog__lead"><h3>白话解释</h3><p>{card.professional.plain_explanation}</p></section>
             <section><h3>今天为什么遇见</h3><p>{item.encounterText || card.professional.why_today}</p></section>
             <section><h3>与本次复盘的关系</h3><p>{card.professional.relation}</p></section>
-            <section><h3>常见误解</h3><p>{card.professional.misconception}</p></section>
-            <section><h3>理解边界</h3><p>{card.professional.boundary}</p></section>
           </div>
         ) : (
           <div className="atlas-reveal-dialog__content">

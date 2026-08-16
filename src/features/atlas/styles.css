@@ -531,8 +531,9 @@
 
 .atlas-reveal-dialog__content h3 {
   color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  line-height: 1.4;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.75;
 }
 
 .atlas-reveal-dialog__content p {

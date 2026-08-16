@@ -286,14 +286,6 @@ export function App(props: AppProps = {}) {
       <div className="journey-result-page" data-reduced-motion={state.reducedMotion || undefined}>
         <BrandBanner />
         <main className="journey-result" id="main">
-          {atlasGateway ? (
-            <AtlasReveal
-              analysisId={state.displayedResult.analysis.analysis_id}
-              gateway={atlasGateway}
-              reducedMotion={state.reducedMotion}
-              themeId={state.displayedResult.analysis.theme_id}
-            />
-          ) : null}
           <div className="journey-result__report">
             <ScoreShareCard input={state.displayedResult} />
             <LongCard
@@ -307,6 +299,14 @@ export function App(props: AppProps = {}) {
               reducedMotion={state.reducedMotion}
             />
           </div>
+          {atlasGateway ? (
+            <AtlasReveal
+              analysisId={state.displayedResult.analysis.analysis_id}
+              gateway={atlasGateway}
+              reducedMotion={state.reducedMotion}
+              themeId={state.displayedResult.analysis.theme_id}
+            />
+          ) : null}
         </main>
         {workspaceNav("result")}
       </div>
