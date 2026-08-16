@@ -79,7 +79,7 @@ async function main() {
     return;
   }
 
-  const root = path.resolve("src/client/public/daily-briefings");
+  const root = path.resolve(process.env.MANDONG_DAILY_BRIEFINGS_DIR || "src/client/public/daily-briefings");
   const sourceDir = path.join(root, date);
   const latestDir = path.join(root, "latest");
   const stagingDir = path.join(root, `.latest-${process.pid}`);

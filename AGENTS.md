@@ -14,6 +14,7 @@
 - 单包 pnpm 项目：Node `>=22 <23`、pnpm `10.33.2`、ESM、严格 TypeScript。不建 workspace 或 `apps/`、`packages/` 布局。
 - 客户端 Vite + React，服务端 Hono（Node），测试 Vitest，持久化 Node 22 内置 `node:sqlite`（迁移在 `migrations/` 按编号执行）。
 - 模型接入走 OpenAI-compatible 网关（Vercel AI SDK Core）；模型与供应商配置不得进入 `VITE_*`、浏览器包、日志或 `/health`。
+- AKShare 上游接口变化频繁，不把开发机旧环境视为可靠基线；排查行情缺失、开始相关开发或发布前，先用 `uv pip install --python "$AKSHARE_PYTHON_EXECUTABLE" --upgrade akshare` 更新隔离环境，再回读版本并实测项目实际调用的基金、ETF、A 股接口。开发机默认解释器为 `/home/evil/.local/share/mandune-dev/akshare-venv/bin/python`，不得装进系统 Python。
 
 ## 命令
 
@@ -35,7 +36,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - `src/contracts/`：框架中立的版本化契约与纯校验器，不得导入 React、Hono 或供应商 SDK。
 - `src/analysis/`：确定性派生、ReviewPacket、Prompt 编译、结果校验与单 agent 编排。
 - `src/scoring/`：基于持仓短期表现、中期趋势、长期回撤和持仓结构的确定性十分制评分；资料完整度、个人约束、证据覆盖、主题与 persona 不参与分数计算，关键行情周期不足时不定级。
-- 默认 `stream` 分析只调用一次模型；同一次输出包含有边界的理性背面与人物正面，人物正文按快照主题加载定稿 persona skill。Markdown 标题实时投影为等待页进度，两个分区完整校验后才进入结果与历史。Atlas 后置候选任务复用主报告的 `modelGateway` 及 fallback 顺序，生产已验证可返回 `generation_mode=model` 卡片。
+- 默认 `stream` 报告正文只做完整非空输出、超时和双面分段检查；严格 `v2` 另做结构化、引用与边界校验。Atlas 在报告完成后独立运行，失败不改写报告。
 - A2A 采用 HTTP+JSON 绑定与 ProtoJSON 对象形状；协议 `1.0.x` 对外协商值固定为 `1.0`，请求必须携带 `A2A-Version: 1.0`（缺失按 `0.3` 处理并拒绝）。
 - A2A 结构化行情复用隔离的 PandaAI Python worker 与 SQLite 证据缓存；生产凭据只使用 `PANDA_DATA_USERNAME` / `PANDA_DATA_PASSWORD` 服务端环境变量，worker 子进程内再映射为 SDK 变量。
 - `src/portfolio/`、`src/workspace/`、`src/history/`、`src/persistence/`：组合快照、匿名工作区、不可变历史、SQLite Store；`src/metrics/` 与 `src/persistence/metrics-store.ts` 保存上海时区每日匿名访问、工作区创建和新复盘启动聚合。
@@ -43,6 +44,7 @@ pnpm start        # 默认 127.0.0.1:8787
 - 引导页随机体验持仓与数据管理页共用 `src/portfolio/random-example.ts` 的真实标的字典、方向性仓位和观察日期生成规则；“换一份”排除当前标的，避免原地重复。
 - `src/atlas/`、`src/a2a/`、`src/model/`、`src/extraction/`：图鉴、独立 A2A 深度复盘、ModelGateway、截图提取。每次成功复盘的图鉴后置任务最多保存 4 张卡（最多 3 张报告相关专业概念，确定性 35% 概率追加 0-1 张场景梗）；新卡与复遇卡都通过 analysis outcome 回放。
 - `src/theme/`：三主题共享目录与 persona 映射；客户端素材映射独立放在 `src/theme/client.ts`，服务端不得导入媒体资源。
+- `src/daily-briefing/`：只读公开行情采集、七主题文案生成、契约/事实一致性校验、日期幂等、进程锁与运行时目录原子发布；生产由 `mandong-daily-briefing.timer` 唤醒，不写 release/source tree。
 - `deploy/`：单主机 Nginx/systemd 发布脚本。
 - 正式应用监听 `127.0.0.1:8791`；生产入口为 `https://mandune.wuxie233.com`，展会页复用同一发布包并使用 `https://expo.wuxie233.com`。
 

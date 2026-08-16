@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Mandong daily market briefing at 08:00 Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=5m
+AccuracySec=1m
+Unit=mandong-daily-briefing.service
+
+[Install]
+WantedBy=timers.target

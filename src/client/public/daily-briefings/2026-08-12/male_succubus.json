@@ -1,0 +1,148 @@
+{
+  "schema_version": "daily-briefing.v2",
+  "fact_sheet_id": "cn-market-2026-08-12-r1",
+  "date": "2026-08-12",
+  "generated_at": "2026-08-12T08:03:13+08:00",
+  "market_data_cutoff": "2026-08-11 15:00（截至 2026-08-12 08:03，最近一个已完成 A 股交易日）",
+  "market": [
+    {
+      "label": "上证指数",
+      "value": "3934.09",
+      "change": "-0.82%",
+      "observed_at": "2026-08-11 15:00",
+      "source_id": "cnstock-close"
+    },
+    {
+      "label": "深证成指",
+      "value": "14259.44",
+      "change": "-0.40%",
+      "observed_at": "2026-08-11 15:00",
+      "source_id": "szse-market"
+    },
+    {
+      "label": "创业板指",
+      "value": "3549.16",
+      "change": "+0.34%",
+      "observed_at": "2026-08-11 15:00",
+      "source_id": "szse-chinext"
+    },
+    {
+      "label": "沪市股票成交额",
+      "value": "10677.85 亿元",
+      "observed_at": "2026-08-11",
+      "source_id": "sse-stock-overview"
+    },
+    {
+      "label": "沪深两市成交额",
+      "value": "23209 亿元",
+      "change": "较上一交易日减少 2021 亿元",
+      "observed_at": "2026-08-11 15:00",
+      "source_id": "cnstock-close"
+    }
+  ],
+  "news": [
+    {
+      "title": "A 股主要指数分化，沪深两市成交缩量",
+      "summary": "上海证券报对 8 月 11 日收盘的报道显示，上证指数、深证成指收跌，创业板指收涨；沪深两市合计成交 23209 亿元，较上一交易日减少 2021 亿元。报道同时记录创新药概念维持强势；这里只并列记录盘面，不将板块表现写成指数涨跌的单一原因。",
+      "published_at": "2026-08-12",
+      "source_id": "cnstock-close",
+      "importance": "high",
+      "related_assets": [
+        "A股",
+        "创新药",
+        "权益市场"
+      ]
+    },
+    {
+      "title": "央行 8 月 11 日 7 天期逆回购操作量为零",
+      "summary": "中国人民银行公告称，根据公开市场业务一级交易商的需求，8 月 11 日 7 天期逆回购投标量和中标量均为 0 亿元。",
+      "published_at": "2026-08-11",
+      "source_id": "pbc-omo-154",
+      "importance": "high",
+      "related_assets": [
+        "货币市场",
+        "银行间流动性",
+        "人民币利率"
+      ]
+    },
+    {
+      "title": "7 月全国居民消费价格同比上涨 0.5%",
+      "summary": "国家统计局发布，2026 年 7 月全国居民消费价格同比上涨 0.5%、环比下降 0.1%；1—7 月平均同比上涨 0.9%。",
+      "published_at": "2026-08-09",
+      "source_id": "stats-cpi-july",
+      "importance": "high",
+      "related_assets": [
+        "宏观经济",
+        "消费价格",
+        "利率"
+      ]
+    },
+    {
+      "title": "7 月全国工业生产者出厂价格同比上涨 3.5%",
+      "summary": "国家统计局发布，2026 年 7 月全国工业生产者出厂价格同比上涨 3.5%、环比下降 0.7%；工业生产者购进价格同比上涨 5.5%、环比下降 1.0%。",
+      "published_at": "2026-08-09",
+      "source_id": "stats-ppi-july",
+      "importance": "high",
+      "related_assets": [
+        "宏观经济",
+        "工业品价格",
+        "原材料"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "cnstock-close",
+      "name": "上海证券报：市场缩量整固 创新药维持强势",
+      "url": "https://paper.cnstock.com/html/2026-08/12/content_2254361.htm"
+    },
+    {
+      "id": "szse-market",
+      "name": "深圳证券交易所市场数据",
+      "url": "https://www.szse.cn/market/index.html"
+    },
+    {
+      "id": "szse-chinext",
+      "name": "深圳证券交易所创业板指行情",
+      "url": "https://www.szse.cn/market/trend/index.html?code=399006"
+    },
+    {
+      "id": "sse-stock-overview",
+      "name": "上海证券交易所市场总貌数据",
+      "url": "https://query.sse.com.cn/commonQuery.do?isPagination=false&sqlId=COMMON_SSE_SJ_SCGM_C&TRADE_DATE=2026-08-11"
+    },
+    {
+      "id": "pbc-omo-154",
+      "name": "中国人民银行公开市场业务交易公告 [2026]第154号",
+      "url": "https://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125431/125475/2026081108552245312/index.html"
+    },
+    {
+      "id": "stats-cpi-july",
+      "name": "国家统计局：2026年7月份居民消费价格同比上涨0.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202608/t20260809_1965008.html"
+    },
+    {
+      "id": "stats-ppi-july",
+      "name": "国家统计局：2026年7月份工业生产者出厂价格同比上涨3.5%",
+      "url": "https://www.stats.gov.cn/sj/zxfb/202608/t20260809_1965007.html"
+    }
+  ],
+  "notice": "日报基于可核验公开市场信息预先生成，不使用你的持仓数据，不构成个性化投资建议。",
+  "theme_id": "male_succubus",
+  "title": "开市前市场清单：靠近清楚的数字，远离抢跑的结论",
+  "dek": "新的交易日尚未展开；让日期、收盘事实与宏观刻度各自待在准确的位置。",
+  "sections": [
+    {
+      "heading": "先看清时间",
+      "body": "今天是 8 月 12 日周三早间，市场还没有新的收盘答案。行情停在 8 月 11 日 15:00；把日报日期与行情截止日分开，判断才不会被带偏。"
+    },
+    {
+      "heading": "再看清分化",
+      "body": "上证与深成指分别跌 0.82% 和 0.40%，创业板指涨 0.34%；沪深两市成交 23209 亿元，较上一交易日减少 2021 亿元。轻轻记住已经发生的，不替未来许诺。"
+    },
+    {
+      "heading": "让数据留在边界内",
+      "body": "央行 8 月 11 日 7 天期逆回购操作量为零。7 月 CPI 同比上涨 0.5%、PPI 同比上涨 3.5%，两者环比则分别下降 0.1% 和 0.7%；它们值得注视，但不该被诱导成单一答案。"
+    }
+  ]
+}

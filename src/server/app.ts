@@ -38,7 +38,7 @@ function resolveClientRoot(moduleDir: string): string {
 
 export function createApp(
   config: Pick<ServerConfig, "version"> &
-    Partial<Pick<ServerConfig, "port" | "workspaceCookie">>,
+    Partial<Pick<ServerConfig, "port" | "workspaceCookie" | "dailyBriefingsDirectory">>,
   workspaceService: WorkspaceService = new WorkspaceService(),
   backend?: {
     history: HistoryService;
@@ -122,9 +122,19 @@ export function createApp(
 
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const clientRoot = resolveClientRoot(moduleDir);
+  const runtimeDailyBriefingsRoot = config.dailyBriefingsDirectory ??
+    path.join(clientRoot, "public", "daily-briefings");
 
   // Vite serves source public assets from src/client/public during development,
   // while production copies them directly under dist/client.
+  app.use(
+    "/daily-briefings/*",
+    serveStatic({
+      root: runtimeDailyBriefingsRoot,
+      rewriteRequestPath: (requestPath) => requestPath.replace(/^\/daily-briefings/u, ""),
+    }),
+  );
+
   app.use(
     "/daily-briefings/*",
     serveStatic({ root: path.join(clientRoot, "public") }),

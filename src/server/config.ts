@@ -39,6 +39,8 @@ export interface ServerConfig {
   dbPath: string;
   migrationsDirectory: string;
   dbBusyTimeoutMs: number;
+  /** Mutable runtime directory for generated daily briefing JSON. */
+  dailyBriefingsDirectory: string;
   workspaceCookie: { name: string; secure: boolean };
   /** Executor selection when a model is configured. Defaults to stream. */
   analysisMode: AnalysisMode;
@@ -69,6 +71,7 @@ export function loadServerConfig(
   const migrationsDirectory = env.MANDONG_MIGRATIONS_DIR?.trim() || path.resolve("migrations");
   const rawBusyTimeout = env.MANDONG_DB_BUSY_TIMEOUT_MS?.trim();
   const dbBusyTimeoutMs = rawBusyTimeout ? Number(rawBusyTimeout) : 1_000;
+  const dailyBriefingsDirectory = env.MANDONG_DAILY_BRIEFINGS_DIR?.trim() || "/var/lib/mandong/daily-briefings";
   const production = env.NODE_ENV === "production";
 
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
@@ -82,6 +85,9 @@ export function loadServerConfig(
   }
   if (!Number.isInteger(dbBusyTimeoutMs) || dbBusyTimeoutMs < 0 || dbBusyTimeoutMs > 60_000) {
     throw new Error("Invalid MANDONG_DB_BUSY_TIMEOUT_MS.");
+  }
+  if (!path.isAbsolute(dailyBriefingsDirectory) || /\0|\r|\n/u.test(dailyBriefingsDirectory)) {
+    throw new Error("Invalid MANDONG_DAILY_BRIEFINGS_DIR: expected an absolute path.");
   }
 
   const model = loadModelConfig(env);
@@ -116,6 +122,7 @@ export function loadServerConfig(
     dbPath,
     migrationsDirectory,
     dbBusyTimeoutMs,
+    dailyBriefingsDirectory,
     workspaceCookie: production
       ? { name: WORKSPACE_COOKIE, secure: true }
       : { name: DEVELOPMENT_WORKSPACE_COOKIE, secure: false },

@@ -11,6 +11,18 @@ function baseEnv(): NodeJS.ProcessEnv {
 }
 
 describe("A2A server config", () => {
+  it("uses a persistent absolute daily briefing runtime directory", () => {
+    expect(loadServerConfig(baseEnv()).dailyBriefingsDirectory).toBe("/var/lib/mandong/daily-briefings");
+    expect(loadServerConfig({
+      ...baseEnv(),
+      MANDONG_DAILY_BRIEFINGS_DIR: "/tmp/mandong-briefings",
+    }).dailyBriefingsDirectory).toBe("/tmp/mandong-briefings");
+    expect(() => loadServerConfig({
+      ...baseEnv(),
+      MANDONG_DAILY_BRIEFINGS_DIR: "relative",
+    })).toThrow(/Invalid MANDONG_DAILY_BRIEFINGS_DIR/u);
+  });
+
   it("keeps the PandaAI Python 3.12 command replaceable at the server boundary", () => {
     expect(loadServerConfig(baseEnv()).pandaPythonExecutable).toBe("python3.12");
     expect(loadServerConfig({

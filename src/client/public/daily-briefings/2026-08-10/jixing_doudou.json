@@ -1,0 +1,131 @@
+{
+  "schema_version": "daily-briefing.v2",
+  "fact_sheet_id": "cn-market-2026-08-10-r1",
+  "date": "2026-08-10",
+  "generated_at": "2026-08-10T08:01:05+08:00",
+  "market_data_cutoff": "2026-08-07 15:00（截至 2026-08-10 08:01，最近一个已完成 A 股交易日）",
+  "market": [
+    {
+      "label": "上证指数",
+      "value": "3940.04",
+      "change": "+1.02%",
+      "observed_at": "2026-08-07 15:00",
+      "source_id": "cnstock-close"
+    },
+    {
+      "label": "深证成指",
+      "value": "14311.01",
+      "change": "+1.42%",
+      "observed_at": "2026-08-07 15:00",
+      "source_id": "szse-market"
+    },
+    {
+      "label": "创业板指",
+      "value": "3563.12",
+      "change": "+1.35%",
+      "observed_at": "2026-08-07 15:00",
+      "source_id": "szse-chinext"
+    },
+    {
+      "label": "沪市股票成交额",
+      "value": "12111.16 亿元",
+      "observed_at": "2026-08-07",
+      "source_id": "sse-stock-overview"
+    },
+    {
+      "label": "沪深北三市成交额",
+      "value": "接近 2.7 万亿元",
+      "change": "较上一交易日增加 1359 亿元",
+      "observed_at": "2026-08-07 15:00",
+      "source_id": "cnstock-close"
+    }
+  ],
+  "news": [
+    {
+      "title": "央行开展 10 亿元 7 天期逆回购操作",
+      "summary": "中国人民银行于 8 月 7 日以固定利率、数量招标方式开展 10 亿元 7 天期逆回购操作，操作利率为 1.40%，并表示全额满足一级交易商需求。",
+      "published_at": "2026-08-07",
+      "source_id": "pbc-omo-152",
+      "importance": "high",
+      "related_assets": [
+        "货币市场",
+        "银行间流动性",
+        "人民币利率"
+      ]
+    },
+    {
+      "title": "香港将重开 5 年期人民币特区政府机构债券",
+      "summary": "香港金融管理局于 8 月 7 日公布，将于 8 月 13 日重开 5 年期人民币特区政府机构债券，供投标金额为 12.5 亿元人民币，计划于 8 月 17 日交收。",
+      "published_at": "2026-08-07",
+      "source_id": "hkma-rmb-bond",
+      "importance": "medium",
+      "related_assets": [
+        "离岸人民币债券",
+        "香港债券市场",
+        "人民币"
+      ]
+    },
+    {
+      "title": "A 股主要指数收涨，创新药与 AI 硬件赛道集中反弹",
+      "summary": "上海证券报对 8 月 7 日收盘的报道显示，A 股主要指数全线收红，创新药与 AI 硬件两条成长赛道集中反弹；该报道用于记录当日市场表现，不将板块表现解释为指数涨跌的单一原因。",
+      "published_at": "2026-08-08",
+      "source_id": "cnstock-close",
+      "importance": "medium",
+      "related_assets": [
+        "A股",
+        "创新药",
+        "AI硬件"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "cnstock-close",
+      "name": "上海证券报：A股放量反弹 医药、算力双主线领涨",
+      "url": "https://paper.cnstock.com/html/2026-08/08/content_2253437.htm"
+    },
+    {
+      "id": "szse-market",
+      "name": "深圳证券交易所市场数据",
+      "url": "https://www.szse.cn/market/index.html"
+    },
+    {
+      "id": "szse-chinext",
+      "name": "深圳证券交易所创业板指行情",
+      "url": "https://www.szse.cn/market/trend/index.html?code=399006"
+    },
+    {
+      "id": "sse-stock-overview",
+      "name": "上海证券交易所市场总貌数据",
+      "url": "https://query.sse.com.cn/commonQuery.do?isPagination=false&sqlId=COMMON_SSE_SJ_SCGM_C&TRADE_DATE=2026-08-07"
+    },
+    {
+      "id": "pbc-omo-152",
+      "name": "中国人民银行公开市场业务交易公告 [2026]第152号",
+      "url": "https://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125431/125475/2026080708590296440/index.html"
+    },
+    {
+      "id": "hkma-rmb-bond",
+      "name": "香港金融管理局人民币特区政府机构债券公告",
+      "url": "https://www.hkma.gov.hk/gb_chi/news-and-media/press-releases/2026/08/20260807-9/"
+    }
+  ],
+  "notice": "日报基于可核验公开市场信息预先生成，不使用你的持仓数据，不构成个性化投资建议。",
+  "theme_id": "jixing_doudou",
+  "title": "开市前财气卡：先收好周五事实，再等新行情",
+  "dek": "周一早间不添新收盘价，把日期、数字和来源装进同一个事实袋。",
+  "sections": [
+    {
+      "heading": "时间小铃铛",
+      "body": "今天是 8 月 10 日周一早间，A 股还没开市。行情时钟停在 8 月 7 日 15:00；这是最近一张完整交易日卡片，不是今天的新报价。"
+    },
+    {
+      "heading": "周五的市场天气",
+      "body": "上证、深成指、创业板指当日分别涨 1.02%、1.42% 和 1.35%，沪深北三市成交额接近 2.7 万亿元。三颗红星可以记录，不能直接画成未来曲线。"
+    },
+    {
+      "heading": "两条官方线索",
+      "body": "央行开展 10 亿元 7 天期逆回购，利率 1.40%；香港公布重开 12.5 亿元人民币的 5 年期机构债券。出处清楚，后续影响仍需要新数据验证。"
+    }
+  ]
+}

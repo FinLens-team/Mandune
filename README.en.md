@@ -14,17 +14,20 @@
 
 ![Mandune theme selection](docs/media/mandune-themes.png)
 
-Mandune turns a confirmed portfolio, four personal constraints, and time-stamped evidence into a daily review that can be read from two sides. The front presents a themed narrative. The back preserves the matching inputs, evidence cutoff, coverage, unknowns, and limitations. A theme may change the voice, but it cannot change the rational result or its risk boundaries.
+Mandune turns a confirmed portfolio, personal constraints, optional valuation and cost inputs, and time-stamped evidence into a two-sided daily review. The front can use any of seven character themes. The back preserves the matching inputs, evidence cutoff, coverage, unknowns, and limitations. Short-term observations use the latest three valid sessions, mid-term observations use roughly one month, and long-term risk uses up to one year. A theme may change the voice, but it cannot change the rational result or its risk boundaries.
 
 Mandune was built for **AdventureX 2026**, in the Portfolio Agent direction of PandaAI's “Build the Next AI Trader” track. It remains a self-hostable early-stage project after the hackathon. It is not a broker, licensed adviser, or automated trading system.
 
 ## What It Includes
 
 - Anonymous workspaces with a 30-day inactivity lifetime and user-requested deletion.
-- Portfolio reviews for funds, ETFs, and a limited set of A-share instruments.
-- Time-stamped market and event evidence with explicit partial-failure states.
-- A two-sided report: themed explanation on the front, matching evidence on the back.
-- Server-sent streaming progress and publication only after result validation.
+- Manual multi-holding entry and local OCR that produces an editable, unconfirmed draft.
+- Optional total value, cash, per-holding market value, and cost inputs; missing amounts do not block directional analysis.
+- Portfolio reviews for funds, ETFs, and A-share instruments across short, mid, and long market windows.
+- Seven themed front sides backed by the same rational report, evidence, unknowns, and risk boundaries.
+- A pre-generated daily market briefing with an explicit briefing date, market cutoff, and sources.
+- A deterministic ten-point portfolio tier card when all required market horizons are available; the share image omits holding names and symbols.
+- Server-sent task and generation progress. The default `stream` path publishes a complete non-empty response; strict `v2` additionally validates structured output, references, and report boundaries.
 - Immutable history replay that does not silently recompute old conclusions.
 - An Atlas of learning cards generated from validated reviews.
 - OpenAI-compatible and Anthropic Messages gateways with ordered fallbacks.
@@ -33,7 +36,7 @@ Mandune was built for **AdventureX 2026**, in the Portfolio Agent direction of P
 - A single-host Node.js, SQLite, systemd, and Nginx deployment contract.
 
 > [!IMPORTANT]
-> Mandune provides traceable, directional information only. It does not provide exact amounts, allocation percentages, prices, trade timing, return guarantees, or transaction execution.
+> Mandune provides traceable, directional information only. It may review user-confirmed holding amounts and realized historical impact, but it does not prescribe exact trade amounts, shares, target allocations, prices, trade timing, return guarantees, or transaction execution.
 
 ## Product View
 
@@ -64,7 +67,9 @@ flowchart LR
   G --> H[Immutable history and Atlas]
 ```
 
-The default `stream` mode combines a public market source with one streaming model generation. Strict `v2` mode adds PandaAI batch collection, cached Bocha event evidence, a deterministic ReviewPacket, and structured output validation. With no model configured, the server uses clearly marked fixtures for local evaluation and tests.
+The default `stream` mode asks an isolated AKShare worker for fund, ETF, and A-share daily data, falls back per instrument to the public Tencent adapter when needed, and performs one streaming model generation for the two-sided report body. `stream` publishes a complete non-empty response and uses bounded markers to split the rational and themed sides when present; strict structural, reference, and risk-boundary validation belongs to `v2`. “One model call” refers only to the report body: Atlas may make an independent non-blocking follow-up gateway request after the report is saved. Strict `v2` adds PandaAI batch collection, cached Bocha event evidence, a deterministic ReviewPacket, and structured generation. With no model configured, a non-production server uses clearly marked fixtures.
+
+The waiting-page briefing is separate from portfolio analysis. It pre-generates seven themed copies from one public market fact sheet and never reads a workspace or portfolio. See [Daily briefing pipeline](docs/daily-briefing-pipeline.md).
 
 See [Architecture](docs/architecture.md) for module and trust boundaries.
 
@@ -77,12 +82,12 @@ git clone https://github.com/FinLens-team/Mandune.git
 cd Mandune
 pnpm install --frozen-lockfile
 
-mkdir -p .localdata
+mkdir -p .localdata/daily-briefings
 cp .env.example .env
-# Set MANDONG_DB_PATH in .env to an absolute path under .localdata.
+# Set MANDONG_DB_PATH and MANDONG_DAILY_BRIEFINGS_DIR to absolute paths under .localdata.
 
 pnpm build
-pnpm start
+node --env-file-if-exists=.env dist/server/index.js
 ```
 
 Open `http://127.0.0.1:8787`. The fixture path works without provider credentials. The local exhibition display is at `http://127.0.0.1:8787/expo`. For development, run `pnpm dev:server` and `pnpm dev` in separate terminals.
@@ -117,7 +122,8 @@ The browser suite covers desktop and a `375 × 812` mobile viewport, runtime fai
 - Workspaces use an `HttpOnly`, `Secure`, `SameSite=Lax` locator cookie instead of a URL secret.
 - Inactive workspaces expire after 30 days and can be deleted earlier by the user.
 - History replay reads the saved snapshot, evidence, result, and versions without silently using later data.
-- Screenshot import is not enabled in the current UI. Its extraction boundary requires raw screenshots to be deleted after success, failure, or cancellation.
+- Screenshot import requires explicit consent and runs through the local OCR boundary. It returns an unconfirmed editable draft, deletes the raw image after success, failure, timeout, or cancellation, and requires line-by-line confirmation before snapshot creation.
+- Score share images contain the tier, score, dimensions, role, and roast only; they omit holding names, symbols, amounts, and account data.
 
 Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 
@@ -129,7 +135,7 @@ The PandaAI track asks for a discoverable and callable A2A Remote Agent. Mandune
 
 ## Project Status
 
-Mandune is a working, self-hostable hackathon project with its production site and exhibition dashboard online. The next priorities are enabling confirmed manual and screenshot-based input, strengthening operational recovery, expanding evidence adapters, and validating the report boundary with more privacy-safe scenarios.
+Mandune is a working, self-hostable hackathon project. The production site, manual entry, local OCR drafts, seven themed reports, score share cards, and exhibition dashboard all have implementations. Current priorities are broader OCR coverage, operational monitoring and recovery for the app and briefing timer, more evidence and verifiable-news adapters with explicit degradation, and more privacy-safe validation of amount-aware reviews, scoring boundaries, and long-report completeness.
 
 ## Contributing
 

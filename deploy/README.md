@@ -20,11 +20,13 @@ The host layout is fixed:
 | `/opt/mandong/releases/<commit-sha>` | `root:mandong`, no world access | Immutable application releases |
 | `/opt/mandong/current` | root-managed symlink | Active release |
 | `/opt/mandong/runtime` | `root:root`, `0755` | Validated Node/Corepack symlinks used by systemd and release scripts |
-| `/var/lib/mandong` | `mandong:mandong`, `0700` | SQLite database/WAL/SHM |
+| `/var/lib/mandong` | `mandong:mandong`, `0700` | SQLite database/WAL/SHM and mutable runtime state |
+| `/var/lib/mandong/daily-briefings` | `mandong:mandong`, `0700` | Dated and `latest/` daily briefing JSON |
 | `/var/backups/mandong` | `root:root`, `0700` | Pre-migration and rollback-guard snapshots |
 | `/etc/mandong/mandong.env` | `root:root`, `0600` | Optional server-only secrets/config |
 | `/etc/mandong/release.env` | `root:root`, `0600` | Generated commit SHA and migration path |
 | `/etc/systemd/system/mandong-purge.*` | `root:root`, `0644` | Hardened daily private-workspace expiry job |
+| `/etc/systemd/system/mandong-daily-briefing.*` | `root:root`, `0644` | Hardened 08:00 Asia/Shanghai briefing job |
 | `/run/lock/mandong/maintenance.lock` | `root:mandong`, `0660`; root-managed `0750` parent | Shared release/rollback/purge transaction lock |
 
 Do not put `HOST`, `PORT`, `APP_VERSION`, `MANDONG_DB_PATH`, or
@@ -92,12 +94,18 @@ resolved entrypoints under `/opt/mandong/runtime`; the service never falls back
 to another `node` on the host PATH. It never starts or restarts
 `mandong.service`. The unit uses `--preserve-symlinks-main` so the ESM entrypoint
 guard remains valid while `/opt/mandong/current` is switched atomically between
-immutable release directories. It also installs and runs `systemctl enable
---now mandong-purge.timer`, so daily expiry cleanup is immediately scheduled.
-The timer is persistent and has a 45-minute randomized delay. Before the first
-release, `ConditionPathExists` makes the oneshot a clean no-op rather than a
-failed unit. The purge service has no network namespace and can only write the
-Mandong state directory. A tmpfiles rule recreates the shared lock after boot
+immutable release directories. It installs and runs `systemctl enable --now` for both
+`mandong-purge.timer` and `mandong-daily-briefing.timer`; the application service
+itself remains enabled but is not started by host installation. The purge timer
+is persistent and has a 45-minute randomized delay. The daily
+briefing timer is persistent, runs at `08:00 Asia/Shanghai`, and has a five-minute
+randomized delay. Before the first release, `ConditionPathExists` makes both
+oneshot jobs a clean no-op rather than a failed unit. The daily briefing worker
+collects public Tencent index candles, generates seven theme copies through the
+server-only model gateway, validates shared facts, and atomically publishes to
+`/var/lib/mandong/daily-briefings/latest`; it never writes the release/source
+tree. The purge service has no network namespace and can only write the Mandong
+state directory. A tmpfiles rule recreates the shared lock after boot
 with a root-owned parent, so the service user can open the lock but cannot
 replace it. Installation fails unless the parent is `root:mandong 0750` and the
 regular lock file is `root:mandong 0660`.
@@ -156,9 +164,11 @@ Cookie:
 
 ```sh
 curl --fail --silent http://127.0.0.1:8791/health
+curl --fail --silent http://127.0.0.1:8791/daily-briefings/latest/eastern_observation.json
 curl --fail --silent https://demo.example.com/health
 curl --fail --silent https://demo.example.com/.well-known/agent-card.json
 sudo systemctl is-active mandong.service nginx.service
+sudo systemctl is-active mandong-purge.timer mandong-daily-briefing.timer
 sudo ss -ltnp | grep -E ':(443|8791)\b'
 ```
 
@@ -219,6 +229,8 @@ modifying the root-managed lock inode.
 sudo nginx -t
 sudo systemd-analyze verify /etc/systemd/system/mandong.service
 sudo systemd-analyze verify /etc/systemd/system/mandong-purge.service /etc/systemd/system/mandong-purge.timer
+sudo systemd-analyze verify /etc/systemd/system/mandong-daily-briefing.service /etc/systemd/system/mandong-daily-briefing.timer
+sudo systemctl list-timers mandong-purge.timer mandong-daily-briefing.timer
 sudo sqlite3 /var/lib/mandong/mandong.sqlite3 'PRAGMA integrity_check;'
 sudo systemctl show mandong.service \
   -p User -p Group -p ProtectSystem -p ProtectHome -p NoNewPrivileges

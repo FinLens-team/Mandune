@@ -1,0 +1,48 @@
+[Unit]
+Description=Generate and publish Mandong daily market briefing
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/mandong/current/dist/daily-briefing/worker.js
+
+[Service]
+Type=oneshot
+User=mandong
+Group=mandong
+WorkingDirectory=/opt/mandong/current
+EnvironmentFile=-/etc/mandong/mandong.env
+EnvironmentFile=/etc/mandong/release.env
+Environment=NODE_ENV=production
+Environment=PATH=/opt/mandong/runtime:/usr/bin:/bin
+Environment=MANDONG_DAILY_BRIEFINGS_DIR=/var/lib/mandong/daily-briefings
+ExecStartPre=/usr/bin/install -d -m 0700 /var/lib/mandong/daily-briefings
+ExecStart=/opt/mandong/runtime/node --preserve-symlinks-main /opt/mandong/current/dist/daily-briefing/worker.js
+TimeoutStartSec=5min
+UMask=0077
+StateDirectory=mandong
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RemoveIPC=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/mandong
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mandong-daily-briefing

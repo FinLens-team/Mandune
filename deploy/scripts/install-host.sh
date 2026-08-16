@@ -61,13 +61,18 @@ validate_deploy_lock || die "shared maintenance lock was not installed as root:$
 systemd-analyze verify \
   "${SCRIPT_DIR}/../systemd/mandong.service" \
   "${SCRIPT_DIR}/../systemd/mandong-purge.service" \
-  "${SCRIPT_DIR}/../systemd/mandong-purge.timer"
+  "${SCRIPT_DIR}/../systemd/mandong-purge.timer" \
+  "${SCRIPT_DIR}/../systemd/mandong-daily-briefing.service" \
+  "${SCRIPT_DIR}/../systemd/mandong-daily-briefing.timer"
 install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong.service" /etc/systemd/system/mandong.service
 install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-purge.service" /etc/systemd/system/mandong-purge.service
 install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-purge.timer" /etc/systemd/system/mandong-purge.timer
+install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-daily-briefing.service" /etc/systemd/system/mandong-daily-briefing.service
+install -o root -g root -m 0644 "${SCRIPT_DIR}/../systemd/mandong-daily-briefing.timer" /etc/systemd/system/mandong-daily-briefing.timer
 systemctl daemon-reload
 systemctl enable mandong.service
 systemctl enable --now mandong-purge.timer
+systemctl enable --now mandong-daily-briefing.timer
 
 NGINX_TARGET_DIR="$(dirname -- "${NGINX_TARGET}")"
 NGINX_CANDIDATE="$(mktemp "${NGINX_TARGET_DIR}/.mandong.conf.XXXXXX")"

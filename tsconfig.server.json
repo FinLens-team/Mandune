@@ -22,6 +22,7 @@
     "src/analysis/**/*.ts",
     "src/model/**/*.ts",
     "src/history/**/*.ts",
-    "src/persistence/**/*.ts"
+    "src/persistence/**/*.ts",
+    "src/daily-briefing/**/*.ts"
   ]
 }
