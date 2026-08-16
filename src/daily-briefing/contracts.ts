@@ -108,6 +108,8 @@ export function validateDailyBriefing(value: unknown, expectedDate: string, expe
         nonEmpty((item as Record<string, unknown>).heading) && nonEmpty((item as Record<string, unknown>).body))) {
     throw new Error("at least two valid sections are required");
   }
+  const generatedAtMs = Date.parse(briefing.generated_at as string);
+  if (!Number.isFinite(generatedAtMs)) throw new Error("generated_at must be a valid timestamp");
   const sourceIds = new Set<string>();
   for (const source of briefing.sources) {
     if (!source || typeof source !== "object") throw new Error("invalid source");
@@ -127,7 +129,9 @@ export function validateDailyBriefing(value: unknown, expectedDate: string, expe
   for (const news of briefing.news) {
     if (!news || typeof news !== "object") throw new Error("invalid news item");
     const item = news as Record<string, unknown>;
+    const publishedAtMs = typeof item.published_at === "string" ? Date.parse(item.published_at) : Number.NaN;
     if (!nonEmpty(item.title) || !nonEmpty(item.summary) || !nonEmpty(item.published_at) ||
+        !Number.isFinite(publishedAtMs) || publishedAtMs > generatedAtMs ||
         !nonEmpty(item.source_id) || !sourceIds.has(item.source_id) ||
         !["high", "medium"].includes(item.importance as string) ||
         !Array.isArray(item.related_assets) || !item.related_assets.every(nonEmpty)) {

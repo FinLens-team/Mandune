@@ -14,7 +14,7 @@
 - 单包 pnpm 项目：Node `>=22 <23`、pnpm `10.33.2`、ESM、严格 TypeScript。不建 workspace 或 `apps/`、`packages/` 布局。
 - 客户端 Vite + React，服务端 Hono（Node），测试 Vitest，持久化 Node 22 内置 `node:sqlite`（迁移在 `migrations/` 按编号执行）。
 - 模型接入走 OpenAI-compatible 网关（Vercel AI SDK Core）；模型与供应商配置不得进入 `VITE_*`、浏览器包、日志或 `/health`。
-- AKShare 上游接口变化频繁，不把开发机旧环境视为可靠基线；排查行情缺失、开始相关开发或发布前，先用 `uv pip install --python "$AKSHARE_PYTHON_EXECUTABLE" --upgrade akshare` 更新隔离环境，再回读版本并实测项目实际调用的基金、ETF、A 股接口。开发机默认解释器为 `/home/evil/.local/share/mandune-dev/akshare-venv/bin/python`，不得装进系统 Python。
+- AKShare 上游接口变化频繁，不把开发机旧环境视为可靠基线；排查行情或日报情报缺失、开始相关开发或发布前，先用 `uv pip install --python "$AKSHARE_PYTHON_EXECUTABLE" --upgrade akshare` 更新隔离环境，再回读版本并实测项目实际调用的基金、ETF、A 股、东方财富新闻和同花顺新闻接口。开发机默认解释器为 `/home/evil/.local/share/mandune-dev/akshare-venv/bin/python`，不得装进系统 Python。
 
 ## 命令
 

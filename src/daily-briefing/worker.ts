@@ -4,7 +4,8 @@ import process from "node:process";
 
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { DAILY_BRIEFING_THEME_IDS, isGeneratedThemeCopy, sharedFacts, validateDailyBriefing, type DailyBriefing, type DailyBriefingMarketItem, type GeneratedThemeCopy } from "./contracts.js";
+import { DAILY_BRIEFING_THEME_IDS, isGeneratedThemeCopy, sharedFacts, validateDailyBriefing, type DailyBriefing, type DailyBriefingMarketItem, type DailyBriefingNewsItem, type DailyBriefingSource, type GeneratedThemeCopy } from "./contracts.js";
+import { collectAkshareDailyNews, type DailyNewsCollector } from "./news.js";
 import { loadServerConfig } from "../server/config.js";
 import { createAnthropicMessagesModelGateway, createFallbackModelGateway, createOpenAICompatibleModelGateway, type ModelGateway } from "../model/index.js";
 
@@ -104,11 +105,11 @@ function generationSchema(): Record<string, unknown> {
   }, required: ["schema_version", "themes"] };
 }
 
-async function generateCopies(gateway: ModelGateway, input: { date: string; cutoff: string; market: DailyBriefingMarketItem[] }, signal: AbortSignal): Promise<DailyBriefingGeneration> {
+async function generateCopies(gateway: ModelGateway, input: { date: string; cutoff: string; market: DailyBriefingMarketItem[]; news: DailyBriefingNewsItem[]; sources: DailyBriefingSource[] }, signal: AbortSignal): Promise<DailyBriefingGeneration> {
   const instructions = [
-    "你是 Mandune 的每日市场日报编辑。只基于输入中的已核验公开行情写作，不得编造新闻、数字、原因或预测。",
+    "你是 Mandune 的每日市场日报编辑。只基于输入中的已核验公开行情和新闻写作，不得编造新闻、数字、原因或预测。",
     "返回一个 JSON 对象，必须严格符合 schema；每个主题只改变标题、导语和 sections，不能改变事实。",
-    "market/news/source 由程序填写，不要在 themes 中重复它们。news 当前为空时，明确写出今日没有纳入可核验新闻，不要补新闻。",
+    "market/news/source 由程序填写，不要在 themes 中重复或改写它们；news 为空时明确没有纳入可核验新闻，非空时只解释所给条目。",
     "标题、导语和段落中禁止使用任何阿拉伯数字；精确数字只由程序写入 market 字段，避免模型改写或编造数字。",
     "必须保留风险边界：不构成个性化投资建议，不给买卖时点、目标价、精确交易动作或收益保证。",
     "贴吧老哥可以有粗粝吐槽但不得群体羞辱；魅魔主题保持暧昧但不得露骨成人内容。",
@@ -118,7 +119,13 @@ async function generateCopies(gateway: ModelGateway, input: { date: string; cuto
     schemaVersion: SCHEMA_VERSION,
     schema: generationSchema(),
     instructions,
-    input: { date: input.date, market_data_cutoff: input.cutoff, market: input.market, news: [], sources: INDEXES.map((item) => ({ id: item.sourceId, name: `腾讯行情日K（${item.label}）`, url: `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${item.code},day,,,30,qfq` })) },
+    input: {
+      date: input.date,
+      market_data_cutoff: input.cutoff,
+      market: input.market,
+      news: input.news,
+      sources: input.sources.map(({ id, name }) => ({ id, name })),
+    },
     signal,
     timeoutMs: REQUEST_TIMEOUT_MS,
     temperature: 0.2,
@@ -230,7 +237,7 @@ async function publish(root: string, date: string): Promise<void> {
   }
 }
 
-export async function runDailyBriefing(options: { date?: string; root?: string; force?: boolean; fetchImpl?: FetchLike; env?: NodeJS.ProcessEnv; gateway?: ModelGateway } = {}): Promise<{ date: string; cutoff: string; reused: boolean }> {
+export async function runDailyBriefing(options: { date?: string; root?: string; force?: boolean; fetchImpl?: FetchLike; env?: NodeJS.ProcessEnv; gateway?: ModelGateway; newsCollector?: DailyNewsCollector; now?: () => Date } = {}): Promise<{ date: string; cutoff: string; reused: boolean; newsCount: number }> {
   const env = options.env ?? process.env;
   const config = loadServerConfig(env);
   const date = options.date ?? dateInShanghai();
@@ -242,29 +249,42 @@ export async function runDailyBriefing(options: { date?: string; root?: string; 
     const existing = options.force ? undefined : await readExisting(root, date);
     if (existing) {
       await publish(root, date);
-      return { date, cutoff: existing[0]!.market_data_cutoff, reused: true };
+      return { date, cutoff: existing[0]!.market_data_cutoff, reused: true, newsCount: existing[0]!.news.length };
     }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 150_000);
     try {
       const market = await collectMarket(options.fetchImpl ?? fetch, controller.signal);
+      const generatedAtDate = options.now?.() ?? new Date();
+      const generatedAt = isoInShanghai(generatedAtDate);
+      const currentShanghaiDate = dateInShanghai(generatedAtDate);
+      const newsAsOf = date === currentShanghaiDate ? generatedAtDate : new Date(`${date}T23:59:59+08:00`);
+      const collectNews = options.newsCollector ?? ((input) => collectAkshareDailyNews({ ...input }));
+      let newsBundle: { news: DailyBriefingNewsItem[]; sources: DailyBriefingSource[] } = { news: [], sources: [] };
+      try {
+        newsBundle = await collectNews({ asOf: newsAsOf, signal: controller.signal, env });
+      } catch {
+        newsBundle = { news: [], sources: [] };
+      }
+      const marketSources = INDEXES.map((item) => ({ id: item.sourceId, name: `腾讯行情日K（${item.label}）`, url: `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${item.code},day,,,30,qfq` }));
+      const sources = [...marketSources, ...newsBundle.sources];
       const gateway = options.gateway ?? buildGateway(env);
       if (!gateway) throw new Error("model gateway is not configured");
-      const copies = await generateCopies(gateway, { date, cutoff: market.cutoff, market: market.market }, controller.signal);
-      const generatedAt = isoInShanghai();
+      const copies = await generateCopies(gateway, {
+        date, cutoff: market.cutoff, market: market.market, news: newsBundle.news, sources,
+      }, controller.signal);
       const cutoff = `${market.cutoff} 15:00（最近一个已完成 A 股交易日；截至 ${generatedAt}）`;
-      const sources = INDEXES.map((item) => ({ id: item.sourceId, name: `腾讯行情日K（${item.label}）`, url: `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${item.code},day,,,30,qfq` }));
       const values = DAILY_BRIEFING_THEME_IDS.map((themeId) => ({
-        schema_version: SCHEMA_VERSION, fact_sheet_id: `cn-market-${date}-r1`, date, generated_at: generatedAt,
+        schema_version: SCHEMA_VERSION, fact_sheet_id: `cn-market-${date}-r2`, date, generated_at: generatedAt,
         market_data_cutoff: cutoff, theme_id: themeId, title: copies.themes[themeId]!.title, dek: copies.themes[themeId]!.dek,
-        market: market.market, news: [], sections: copies.themes[themeId]!.sections, sources,
+        market: market.market, news: newsBundle.news, sections: copies.themes[themeId]!.sections, sources,
         notice: "日报基于公开市场信息预先生成，不使用你的持仓数据，也不构成个性化投资建议。",
       } satisfies DailyBriefing));
       for (const value of values) validateDailyBriefing(value, date, value.theme_id);
       if (!values.every((value) => sharedFacts(value) === sharedFacts(values[0]!))) throw new Error("generated themes do not share facts");
       await writeDateDirectory(root, date, values);
       await publish(root, date);
-      return { date, cutoff, reused: false };
+      return { date, cutoff, reused: false, newsCount: newsBundle.news.length };
     } finally { clearTimeout(timer); }
   } finally { await release(); }
 }
@@ -273,7 +293,7 @@ async function main(): Promise<void> {
   const args = new Set(process.argv.slice(2));
   const dateArg = process.argv.slice(2).find((arg) => /^\d{4}-\d{2}-\d{2}$/u.test(arg));
   const result = await runDailyBriefing({ ...(dateArg ? { date: dateArg } : {}), force: args.has("--force") });
-  process.stdout.write(`Mandune daily briefing ${result.reused ? "reused" : "generated and published"}: ${result.date}; ${DAILY_BRIEFING_THEME_IDS.length} themes; ${result.cutoff}\n`);
+  process.stdout.write(`Mandune daily briefing ${result.reused ? "reused" : "generated and published"}: ${result.date}; ${DAILY_BRIEFING_THEME_IDS.length} themes; ${result.newsCount} verified news items; ${result.cutoff}\n`);
 }
 
 const entryPoint = process.argv[1] ? path.resolve(process.argv[1]) : undefined;

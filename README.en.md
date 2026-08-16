@@ -25,7 +25,7 @@ Mandune was built for **AdventureX 2026**, in the Portfolio Agent direction of P
 - Optional total value, cash, per-holding market value, and cost inputs; missing amounts do not block directional analysis.
 - Portfolio reviews for funds, ETFs, and A-share instruments across short, mid, and long market windows.
 - Seven themed front sides backed by the same rational report, evidence, unknowns, and risk boundaries.
-- A pre-generated daily market briefing with an explicit briefing date, market cutoff, and sources.
+- A pre-generated daily market briefing with three mainland indices and up to four citable market or macro news items, each carrying an explicit briefing date, market cutoff, publication time, and source URL.
 - A deterministic ten-point portfolio tier card when all required market horizons are available; the share image omits holding names and symbols.
 - Server-sent task and generation progress. The default `stream` path publishes a complete non-empty response; strict `v2` additionally validates structured output, references, and report boundaries.
 - Immutable history replay that does not silently recompute old conclusions.
@@ -69,7 +69,7 @@ flowchart LR
 
 The default `stream` mode asks an isolated AKShare worker for fund, ETF, and A-share daily data, falls back per instrument to the public Tencent adapter when needed, and performs one streaming model generation for the two-sided report body. `stream` publishes a complete non-empty response and uses bounded markers to split the rational and themed sides when present; strict structural, reference, and risk-boundary validation belongs to `v2`. “One model call” refers only to the report body: Atlas may make an independent non-blocking follow-up gateway request after the report is saved. Strict `v2` adds PandaAI batch collection, cached Bocha event evidence, a deterministic ReviewPacket, and structured generation. With no model configured, a non-production server uses clearly marked fixtures.
 
-The waiting-page briefing is separate from portfolio analysis. It pre-generates seven themed copies from one public market fact sheet and never reads a workspace or portfolio. See [Daily briefing pipeline](docs/daily-briefing-pipeline.md).
+The waiting-page briefing is separate from portfolio analysis. It pre-generates seven themed copies from three public index series and a bounded set of market or macro news that passes timestamp, host, relevance, privacy, and citation checks. It never reads a workspace or portfolio. If no item qualifies or the AKShare news adapters fail, `news` remains explicitly empty and the model may not invent a replacement. See [Daily briefing pipeline](docs/daily-briefing-pipeline.md).
 
 See [Architecture](docs/architecture.md) for module and trust boundaries.
 
@@ -135,7 +135,7 @@ The PandaAI track asks for a discoverable and callable A2A Remote Agent. Mandune
 
 ## Project Status
 
-Mandune is a working, self-hostable hackathon project. The production site, manual entry, local OCR drafts, seven themed reports, score share cards, and exhibition dashboard all have implementations. Current priorities are broader OCR coverage, operational monitoring and recovery for the app and briefing timer, more evidence and verifiable-news adapters with explicit degradation, and more privacy-safe validation of amount-aware reviews, scoring boundaries, and long-report completeness.
+Mandune is a working, self-hostable hackathon project. The production site, manual entry, local OCR drafts, seven themed reports, score share cards, public-index briefing, bounded citable-news collection, and exhibition dashboard all have implementations. Current priorities are broader OCR coverage, operational monitoring and recovery for the app and briefing timer, more evidence and news-source adapters with explicit degradation, and more privacy-safe validation of amount-aware reviews, scoring boundaries, and long-report completeness.
 
 ## Contributing
 

@@ -23,6 +23,9 @@ flowchart TB
   Hono --> Briefing[Runtime daily briefings]
   BriefingTimer[systemd daily timer] --> BriefingWorker[Daily briefing worker]
   BriefingWorker --> Briefing
+  BriefingWorker --> TencentBriefing[Tencent index candles]
+  BriefingWorker --> NewsAdapters[AKShare Eastmoney and 10jqka news]
+  BriefingWorker --> Gateway
   Hono --> Metrics[Anonymous daily metrics]
   Hono --> A2A[Optional A2A deep-review agent]
   A2A --> Ark[Volcano Ark DeepSeek-Pro endpoint]
@@ -42,7 +45,7 @@ flowchart TB
 | `src/providers/` | Market and event evidence adapters and cache-aware composition |
 | `src/portfolio/` | Editable drafts, optional valuation inputs, random examples, and immutable snapshot construction |
 | `src/scoring/` | Deterministic ten-point score, tier selection, market-horizon gating, and privacy-safe share-card input |
-| `src/daily-briefing/` | Public index collection, seven-theme generation, shared-fact validation, locking, and atomic publication |
+| `src/daily-briefing/` | Public index and bounded citable-news collection, seven-theme generation, shared-fact validation, locking, and atomic publication |
 | `src/metrics/` | Shanghai-time anonymous visit and service-use aggregation |
 | `src/workspace/` | Anonymous workspace authorization and lifecycle |
 | `src/history/` | Immutable history records, compatibility checks, and replay |
@@ -92,9 +95,9 @@ Total analysis time has a configurable hard deadline. The default is 180 seconds
 
 ## Daily briefing flow
 
-The waiting-page briefing does not read portfolio or workspace data. A separate oneshot worker fetches the three configured mainland indices from Tencent daily candles, selects the latest completed trading day, and asks the configured model gateway for seven themed copies. The program owns every number, source URL, cutoff, and risk notice; the model can change only the title, dek, and prose sections and cannot put digits into those fields.
+The waiting-page briefing does not read portfolio or workspace data. A separate oneshot worker fetches the three configured mainland indices from Tencent daily candles and recent public news through AKShare's Eastmoney and 10jqka adapters. News must be no later than the generation cutoff, within a bounded lookback, on an allowlisted HTTPS host, relevant to Chinese markets or core global macro signals, free of privacy-like patterns, deduplicated, and linked to its exact article URL. The program selects the latest completed trading day and asks the configured model gateway for seven themed copies. It owns every number, news item, source URL, cutoff, and risk notice; the model can change only the title, dek, and prose sections and cannot put digits into those fields.
 
-All seven files must pass the `daily-briefing.v2` contract and share the same fact sheet before the worker atomically replaces `latest/`. A dated complete set is reused unless the operator passes `--force`. Production writes under `MANDONG_DAILY_BRIEFINGS_DIR`, not the release tree, and `mandong-daily-briefing.timer` runs at 08:00 Asia/Shanghai with a randomized delay. The current collector publishes index data only and leaves `news` empty rather than fabricating or carrying forward stale news.
+All seven files must pass the `daily-briefing.v2` contract and share the same fact sheet before the worker atomically replaces `latest/`. A dated complete set is reused unless the operator passes `--force`. Production writes under `MANDONG_DAILY_BRIEFINGS_DIR`, not the release tree, and `mandong-daily-briefing.timer` runs at 08:00 Asia/Shanghai with a randomized delay. If the isolated AKShare runtime, both news adapters, or every candidate fails validation, the worker keeps the index briefing and publishes `news: []`; it never fabricates or carries forward stale news.
 
 ## Persistence Model
 

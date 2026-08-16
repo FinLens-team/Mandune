@@ -6,13 +6,15 @@
 
 生产 worker 位于 `src/daily-briefing/worker.ts`，使用 `daily-briefing.v2` 合约：
 
-1. 按 `Asia/Shanghai` 确定日报日期。
+1. 按 `Asia/Shanghai` 确定日报日期和生成截止时点。
 2. 从腾讯日 K 接口读取上证指数、深证成指和创业板指最近三十个交易日。
-3. 选择最近一个已完成交易日作为统一行情截止日。周末和休市日不会伪造同日收盘价。
-4. 程序固定行情数字、观察时点、来源 URL、事实底稿 ID 和免责声明。
-5. 模型网关只生成七种主题的 `title`、`dek` 和 `sections`；这些字段禁止出现阿拉伯数字，避免模型改写市场数值。
-6. 七份文件全部通过合约校验且共享完全相同的 `market`、`news`、`sources`、日期和截止时间后，才原子更新 `latest/`。
-7. 同一日期已经存在完整文件时默认复用；只有显式传入 `--force` 才重新生成。
+3. 通过隔离 AKShare worker 调用东方财富与同花顺新闻接口，合并最近公开条目。
+4. 新闻候选必须满足：发布时间不晚于生成时点、位于最近四十八小时、来自白名单 HTTPS 域名、与中国市场或核心全球宏观信号相关、不命中隐私模式，并按归一化标题与 URL 去重；最多发布四条。
+5. 选择最近一个已完成交易日作为统一行情截止日。周末和休市日不会伪造同日收盘价。
+6. 程序固定行情数字、新闻标题与摘要、发布时间、原文 URL、观察时点、事实底稿 ID 和免责声明。
+7. 模型网关只生成七种主题的 `title`、`dek` 和 `sections`；它只能解释程序提供的事实，不能新增新闻或链接，这些字段也禁止出现阿拉伯数字。
+8. 七份文件全部通过合约校验且共享完全相同的 `market`、`news`、`sources`、日期和截止时间后，才原子更新 `latest/`。
+9. 同一日期已经存在完整文件时默认复用；只有显式传入 `--force` 才重新生成。
 
 七种主题为：
 
@@ -24,7 +26,7 @@
 - `male_succubus`
 - `female_succubus`
 
-当前自动采集器只发布三大指数行情，`news` 固定为空。旧的人工日报可能包含新闻，但 worker 不会把旧新闻复制到新日期，也不会为了让内容看起来“实时”而补写新闻、原因或预测。可核验新闻采集需要单独实现来源适配、发布时间与行情时点分离、引用校验和失败降级。
+新闻来源当前由 AKShare 的 `stock_info_global_em`（东方财富）和 `stock_info_global_ths`（同花顺）提供。两路都失败或没有条目通过筛选时，worker 仍会发布三大指数日报，但 `news` 明确为空。旧的人工日报不会被复制到新日期，模型也不得为了让内容看起来“实时”而补写新闻、原因、发布时间或 URL。
 
 ## 运行目录
 
@@ -74,7 +76,7 @@ sudo journalctl -u mandong-daily-briefing.service --since today
 ```json
 {
   "schema_version": "daily-briefing.v2",
-  "fact_sheet_id": "cn-market-YYYY-MM-DD-r1",
+  "fact_sheet_id": "cn-market-YYYY-MM-DD-r2",
   "date": "YYYY-MM-DD",
   "generated_at": "YYYY-MM-DDTHH:mm:ss+08:00",
   "market_data_cutoff": "YYYY-MM-DD 15:00 Asia/Shanghai",
@@ -90,12 +92,22 @@ sudo journalctl -u mandong-daily-briefing.service --since today
       "source_id": "source-id"
     }
   ],
-  "news": [],
+  "news": [
+    {
+      "title": "可核验标题",
+      "summary": "来源摘要",
+      "published_at": "YYYY-MM-DDTHH:mm:ss.sssZ",
+      "source_id": "news-source-id",
+      "importance": "high",
+      "related_assets": ["中国宏观"]
+    }
+  ],
   "sections": [
     { "heading": "角色版小标题", "body": "只解释统一事实底稿" }
   ],
   "sources": [
-    { "id": "source-id", "name": "来源名称", "url": "https://..." }
+    { "id": "source-id", "name": "行情来源", "url": "https://..." },
+    { "id": "news-source-id", "name": "新闻来源", "url": "https://..." }
   ],
   "notice": "日报基于公开市场信息预先生成，不使用你的持仓数据，也不构成个性化投资建议。"
 }

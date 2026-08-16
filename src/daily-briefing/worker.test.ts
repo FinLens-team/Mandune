@@ -31,11 +31,15 @@ function copyGateway(): ModelGateway {
     async generate<T>() {
       const themes = Object.fromEntries(DAILY_BRIEFING_THEME_IDS.map((theme) => [theme, {
         schema_version: "daily-briefing.v2", title: `${theme} 今日市场`, dek: "仅依据已核验公开行情。",
-        sections: [{ heading: "盘面", body: "三大指数数据见统一事实底稿。" }, { heading: "边界", body: "没有纳入可核验新闻，不补写原因或预测。" }],
+        sections: [{ heading: "盘面", body: "三大指数数据见统一事实底稿。" }, { heading: "边界", body: "新闻与来源均以统一事实底稿为准，不补写原因或预测。" }],
       }]));
       return { ok: true, value: { schema_version: "daily-briefing.v2", themes } as T };
     },
   };
+}
+
+async function emptyNewsCollector() {
+  return { news: [], sources: [] };
 }
 
 async function root(): Promise<string> {
@@ -47,7 +51,7 @@ async function root(): Promise<string> {
 describe("daily briefing worker", () => {
   it("generates seven validated themes and atomically publishes latest", async () => {
     const directory = await root();
-    const result = await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {} });
+    const result = await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {}, newsCollector: emptyNewsCollector });
     expect(result.reused).toBe(false);
     const dated = await readdir(path.join(directory, "2026-08-13"));
     const latest = await readdir(path.join(directory, "latest"));
@@ -58,13 +62,53 @@ describe("daily briefing worker", () => {
     expect(values.every((value) => value.news.length === 0 && value.market.length === 3)).toBe(true);
   });
 
+  it("publishes one shared verified news bundle across all themes", async () => {
+    const directory = await root();
+    const newsCollector = vi.fn(async () => ({
+      news: [{
+        title: "央行发布公开市场操作信息",
+        summary: "人民银行公布当日公开市场操作。",
+        published_at: "2026-08-13T01:00:00.000Z",
+        source_id: "news-test",
+        importance: "high" as const,
+        related_assets: ["中国宏观"],
+      }],
+      sources: [{ id: "news-test", name: "东方财富财经", url: "https://finance.eastmoney.com/a/test.html" }],
+    }));
+    const result = await runDailyBriefing({
+      date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {}, newsCollector,
+      now: () => new Date("2026-08-13T02:00:00Z"),
+    });
+    const values = await Promise.all(DAILY_BRIEFING_THEME_IDS.map(async (theme) =>
+      JSON.parse(await readFile(path.join(directory, "latest", `${theme}.json`), "utf8"))));
+    expect(result.newsCount).toBe(1);
+    expect(newsCollector).toHaveBeenCalledOnce();
+    expect(values.every((value) => value.news[0]?.source_id === "news-test")).toBe(true);
+    expect(values.every((value) => value.sources.some((source: { id: string }) => source.id === "news-test"))).toBe(true);
+  });
+
+  it("rejects a news item published after the briefing generation time", async () => {
+    const directory = await root();
+    await expect(runDailyBriefing({
+      date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {},
+      now: () => new Date("2026-08-13T02:00:00Z"),
+      newsCollector: async () => ({
+        news: [{
+          title: "未来新闻", summary: "发布时间越过日报生成时点。", published_at: "2026-08-13T03:00:00.000Z",
+          source_id: "news-future", importance: "high", related_assets: ["中国宏观"],
+        }],
+        sources: [{ id: "news-future", name: "测试来源", url: "https://finance.eastmoney.com/a/future.html" }],
+      }),
+    })).rejects.toThrow("invalid news item or source reference");
+  });
+
   it("is date-idempotent and does not call market or model again", async () => {
     const directory = await root();
     const fetchImpl = marketFetch();
     const gateway = copyGateway();
     const generate = vi.spyOn(gateway, "generate");
-    await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl, gateway, env: {} });
-    const result = await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl, gateway, env: {} });
+    await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl, gateway, env: {}, newsCollector: emptyNewsCollector });
+    const result = await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl, gateway, env: {}, newsCollector: emptyNewsCollector });
     expect(result.reused).toBe(true);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(generate).toHaveBeenCalledTimes(1);
@@ -74,19 +118,19 @@ describe("daily briefing worker", () => {
     const directory = await root();
     await mkdir(directory, { recursive: true });
     await writeFile(path.join(directory, ".lock"), `${process.pid}\n`);
-    await expect(runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {} }))
+    await expect(runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {}, newsCollector: emptyNewsCollector }))
       .rejects.toThrow("already running");
     await writeFile(path.join(directory, ".lock"), "999999999\n");
-    await expect(runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {} }))
+    await expect(runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {}, newsCollector: emptyNewsCollector }))
       .resolves.toMatchObject({ reused: false });
   });
 
   it("keeps current latest intact when generation fails", async () => {
     const directory = await root();
-    await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {} });
+    await runDailyBriefing({ date: "2026-08-13", root: directory, fetchImpl: marketFetch(), gateway: copyGateway(), env: {}, newsCollector: emptyNewsCollector });
     const before = await readFile(path.join(directory, "latest", "eastern_observation.json"), "utf8");
     const failing: ModelGateway = { async generate() { return { ok: false, code: "provider_failure", retryable: true }; } };
-    await expect(runDailyBriefing({ date: "2026-08-14", root: directory, fetchImpl: marketFetch(), gateway: failing, env: {} })).rejects.toThrow("provider_failure");
+    await expect(runDailyBriefing({ date: "2026-08-14", root: directory, fetchImpl: marketFetch(), gateway: failing, env: {}, newsCollector: emptyNewsCollector })).rejects.toThrow("provider_failure");
     expect(await readFile(path.join(directory, "latest", "eastern_observation.json"), "utf8")).toBe(before);
   });
 });

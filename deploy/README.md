@@ -101,8 +101,9 @@ is persistent and has a 45-minute randomized delay. The daily
 briefing timer is persistent, runs at `08:00 Asia/Shanghai`, and has a five-minute
 randomized delay. Before the first release, `ConditionPathExists` makes both
 oneshot jobs a clean no-op rather than a failed unit. The daily briefing worker
-collects public Tencent index candles, generates seven theme copies through the
-server-only model gateway, validates shared facts, and atomically publishes to
+collects public Tencent index candles plus bounded, citable market or macro news
+through the isolated AKShare Eastmoney/10jqka adapters, generates seven theme
+copies through the server-only model gateway, validates shared facts, and atomically publishes to
 `/var/lib/mandong/daily-briefings/latest`; it never writes the release/source
 tree. The purge service has no network namespace and can only write the Mandong
 state directory. A tmpfiles rule recreates the shared lock after boot

@@ -64,7 +64,7 @@ Market evidence tries AKShare first for funds, ETFs, and A-share daily series, t
 AKSHARE_PYTHON_EXECUTABLE=/absolute/path/to/venv/bin/python
 ```
 
-AKShare follows upstream website changes and needs regular refreshes. Before debugging missing market data, starting market-adapter work, or releasing a related change, upgrade the isolated environment and then run live fund, ETF, and A-share probes through `src/providers/akshare-worker.py`:
+AKShare follows upstream website changes and needs regular refreshes. Before debugging missing market or briefing-news data, starting related adapter work, or releasing a related change, upgrade the isolated environment and then run live fund, ETF, A-share, `stock_info_global_em`, and `stock_info_global_ths` probes through `src/providers/akshare-worker.py`:
 
 ```sh
 uv pip install --python "$AKSHARE_PYTHON_EXECUTABLE" --upgrade akshare
@@ -116,7 +116,7 @@ MANDONG_DAILY_BRIEFINGS_DIR=/absolute/runtime/daily-briefings \
   node --env-file-if-exists=.env dist/daily-briefing/worker.js
 ```
 
-The worker reuses a complete set for the current date. Pass `--force` only when an operator intentionally wants to regenerate that date. Production installs `mandong-daily-briefing.timer`, scheduled for 08:00 Asia/Shanghai with up to five minutes of randomized delay. The current automated collector retrieves the three configured mainland index candles from Tencent and leaves `news` empty; it never reuses stale news to make a briefing look current.
+The worker reuses a complete set for the current date. Pass `--force` only when an operator intentionally wants to regenerate that date. Production installs `mandong-daily-briefing.timer`, scheduled for 08:00 Asia/Shanghai with up to five minutes of randomized delay. The automated collector retrieves the three configured mainland index candles from Tencent and up to four recent, citable market or macro items through the isolated AKShare Eastmoney/10jqka adapters. Candidates are filtered by generation time, a 48-hour lookback, allowlisted HTTPS hosts, Chinese-market or core-global-macro relevance, privacy patterns, duplicate titles, and source references. Adapter failure or an empty qualified set leaves `news` explicitly empty; stale news is never reused to make a briefing look current.
 
 ## Health Surface
 

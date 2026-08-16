@@ -11,6 +11,7 @@ flowchart LR
   BriefingTimer[08:00 Asia/Shanghai timer] --> BriefingWorker[Daily briefing worker]
   BriefingWorker --> Briefings[(Runtime briefing JSON)]
   BriefingWorker --> Tencent[Tencent index candles]
+  BriefingWorker --> News[AKShare Eastmoney and 10jqka news]
   BriefingWorker --> Gateway[Model gateway]
   Node --> Briefings
 ```

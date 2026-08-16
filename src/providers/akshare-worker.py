@@ -104,14 +104,57 @@ def fetch(request: dict[str, Any], ak: Any) -> dict[str, Any]:
         return result
 
 
+def clean_text(value: Any, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def normalize_news(frame: Any, provider: str, *, summary_key: str) -> list[dict[str, str]]:
+    if frame is None or not hasattr(frame, "iterrows"):
+        return []
+    rows: list[dict[str, str]] = []
+    for _, source in frame.iterrows():
+        title = clean_text(source.get("标题"), 180)
+        summary = clean_text(source.get(summary_key), 420)
+        published_at = clean_text(source.get("发布时间"), 40)
+        url = clean_text(source.get("链接"), 500)
+        if title and summary and published_at and url.startswith("https://"):
+            rows.append({
+                "provider": provider,
+                "title": title,
+                "summary": summary,
+                "publishedAt": published_at,
+                "url": url,
+            })
+    return rows[:200]
+
+
+def fetch_daily_news(ak: Any) -> dict[str, Any]:
+    results: list[dict[str, str]] = []
+    failures: list[str] = []
+    for provider, method, summary_key in (
+        ("eastmoney", "stock_info_global_em", "摘要"),
+        ("10jqka", "stock_info_global_ths", "内容"),
+    ):
+        try:
+            results.extend(normalize_news(getattr(ak, method)(), provider, summary_key=summary_key))
+        except Exception as error:
+            failures.append(f"{method}:{type(error).__name__}")
+    return {"status": "completed", "results": results, "failures": failures}
+
+
 def main() -> int:
     try:
         payload = json.loads(sys.stdin.read())
+        import importlib
+        ak = importlib.import_module("akshare")
+        if payload.get("operation") == "daily_news":
+            emit(fetch_daily_news(ak))
+            return 0
         requests = payload.get("requests")
         if not isinstance(requests, list) or not requests or len(requests) > 100:
             emit({"status": "invalid_request", "results": []})
             return 2
-        import akshare as ak
         emit({"status": "completed", "results": [fetch(item, ak) for item in requests]})
         return 0
     except Exception as error:
